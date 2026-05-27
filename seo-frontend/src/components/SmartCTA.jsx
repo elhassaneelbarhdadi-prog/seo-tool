@@ -3,15 +3,25 @@ import { routes } from "../routes";
 
 export default function SmartCTA({ usage }) {
 
-    const { go } = useLangNavigate(); // ✅ CLEAN
+    const { go } = useLangNavigate();
 
+    // ✅ SAFE DATA
+    const plan = usage?.plan || "FREE";
+    const used = Number(usage?.used) || 0;
+    const limit =
+        usage?.limit === Infinity || usage?.limit === -1
+            ? Infinity
+            : Number(usage?.limit) || 0;
+
+    const isLimitReached =
+        limit !== Infinity && used >= limit;
+
+    /* ========================= */
+    /* 🚀 CLICK */
+    /* ========================= */
     const handleClick = () => {
 
-        const plan = usage?.plan || "FREE";
-        const used = usage?.used || 0;
-        const limit = usage?.limit || 0;
-
-        if (limit !== Infinity && used >= limit) {
+        if (isLimitReached) {
             return go(routes.pricing);
         }
 
@@ -22,13 +32,12 @@ export default function SmartCTA({ usage }) {
         return go(routes.niches);
     };
 
+    /* ========================= */
+    /* 🏷️ LABEL */
+    /* ========================= */
     const getLabel = () => {
 
-        const plan = usage?.plan || "FREE";
-        const used = usage?.used || 0;
-        const limit = usage?.limit || 0;
-
-        if (limit !== Infinity && used >= limit) {
+        if (isLimitReached) {
             return "⚠️ Limite atteinte - Upgrade";
         }
 

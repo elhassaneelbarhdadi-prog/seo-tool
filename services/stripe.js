@@ -3,8 +3,25 @@ dotenv.config();
 
 import Stripe from "stripe";
 
-console.log("Stripe key loaded:", process.env.STRIPE_SECRET_KEY);
+/* ========================= */
+/* 🔐 CHECK ENV */
+/* ========================= */
+if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("❌ STRIPE_SECRET_KEY is missing in .env");
+}
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+/* ========================= */
+/* 🚀 INIT STRIPE */
+/* ========================= */
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2024-06-20", // ✅ toujours fixer version
+});
+
+/* ========================= */
+/* 🧪 DEBUG SAFE */
+/* ========================= */
+if (process.env.NODE_ENV !== "production") {
+    console.log("✅ Stripe initialized");
+}
 
 export default stripe;

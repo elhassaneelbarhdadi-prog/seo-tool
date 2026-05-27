@@ -4,15 +4,20 @@ import {
   Route,
   Navigate,
   useLocation,
-  useParams
+  useParams,
+  Link
 } from "react-router-dom";
 
 import { useEffect, useMemo } from "react";
 
+/* ========================= */
 /* LAYOUT */
+/* ========================= */
 import DashboardLayout from "./layout/DashboardLayout";
 
+/* ========================= */
 /* PAGES */
+/* ========================= */
 import Home from "./pages/Home";
 import ProjectPage from "./pages/ProjectPage";
 import Login from "./pages/Login";
@@ -26,54 +31,63 @@ import BusinessProfile from "./pages/BusinessProfile";
 import LandingKeyword from "./pages/LandingKeyword";
 import AnnuairePage from "./pages/AnnuairePage";
 
+/* ========================= */
 /* COMPONENTS */
+/* ========================= */
 import ErrorBoundary from "./components/ErrorBoundary";
 
+/* ========================= */
 /* I18N */
+/* ========================= */
 import "./i18n";
 
 /* ========================= */
-/* 🔍 DEBUG ROUTER */
+/* 🌍 LANGS */
 /* ========================= */
-function DebugRouter() {
-  const location = useLocation();
+const SUPPORTED_LANGS = ["fr", "en", "es", "de"];
 
-  useEffect(() => {
-    console.log("📍 ROUTE:", location.pathname);
-  }, [location]);
-
-  return null;
-}
-
-/* ========================= */
-/* 🌍 LANG DETECTION */
-/* ========================= */
 function getBrowserLang() {
-  const saved = localStorage.getItem("lang");
-  if (saved) return saved;
 
-  const lang = navigator.language.split("-")[0];
-  const supported = ["fr", "en", "es", "de"];
+  const saved =
+    localStorage.getItem("lang");
 
-  return supported.includes(lang) ? lang : "fr";
+  if (
+    saved &&
+    SUPPORTED_LANGS.includes(saved)
+  ) {
+    return saved;
+  }
+
+  const browserLang =
+    navigator.language.split("-")[0];
+
+  return SUPPORTED_LANGS.includes(browserLang)
+    ? browserLang
+    : "fr";
 }
 
 /* ========================= */
-/* 🔒 TOKEN VALIDATION (PURE) */
+/* 🔒 TOKEN */
 /* ========================= */
 function isTokenValid(token) {
-  if (!token) return false;
+
+  if (!token) {
+    return false;
+  }
 
   try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
 
-    // ⚠️ calcul encapsulé (pas dans JSX direct)
-    const now = Date.now();
+    const payload =
+      JSON.parse(
+        atob(token.split(".")[1])
+      );
 
-    return payload.exp * 1000 > now;
+    return payload.exp * 1000 > Date.now();
 
   } catch {
+
     return false;
+
   }
 }
 
@@ -81,46 +95,81 @@ function isTokenValid(token) {
 /* 🔒 PROTECTED ROUTE */
 /* ========================= */
 function ProtectedRoute({ children }) {
+
   const { lang } = useParams();
 
-  const token = localStorage.getItem("token");
+  const token =
+    localStorage.getItem("token");
 
-  const isValid = useMemo(() => isTokenValid(token), [token]);
+  const isValid = useMemo(
+    () => isTokenValid(token),
+    [token]
+  );
 
   if (!isValid) {
+
     localStorage.removeItem("token");
-    return <Navigate to={`/${lang || "fr"}/login`} replace />;
+
+    return (
+      <Navigate
+        to={`/${lang || "fr"}/login`}
+        replace
+      />
+    );
   }
 
   return children;
 }
 
 /* ========================= */
-/* 🔁 ANNuaire WRAPPER */
+/* 🔁 ANNUAIRE WRAPPER */
 /* ========================= */
 function AnnuaireWrapper() {
+
   const location = useLocation();
-  return <AnnuairePage key={location.pathname} />;
+
+  return (
+    <AnnuairePage key={location.pathname} />
+  );
 }
 
 /* ========================= */
-/* ❌ 404 */
+/* ❌ NOT FOUND */
 /* ========================= */
 function NotFound() {
+
   const { lang } = useParams();
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen text-center">
-      <h1 className="text-4xl font-bold mb-4">❌ 404</h1>
-      <p className="text-gray-500 mb-6">Page non trouvée</p>
 
-      <a
-        href={`/${lang || "fr"}`}
-        className="bg-indigo-600 text-white px-6 py-3 rounded-xl"
+    <div className="flex flex-col items-center justify-center h-screen text-center bg-gray-50">
+
+      <h1 className="text-6xl font-black mb-4">
+        ❌ 404
+      </h1>
+
+      <p className="text-gray-500 text-lg mb-8">
+        Page non trouvée
+      </p>
+
+      <Link
+        to={`/${lang || "fr"}`}
+        className="
+          bg-indigo-600
+          hover:bg-indigo-700
+          transition
+          text-white
+          px-8
+          py-4
+          rounded-2xl
+          font-semibold
+        "
       >
         Retour accueil
-      </a>
+      </Link>
+
     </div>
+
   );
 }
 
@@ -128,33 +177,77 @@ function NotFound() {
 /* 🚀 APP */
 /* ========================= */
 export default function App() {
+
+  const defaultLang = useMemo(
+    () => getBrowserLang(),
+    []
+  );
+
   return (
+
     <ErrorBoundary>
+
       <Router>
 
-        <DebugRouter />
+        {/* DEV ROUTER DEBUG */}
+        {import.meta.env.DEV && (
+          <DebugRouter />
+        )}
 
         <Routes>
 
           {/* ROOT */}
           <Route
             path="/"
-            element={<Navigate to={`/${getBrowserLang()}`} replace />}
+            element={
+              <Navigate
+                to={`/${defaultLang}`}
+                replace
+              />
+            }
           />
 
+          {/* ========================= */}
+          {/* PUBLIC */}
+          {/* ========================= */}
+
           {/* HOME */}
-          <Route path="/:lang" element={<Home />} />
+          <Route
+            path="/:lang"
+            element={<Home />}
+          />
 
           {/* AUTH */}
-          <Route path="/:lang/login" element={<Login />} />
-          <Route path="/:lang/register" element={<Register />} />
+          <Route
+            path="/:lang/login"
+            element={<Login />}
+          />
+
+          <Route
+            path="/:lang/register"
+            element={<Register />}
+          />
 
           {/* SEO */}
-          <Route path="/:lang/landing/:keyword" element={<LandingKeyword />} />
-          <Route path="/:lang/projet/:keyword" element={<ProjectPage />} />
-          <Route path="/:lang/annuaire/:slug" element={<AnnuaireWrapper />} />
+          <Route
+            path="/:lang/landing/:keyword"
+            element={<LandingKeyword />}
+          />
 
+          <Route
+            path="/:lang/projet/:keyword"
+            element={<ProjectPage />}
+          />
+
+          <Route
+            path="/:lang/annuaire/:slug"
+            element={<AnnuaireWrapper />}
+          />
+
+          {/* ========================= */}
           {/* DASHBOARD */}
+          {/* ========================= */}
+
           <Route
             path="/:lang/dashboard/*"
             element={
@@ -163,20 +256,78 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Dashboard />} />
-            <Route path="keywords" element={<KeywordAnalyzer />} />
-            <Route path="pricing" element={<Pricing />} />
-            <Route path="niches" element={<NichesPage />} />
-            <Route path="annuaire" element={<Annuaire />} />
-            <Route path="business-profile" element={<BusinessProfile />} />
+
+            {/* DASHBOARD HOME */}
+            <Route
+              index
+              element={<Dashboard />}
+            />
+
+            {/* KEYWORD ANALYZER */}
+            <Route
+              path="keywords"
+              element={<KeywordAnalyzer />}
+            />
+
+            {/* PRICING */}
+            <Route
+              path="pricing"
+              element={<Pricing />}
+            />
+
+            {/* NICHES */}
+            <Route
+              path="niches"
+              element={<NichesPage />}
+            />
+
+            {/* ANNUAIRE */}
+            {/* ANNUAIRE */}
+            <Route
+              path="annuaire"
+              element={<Annuaire />}
+            />
+            {/* BUSINESS */}
+            <Route
+              path="business-profile"
+              element={<BusinessProfile />}
+            />
+
           </Route>
 
+          {/* ========================= */}
           {/* 404 */}
-          <Route path="*" element={<NotFound />} />
+          {/* ========================= */}
+
+          <Route
+            path="*"
+            element={<NotFound />}
+          />
 
         </Routes>
 
       </Router>
+
     </ErrorBoundary>
+
   );
+}
+
+/* ========================= */
+/* 🔍 DEBUG ROUTER */
+/* ========================= */
+function DebugRouter() {
+
+  const location = useLocation();
+
+  useEffect(() => {
+
+    console.log(
+      "📍 ROUTE:",
+      location.pathname
+    );
+
+  }, [location]);
+
+  return null;
 }

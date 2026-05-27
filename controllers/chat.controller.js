@@ -1,121 +1,421 @@
 import db from "../config/database.js";
 import OpenAI from "openai";
-import { PLANS } from "../config/plans.js";
-import dotenv from "dotenv";
+import { getPlan } from "../config/plans.js";
 
-dotenv.config();
+/* ========================= */
+/* OPENAI */
+/* ========================= */
+
+if (!process.env.OPENAI_API_KEY) {
+
+    throw new Error(
+        "OPENAI_API_KEY manquant"
+    );
+
+}
 
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
+
+    apiKey:
+        process.env.OPENAI_API_KEY,
+
+    timeout: 30000
+
 });
 
-export const askSEO = async (req, res) => {
+/* ========================= */
+/* ASK SEO */
+/* ========================= */
 
-    try {
+export const askSEO =
+    async (req, res) => {
 
-        const { question, keyword, serp = [], products = [] } = req.body;
-        const userId = req.user?.id;
+        try {
 
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
+            const userId =
+                req.user?.id;
 
-        if (!question?.trim()) {
-            return res.status(400).json({ error: "Question required" });
-        }
+            if (
+                !userId
+            ) {
 
-        /* ========================= */
-        /* 🔥 PLAN + LIMIT */
-        /* ========================= */
+                return res
+                    .status(401)
+                    .json({
 
-        const user = await db.get(
-            "SELECT plan FROM users WHERE id = ?",
-            [userId]
-        );
+                        error:
+                            "Unauthorized"
 
-        const plan = user?.plan || "FREE";
-        const planData = PLANS[plan] || PLANS.FREE;
-        const limit = planData.limit;
+                    });
 
-        const usage = await db.get(`
-            SELECT COUNT(*) as total
-            FROM ai_usage
-            WHERE user_id = ?
-            AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
-        `, [userId]);
+            }
 
-        if (limit !== Infinity && usage.total >= limit) {
-            return res.status(403).json({
-                error: "LIMIT_REACHED"
-            });
-        }
+            let {
 
-        /* ========================= */
-        /* 🧠 CONTEXT */
-        /* ========================= */
+                question = "",
 
-        const topSerp = serp.slice(0, 3)
-            .map(s => `- ${s.title}`)
-            .join("\n");
+                keyword = "",
 
-        const topProducts = products.slice(0, 3)
-            .map(p => `- ${p.title} (${p.price})`)
-            .join("\n");
+                serp = [],
 
-        /* ========================= */
-        /* 🤖 PROMPT */
-        /* ========================= */
+                products = []
 
-        const prompt = `
-Tu es un expert SEO + business.
+            } = req.body;
 
-Mot-clé : ${keyword || "N/A"}
+            /* ========================= */
+            /* VALIDATION */
+            /* ========================= */
 
-Concurrents :
-${topSerp || "aucun"}
+            question =
+                String(question);
 
-Produits :
-${topProducts || "aucun"}
+            keyword =
+                String(keyword);
 
-Question : ${question}
+            if (
+                !question.trim()
+            ) {
 
-Réponds avec :
-- analyse SEO
-- opportunité
-- idée business
-- revenu estimé
-- action immédiate
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Question required"
+
+                    });
+
+            }
+
+            const safeQuestion =
+                question
+                    .slice(0, 300);
+
+            const safeKeyword =
+                keyword
+                    .slice(0, 100);
+
+            /* ========================= */
+            /* USER */
+            /* ========================= */
+
+            const user =
+                await db.get(
+
+                    `
+        SELECT
+        plan
+        FROM users
+        WHERE id=?
+        `,
+
+                    [userId]
+
+                );
+
+            if (
+                !user
+            ) {
+
+                return res
+                    .status(404)
+                    .json({
+
+                        error:
+                            "User not found"
+
+                    });
+
+            }
+
+            const plan =
+                getPlan(
+                    user.plan
+                );
+
+            const limit =
+                plan.limit;
+
+            const usage =
+                await db.get(`
+
+        SELECT
+        COUNT(*) as total
+
+        FROM ai_usage
+
+        WHERE user_id=?
+
+        AND strftime(
+        '%Y-%m',
+        created_at
+        )=
+
+        strftime(
+        '%Y-%m',
+        'now'
+        )
+
+    `, [userId]);
+
+            if (
+
+                limit !== null &&
+
+                usage.total >= limit
+
+            ) {
+
+                return res
+                    .status(403)
+                    .json({
+
+                        error:
+                            "LIMIT_REACHED"
+
+                    });
+
+            }
+
+            /* ========================= */
+            /* CONTEXT */
+            /* ========================= */
+
+            serp =
+                Array.isArray(
+                    serp
+                )
+                    ?
+                    serp.slice(0, 3)
+                    :
+                    [];
+
+            products =
+                Array.isArray(
+                    products
+                )
+                    ?
+                    products.slice(0, 3)
+                    :
+                    [];
+
+            const topSerp =
+
+                serp
+
+                    .map(
+
+                        s =>
+
+                            `- ${s.title
+                                ?.slice(0, 80)
+                            || "Sans titre"
+                            }`
+
+                    )
+
+                    .join("\n");
+
+
+            const topProducts =
+
+                products
+
+                    .map(
+
+                        p =>
+
+                            `- ${p.title
+                                ?.slice(0, 80)
+                            || "Sans titre"
+                            }
+
+    (${p.price || ""})`
+
+                    )
+
+                    .join("\n");
+
+            /* ========================= */
+            /* PROMPT */
+            /* ========================= */
+
+            const systemPrompt = `
+
+Tu es un expert SEO SaaS.
+
+Réponse:
+
+1. Analyse SEO rapide
+2. Opportunité
+3. Idée business
+4. Revenus mensuels
+5. Action immédiate
+
+Réponse concise.
+
 `;
 
-        /* ========================= */
-        /* 🤖 OPENAI */
-        /* ========================= */
+            const userPrompt = `
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.7
-        });
+Mot-clé:
+${safeKeyword}
 
-        const answer = response.choices?.[0]?.message?.content || "Pas de réponse";
+Concurrents:
+${topSerp || "aucun"}
 
-        /* ========================= */
-        /* 💾 TRACK */
-        /* ========================= */
+Produits:
+${topProducts || "aucun"}
 
-        await db.run(`
-            INSERT INTO ai_usage (user_id, message)
-            VALUES (?, ?)
-        `, [userId, question]);
+Question:
+${safeQuestion}
 
-        res.json({ answer });
+`;
 
-    } catch (error) {
+            /* ========================= */
+            /* OPENAI */
+            /* ========================= */
 
-        console.error("CHAT ERROR:", error);
+            const response =
 
-        res.status(500).json({
-            error: "Chat error"
-        });
-    }
-};
+                await openai
+                    .chat
+                    .completions
+                    .create({
+
+                        model:
+                            "gpt-4o-mini",
+
+                        messages: [
+
+                            {
+
+                                role:
+                                    "system",
+
+                                content:
+                                    systemPrompt
+
+                            },
+
+                            {
+
+                                role:
+                                    "user",
+
+                                content:
+                                    userPrompt
+
+                            }
+
+                        ],
+
+                        temperature:
+                            0.5,
+
+                        max_tokens:
+                            400
+
+                    });
+
+            const answer =
+
+                response
+                    ?.choices?.[0]
+                    ?.message
+                    ?.content
+
+                ||
+
+                "Pas de réponse";
+
+
+            /* ========================= */
+            /* TRACK */
+            /* ========================= */
+
+            await db.run(
+
+                `
+
+INSERT INTO
+ai_usage(
+
+user_id,
+
+message
+
+)
+
+VALUES(
+
+?,
+
+?
+
+)
+
+`,
+
+                [
+
+                    userId,
+
+                    safeQuestion
+
+                ]
+
+            );
+
+            return res.json({
+
+                answer,
+
+                remaining:
+
+                    limit === null
+
+                        ?
+
+                        "infinite"
+
+                        :
+
+                        Math.max(
+
+                            0,
+
+                            limit -
+
+                            usage.total -
+
+                            1
+
+                        )
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+
+                "CHAT ERROR:",
+
+                error.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Chat error"
+
+                });
+
+        }
+
+    };

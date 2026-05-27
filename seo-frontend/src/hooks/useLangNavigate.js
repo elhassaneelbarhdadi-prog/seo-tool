@@ -1,44 +1,65 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation, useParams } from "react-router-dom";
 
 export default function useLangNavigate() {
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const { lang: paramLang } = useParams();
 
+    /* ========================= */
+    /* 🌍 GET LANG SAFE */
+    /* ========================= */
     const getLang = () => {
-        const pathLang = window.location.pathname.split("/")[1];
-        return pathLang || localStorage.getItem("lang") || "fr";
+        const pathLang = location.pathname.split("/")[1];
+
+        return (
+            paramLang ||
+            pathLang ||
+            localStorage.getItem("lang") ||
+            "fr"
+        );
     };
 
-    const go = (path) => {
+    /* ========================= */
+    /* 🚀 NAVIGATE */
+    /* ========================= */
+    const go = (inputPath) => {
 
-        if (!path) return;
+        if (!inputPath) return;
 
-        // si fonction → exécute
-        if (typeof path === "function") {
-            path = path();
-        }
+        let path =
+            typeof inputPath === "function"
+                ? inputPath()
+                : inputPath;
 
-        if (typeof path !== "string") {
-            console.error("❌ path invalide:", path);
+        if (!path || typeof path !== "string") {
+            console.error("❌ Invalid path:", path);
             return;
         }
 
         const lang = getLang();
 
-        // ✅ SI déjà /fr/... → on ne touche pas
+        // nettoie path
+        path = path.trim();
+
+        /* ========================= */
+        /* ✅ CAS 1 : déjà avec lang */
+        /* ========================= */
         if (path.startsWith(`/${lang}/`)) {
-            navigate(path);
-            return;
+            return navigate(path);
         }
 
-        // ✅ SI path commence par /dashboard
-        if (path.startsWith("/dashboard")) {
-            navigate(`/${lang}${path}`);
-            return;
+        /* ========================= */
+        /* ✅ CAS 2 : path absolu */
+        /* ========================= */
+        if (path.startsWith("/")) {
+            return navigate(`/${lang}${path}`);
         }
 
-        // fallback
-        navigate(`/${lang}/${path.replace(/^\/+/, "")}`);
+        /* ========================= */
+        /* ✅ CAS 3 : path relatif */
+        /* ========================= */
+        return navigate(`/${lang}/${path}`);
     };
 
     return { go };

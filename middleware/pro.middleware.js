@@ -1,57 +1,177 @@
-import jwt from "jsonwebtoken";
+/* ========================= */
+/* PRO ACCESS */
+/* ========================= */
 
-const proMiddleware = (req, res, next) => {
+const PRO_PLANS =
 
-    try {
+    Object.freeze([
 
-        console.log("PRO MIDDLEWARE CALLED");
+        "PRO",
 
-        // 1️⃣ Récupérer le header Authorization
-        const authHeader = req.headers.authorization;
+        "BUSINESS"
 
-        if (!authHeader) {
-            return res.status(401).json({
-                error: "Token manquant"
-            });
+    ]);
+
+const proMiddleware =
+    (
+        req,
+        res,
+        next
+    ) => {
+
+        try {
+
+            /* ========================= */
+            /* AUTH */
+            /* ========================= */
+
+            if (
+                !req.user
+            ) {
+
+                return res
+                    .status(401)
+                    .json({
+
+                        error:
+                            "Unauthorized"
+
+                    });
+
+            }
+
+            const plan =
+
+                String(
+
+                    req.user.plan
+                    ||
+                    "FREE"
+
+                )
+
+                    .trim()
+
+                    .toUpperCase();
+
+            const status =
+
+                String(
+
+                    req.user
+                        .subscription_status
+
+                    ||
+
+                    "inactive"
+
+                )
+
+                    .trim()
+
+                    .toLowerCase();
+
+            const role =
+
+                String(
+
+                    req.user.role
+                    ||
+                    "user"
+
+                )
+
+                    .trim()
+
+                    .toLowerCase();
+
+            /* ========================= */
+            /* ADMIN BYPASS */
+            /* ========================= */
+
+            if (
+                role === "admin"
+            ) {
+
+                return next();
+
+            }
+
+            /* ========================= */
+            /* ACTIVE SUB */
+            /* ========================= */
+
+            if (
+                plan !== "FREE"
+                &&
+                status !== "active"
+            ) {
+
+                return res
+                    .status(403)
+                    .json({
+
+                        error:
+                            "Subscription inactive"
+
+                    });
+
+            }
+
+            /* ========================= */
+            /* PLAN */
+            /* ========================= */
+
+            if (
+
+                !PRO_PLANS
+                    .includes(
+                        plan
+                    )
+
+            ) {
+
+                return res
+                    .status(403)
+                    .json({
+
+                        error:
+                            "PRO plan required",
+
+                        currentPlan:
+                            plan
+
+                    });
+
+            }
+
+            req.isPremium = true;
+
+            next();
+
         }
 
-        // 2️⃣ Extraire le token
-        const token = authHeader.split(" ")[1];
+        catch (error) {
 
-        if (!token) {
-            return res.status(401).json({
-                error: "Token invalide"
-            });
+            console.error(
+
+                "PRO:",
+
+                error.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Access error"
+
+                });
+
         }
 
-        // 3️⃣ Vérifier le token
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        console.log("DECODED USER:", decoded);
-
-        // 4️⃣ Vérifier si user PRO
-        if (!decoded.isPro) {
-            return res.status(403).json({
-                error: "Accès réservé aux utilisateurs PRO"
-            });
-        }
-
-        // 5️⃣ Ajouter user dans request
-        req.user = decoded;
-
-        // 6️⃣ Continuer
-        next();
-
-    } catch (error) {
-
-        console.error("PRO MIDDLEWARE ERROR:", error.message);
-
-        return res.status(401).json({
-            error: "Token invalide"
-        });
-
-    }
-
-};
+    };
 
 export default proMiddleware;

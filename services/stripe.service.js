@@ -1,39 +1,67 @@
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+/* ========================= */
+/* 🔐 INIT */
+/* ========================= */
+if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+}
 
-export const createCheckoutSession = async (email, plan = "PRO") => {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: "2024-06-20",
+});
 
-    const prices = {
-        PRO: 2900,
-        BUSINESS: 4900
-    };
+/* ========================= */
+/* 💰 PRICES (ID STRIPE) */
+/* ========================= */
+// 👉 CRÉE CES PRIX DANS STRIPE (IMPORTANT)
+const PRICE_IDS = {
+    PRO: process.env.STRIPE_PRICE_PRO,
+    BUSINESS: process.env.STRIPE_PRICE_BUSINESS,
+};
+
+/* ========================= */
+/* 🚀 CHECKOUT */
+/* ========================= */
+export const createCheckoutSession = async ({
+    email,
+    userId,
+    plan = "PRO"
+}) => {
+
+    if (!email) {
+        throw new Error("Email required");
+    }
+
+    const priceId = PRICE_IDS[plan];
+
+    if (!priceId) {
+        throw new Error("Invalid plan");
+    }
 
     const session = await stripe.checkout.sessions.create({
 
-        payment_method_types: ["card"],
         mode: "subscription",
 
         customer_email: email,
 
         line_items: [
             {
-                price_data: {
-                    currency: "eur",
-                    product_data: {
-                        name: `SEO Tool ${plan}`,
-                    },
-                    recurring: {
-                        interval: "month",
-                    },
-                    unit_amount: prices[plan] || 2900,
-                },
-                quantity: 1,
-            },
+                price: priceId,
+                quantity: 1
+            }
         ],
 
-        success_url: "http://localhost:5173/fr/dashboard",
-        cancel_url: "http://localhost:5173/fr/dashboard/pricing",
+        /* ========================= */
+        /* 🔥 CRUCIAL POUR WEBHOOK */
+        /* ========================= */
+        metadata: {
+            userId,
+            plan
+        },
+
+        success_url: `${process.env.FRONT_URL}/fr/dashboard?success=1`,
+        cancel_url: `${process.env.FRONT_URL}/fr/dashboard/pricing?cancel=1`,
 
     });
 

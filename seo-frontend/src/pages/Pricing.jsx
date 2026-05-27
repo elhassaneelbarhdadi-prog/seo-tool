@@ -19,9 +19,10 @@ export default function Pricing() {
     const [userPlan, setUserPlan] = useState("FREE");
 
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
 
     /* ========================= */
-    /* 📡 LOAD PLANS + USER */
+    /* 📡 LOAD */
     /* ========================= */
     useEffect(() => {
 
@@ -55,8 +56,9 @@ export default function Pricing() {
                     }
                 }
 
-            } catch (error) {
-                console.error("LOAD ERROR:", error);
+            } catch (err) {
+                console.error("LOAD ERROR:", err);
+                if (isMounted) setError("Erreur chargement");
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -97,45 +99,31 @@ export default function Pricing() {
                 })
             });
 
+            const data = await res.json().catch(() => null);
+
             if (res.status === 401) {
                 navigate(`/${currentLang}/login`);
                 return;
             }
 
-            const data = await res.json();
-
             if (res.status === 403) {
-                if (data.redirectToPortal) {
-                    const portalRes = await fetch(`${API_URL}/api/stripe/portal`, {
-                        method: "POST",
-                        headers: {
-                            Authorization: "Bearer " + token
-                        }
-                    });
-
-                    const portalData = await portalRes.json();
-
-                    if (portalData.url) {
-                        window.location.href = portalData.url;
-                        return;
-                    }
+                if (data?.redirectToPortal) {
+                    return openPortal();
                 }
-
-                alert("Abonnement déjà actif");
+                setError("Abonnement déjà actif");
                 return;
             }
 
             if (!data?.url) {
-                console.error("STRIPE ERROR:", data);
-                alert("Erreur paiement");
+                setError("Erreur paiement");
                 return;
             }
 
             window.location.href = data.url;
 
-        } catch (error) {
-            console.error("CHECKOUT ERROR:", error);
-            alert("Erreur paiement");
+        } catch (err) {
+            console.error("CHECKOUT ERROR:", err);
+            setError("Erreur paiement");
         } finally {
             setLoadingPlan(null);
         }
@@ -163,31 +151,31 @@ export default function Pricing() {
             const data = await res.json();
 
             if (!data?.url) {
-                alert("Aucun abonnement actif");
+                setError("Aucun abonnement actif");
                 return;
             }
 
             window.location.href = data.url;
 
-        } catch (error) {
-            console.error("PORTAL ERROR:", error);
-            alert("Erreur portail");
+        } catch (err) {
+            console.error(err);
+            setError("Erreur portail");
         }
     };
 
     /* ========================= */
-    /* 💰 HELPERS */
+    /* 💰 HELPERS SAFE */
     /* ========================= */
     const getPrice = (plan) => {
-        if (!plan?.price) return 0;
+        const base = Number(plan?.price) || 0;
         return isYearly
-            ? Math.round(plan.price * 12 * 0.8)
-            : plan.price;
+            ? Math.round(base * 12 * 0.8)
+            : base;
     };
 
     const getSavings = (plan) => {
-        if (!plan?.price) return 0;
-        return Math.round(plan.price * 12 * 0.2);
+        const base = Number(plan?.price) || 0;
+        return Math.round(base * 12 * 0.2);
     };
 
     /* ========================= */
@@ -196,7 +184,7 @@ export default function Pricing() {
     if (loading) {
         return (
             <div className="p-10 text-center text-gray-500">
-                Chargement des offres...
+                ⏳ Chargement des offres...
             </div>
         );
     }
@@ -214,6 +202,10 @@ export default function Pricing() {
             <p className="text-gray-500 text-center mb-8">
                 {t("pricingSubtitle")}
             </p>
+
+            {error && (
+                <p className="text-red-500 text-center mb-6">{error}</p>
+            )}
 
             {/* TOGGLE */}
             <div className="flex justify-center items-center gap-4 mb-12">
@@ -272,14 +264,14 @@ export default function Pricing() {
                             )}
 
                             <h2 className="text-xl font-semibold mb-2">
-                                {t(`plan_${key}`)}
+                                {plan.name || key}
                             </h2>
 
                             <div className="text-4xl font-bold mb-2">
                                 {price}€
                                 {isYearly && (
                                     <div className="text-sm text-gray-400 line-through">
-                                        {plan.price * 12}€
+                                        {(plan?.price || 0) * 12}€
                                     </div>
                                 )}
                             </div>
@@ -296,7 +288,7 @@ export default function Pricing() {
                                 </li>
 
                                 {plan.features?.map((f, i) => (
-                                    <li key={i}>✓ {t(f) || f}</li>
+                                    <li key={i}>✓ {f}</li>
                                 ))}
                             </ul>
 
@@ -308,13 +300,16 @@ export default function Pricing() {
                                 {isCurrent
                                     ? "Plan actuel"
                                     : loadingPlan === key
-                                        ? "Chargement..."
-                                        : "Choisir"}
+                                        ? "⏳ Chargement..."
+                                        : key === "FREE"
+                                            ? "Gratuit"
+                                            : "Choisir"}
                             </button>
 
                         </div>
                     );
                 })}
+
             </div>
 
             {/* PORTAL */}

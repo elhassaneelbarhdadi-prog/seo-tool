@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import useApi from "../hooks/useApi";
+
+import { request, API } from "../services/api";
 
 export default function BusinessProfile() {
 
-    const api = useApi();
     const navigate = useNavigate();
-    const { lang } = useParams();
-
-    const currentLang = lang || "fr";
+    const { lang: currentLang = "fr" } = useParams();
 
     const [form, setForm] = useState({
         name: "",
@@ -19,18 +17,11 @@ export default function BusinessProfile() {
 
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
 
     /* ========================= */
-    /* SAFE GUARD */
+    /* INPUT */
     /* ========================= */
-    if (!api) {
-        return (
-            <div style={{ padding: 40 }}>
-                ⚠️ API non disponible
-            </div>
-        );
-    }
-
     const handleChange = (e) => {
         setForm(prev => ({
             ...prev,
@@ -39,13 +30,31 @@ export default function BusinessProfile() {
     };
 
     /* ========================= */
+    /* VALIDATION */
+    /* ========================= */
+    const isValid = () => {
+        return (
+            form.name.trim() &&
+            form.keyword.trim() &&
+            form.city.trim()
+        );
+    };
+
+    /* ========================= */
+    /* NAV */
+    /* ========================= */
+    const goAnnuaire = () =>
+        navigate(`/${currentLang}/dashboard/annuaire`);
+
+    /* ========================= */
     /* SUBMIT */
     /* ========================= */
     const handleSubmit = async () => {
 
         setError("");
+        setSuccess("");
 
-        if (!form.name || !form.keyword || !form.city) {
+        if (!isValid()) {
             setError("Veuillez remplir tous les champs");
             return;
         }
@@ -54,43 +63,51 @@ export default function BusinessProfile() {
 
         try {
 
-            const res = await api.post("/business-profile", form);
+            const data = await request("/business-profile", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    keyword: form.keyword.trim(),
+                    city: form.city.trim(),
+                    description: form.description.trim()
+                })
+            });
 
-            // 🔥 CAS : déjà existant
-            if (res?.alreadyExists) {
-                alert("Tu as déjà un profil 👀");
-                navigate(`/${currentLang}/dashboard/annuaire`);
+            /* ========================= */
+            /* CAS EXIST */
+            /* ========================= */
+            if (data?.alreadyExists) {
+                setError("⚠️ Vous avez déjà un profil");
+                setTimeout(goAnnuaire, 1500);
                 return;
             }
 
-            // 🔥 sécurité API
-            if (!res || res.error) {
-                throw new Error(res?.error || "API ERROR");
-            }
+            /* ========================= */
+            /* SUCCESS */
+            /* ========================= */
+            setSuccess("✅ Profil créé avec succès");
 
-            alert("Profil créé avec succès 🚀");
-
-            navigate(`/${currentLang}/dashboard/annuaire`);
+            setTimeout(goAnnuaire, 1200);
 
         } catch (err) {
 
             console.error("CREATE PROFILE ERROR:", err);
 
-            // 🔥 CAS : FREE → upgrade
             if (
-                err?.status === 403 ||
-                err?.message?.includes("upgradeRequired")
+                err?.message?.includes("upgrade") ||
+                err?.status === 403
             ) {
-                navigate(`/${currentLang}/pricing`);
+                navigate(`/${currentLang}/dashboard/pricing`);
                 return;
             }
 
-            setError("Erreur serveur ou API indisponible");
+            setError(err.message || "❌ Erreur serveur");
 
         } finally {
             setLoading(false);
         }
     };
+
     /* ========================= */
     /* UI */
     /* ========================= */
@@ -98,13 +115,36 @@ export default function BusinessProfile() {
 
         <div className="max-w-3xl mx-auto p-6">
 
-            <h1 className="text-3xl font-bold mb-4">
-                🚀 Ajouter mon entreprise
-            </h1>
+            <div className="text-center mb-10">
+
+                <h1 className="
+        text-4xl
+        font-black
+        mb-3
+    ">
+                    🚀 Référencez votre entreprise
+                    dans l’annuaire SEO
+                </h1>
+
+                <p className="
+        text-gray-500
+        text-lg
+    ">
+                    Apparaissez dans notre annuaire SEO
+                    et gagnez en visibilité sur Google.
+                </p>
+
+            </div>
 
             {error && (
                 <div className="bg-red-100 text-red-600 p-3 rounded mb-4">
                     {error}
+                </div>
+            )}
+
+            {success && (
+                <div className="bg-green-100 text-green-600 p-3 rounded mb-4">
+                    {success}
                 </div>
             )}
 
@@ -141,9 +181,11 @@ export default function BusinessProfile() {
                     onChange={handleChange}
                     className="w-full border p-3 rounded"
                 />
-                <div className="bg-yellow-100 p-3 rounded mb-4 text-sm text-center">
+
+                <div className="bg-yellow-100 p-3 rounded text-sm text-center">
                     🔒 Réservé aux utilisateurs PRO pour apparaître dans l'annuaire
                 </div>
+
                 <button
                     onClick={handleSubmit}
                     disabled={loading}

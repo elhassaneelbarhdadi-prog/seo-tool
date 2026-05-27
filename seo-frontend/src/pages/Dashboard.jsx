@@ -1,217 +1,812 @@
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
-import useApi from "../hooks/useApi";
+
+import {
+    ResponsiveContainer,
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip
+} from "recharts";
+
+import { formatNumber } from "../utils/format";
+import { request } from "../services/api";
 import UsageBar from "../components/UsageBar";
 
 export default function Dashboard() {
 
-    const navigate = useNavigate();
+    console.log("🔥 DASHBOARD LOADED");
+
     const { lang } = useParams();
+
     const { t, i18n } = useTranslation();
 
-    const currentLang = lang || "fr";
     const isDev = import.meta.env.DEV;
 
-    const api = useApi();
-
-    const [plans, setPlans] = useState({});
     const [usage, setUsage] = useState(null);
+
+    const [history, setHistory] = useState([]);
+
     const [loading, setLoading] = useState(true);
 
     /* ========================= */
     /* 🌍 SYNC LANG */
     /* ========================= */
+
     useEffect(() => {
-        if (lang && !i18n.language.startsWith(lang)) {
+
+        if (
+            lang &&
+            !i18n.language.startsWith(lang)
+        ) {
+
             i18n.changeLanguage(lang);
-            localStorage.setItem("lang", lang);
+
+            localStorage.setItem(
+                "lang",
+                lang
+            );
+
         }
+
     }, [lang, i18n]);
 
     /* ========================= */
-    /* 🔄 CHANGE LANG */
+    /* 📡 LOAD USAGE */
     /* ========================= */
-    const changeLang = (newLang) => {
-        localStorage.setItem("lang", newLang);
-        navigate(`/${newLang}/dashboard`);
-    };
 
-    /* ========================= */
-    /* 📡 LOAD USAGE (FIX CLEAN) */
-    /* ========================= */
     const loadUsage = useCallback(async () => {
+
         try {
-            const data = await api.get("/keyword/usage");
 
-            if (!data) return;
+            const data =
+                await request(
+                    "/keyword/usage"
+                );
 
-            setUsage({
-                used: data.used || 0,
-                limit: data.limit ?? Infinity,
-                plan: data.plan || "FREE"
-            });
+            console.log(
+                "🔥 RESPONSE COMPLETE:",
+                data
+            );
 
-        } catch (err) {
-            console.error("USAGE ERROR:", err);
+            const formatted = {
 
-            // fallback safe
-            setUsage({
-                used: 0,
-                limit: 5,
-                plan: "FREE"
-            });
+                used:
+                    Number(
+                        data?.used ?? 0
+                    ),
+
+                limit:
+                    data?.limit === null
+                        ? null
+                        : Number(
+                            data?.limit ?? 5
+                        ),
+
+                plan:
+                    String(
+                        data?.plan ||
+                        "FREE"
+                    )
+
+            };
+
+            console.log(
+                "🔥 USAGE:",
+                formatted
+            );
+
+            setUsage(
+                formatted
+            );
+
+            return formatted;
+
         }
-    }, [api]);
+
+        catch (error) {
+
+            console.error(
+                "USAGE ERROR:",
+                error
+            );
+
+            const fallback = {
+
+                used: 0,
+
+                limit: 5,
+
+                plan: "FREE"
+
+            };
+
+            setUsage(
+                fallback
+            );
+
+            return fallback;
+
+        }
+
+    }, []);
 
     /* ========================= */
-    /* 🔥 RESET USAGE */
+    /* 🔥 RESET DEV */
     /* ========================= */
+
     const resetUsage = async () => {
+
         try {
-            const token = localStorage.getItem("token");
 
-            const res = await fetch("http://localhost:3001/api/dev/reset-usage", {
-                method: "POST",
-                headers: {
-                    Authorization: "Bearer " + token
+            await request(
+                "/dev/reset-usage",
+                {
+                    method: "POST"
                 }
-            });
-
-            if (!res.ok) throw new Error("Reset failed");
+            );
 
             await loadUsage();
 
-            alert("✅ Usage reset");
-
-        } catch (err) {
-            console.error(err);
-            alert("Erreur reset");
         }
+
+        catch (err) {
+
+            console.error(
+                "RESET ERROR:",
+                err
+            );
+
+        }
+
     };
 
     /* ========================= */
     /* 📡 LOAD DATA */
     /* ========================= */
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                setLoading(true);
 
-                const plansRes = await fetch("http://localhost:3001/api/plans");
-                const plansData = await plansRes.json();
-                setPlans(plansData);
+    useEffect(() => {
+
+        let mounted = true;
+
+        const loadData = async () => {
+
+            try {
+
+                setLoading(true);
 
                 await loadUsage();
 
-            } catch (error) {
-                console.error("DASHBOARD ERROR:", error);
-            } finally {
-                setLoading(false);
+                const historyData =
+                    await request(
+                        "/keyword/history"
+                    );
+
+                if (!mounted) {
+                    return;
+                }
+
+                setHistory(
+
+                    Array.isArray(historyData)
+
+                        ? historyData
+
+                        : historyData?.data || []
+
+                );
+
             }
+
+            catch (err) {
+
+                console.error(
+                    "DASHBOARD:",
+                    err
+                );
+
+            }
+
+            finally {
+
+                if (mounted) {
+
+                    setLoading(false);
+
+                }
+
+            }
+
         };
 
         loadData();
-    }, [currentLang, loadUsage]);
+
+        return () => {
+
+            mounted = false;
+
+        };
+
+    }, [loadUsage]);
 
     /* ========================= */
     /* ⏳ LOADING */
     /* ========================= */
+
     if (loading) {
+
         return (
-            <div className="p-6 text-center text-gray-500">
+            <div className="p-10 text-center text-gray-500">
                 {t("loading")}
             </div>
         );
+
     }
 
     /* ========================= */
     /* 📊 DATA */
     /* ========================= */
-    const currentPlan = usage?.plan || "FREE";
-    const used = usage?.used || 0;
-    const limit = usage?.limit ?? 5;
 
-    const isUnlimited = limit === Infinity;
-    const isLimitReached = !isUnlimited && used >= limit;
+    const currentPlan =
+        (usage?.plan || "FREE")
+            .toUpperCase();
+
+    const used =
+        Number(
+            usage?.used ?? 0
+        );
+
+    const limit =
+        usage?.limit === null
+            ? Infinity
+            : Number(
+                usage?.limit ?? 5
+            );
+
+    const isUnlimited =
+        !Number.isFinite(limit);
+
+    console.log(
+        "🔥 FINAL USAGE:",
+        {
+            used,
+            limit
+        }
+    );
+
+    const latest =
+        history[0] || {};
+
+    const score =
+        Number(latest?.score || 0);
+
+    const volume =
+        Number(latest?.volume || 0);
+
+    const cpc =
+        Number(latest?.cpc || 0);
 
     /* ========================= */
-    /* 🎨 UI */
+    /* 📈 TREND DATA */
     /* ========================= */
+
+    /* ========================= */
+    /* 📈 TREND DATA */
+    /* ========================= */
+
+    let parsedTrend = [];
+
+    try {
+
+        if (latest?.trend) {
+
+            parsedTrend =
+                typeof latest.trend === "string"
+                    ? JSON.parse(latest.trend)
+                    : latest.trend;
+
+        }
+
+    } catch {
+
+        parsedTrend = [];
+
+    }
+
+    /* 🔥 sécurisation */
+    parsedTrend = Array.isArray(parsedTrend)
+        ? parsedTrend
+            .map(v => Number(v || 0))
+            .filter(v => v > 0)
+        : [];
+
+    /* 🔥 fallback intelligent */
+    if (parsedTrend.length === 0 && volume > 0) {
+
+        parsedTrend = Array.from(
+            { length: 6 },
+            (_, i) => {
+
+                const variation =
+                    Math.sin(i / 1.5) * 180;
+
+                return Math.round(
+                    volume + variation
+                );
+
+            }
+        );
+
+    }
+
+    /* 🔥 génération vrais mois */
+    const trendData = parsedTrend.map(
+        (value, index) => {
+
+            const date = new Date();
+
+            date.setMonth(
+                date.getMonth() -
+                (parsedTrend.length - 1 - index)
+            );
+
+            return {
+
+                month: date.toLocaleString(
+                    "fr-FR",
+                    {
+                        month: "short"
+                    }
+                ),
+
+                value: Number(value || 0)
+
+            };
+
+        }
+    );
+
+
+
+
+    /* ========================= */
+    /* 📏 Y AXIS */
+    /* ========================= */
+
+    const values =
+        trendData.map(
+            i => i.value
+        );
+
+    const minValue =
+        values.length
+            ? Math.min(...values)
+            : 0;
+
+    const maxValue =
+        values.length
+            ? Math.max(...values)
+            : 100;
+
+    const padding =
+        Math.max(
+            (maxValue - minValue) * 0.15,
+            50
+        );
+
+    const yMin =
+        Math.max(
+            0,
+            minValue - padding
+        );
+
+    const yMax =
+        maxValue + padding;
+
     return (
-        <div className="max-w-5xl mx-auto p-6">
 
-            {/* 🌍 LANG */}
-            <div className="flex justify-end mb-4">
-                <select
-                    onChange={(e) => changeLang(e.target.value)}
-                    value={currentLang}
-                    className="border px-2 py-1 rounded"
-                >
-                    <option value="fr">🇫🇷 FR</option>
-                    <option value="en">🇬🇧 EN</option>
-                    <option value="es">🇪🇸 ES</option>
-                    <option value="de">🇩🇪 DE</option>
-                </select>
-            </div>
+        <div className="
+            p-4
+            lg:p-6
+            space-y-5
+            overflow-x-hidden
+            w-full
+        ">
 
-            <h1 className="text-3xl font-bold mb-6">
-                {t("dashboard")}
-            </h1>
+            {/* HERO */}
 
-            <div className="bg-white shadow rounded-xl p-6 mb-6">
+            <div className="
+                relative
+                overflow-hidden
+                bg-gradient-to-r
+                from-indigo-600
+                via-purple-600
+                to-fuchsia-600
+                rounded-2xl
+                px-4
+                py-5
+                lg:px-6
+                lg:py-6
+                text-white
+                shadow-lg
+            ">
 
-                <h2 className="font-bold text-lg mb-2">
-                    {t("currentPlan")} : {t(`plan_${currentPlan}`)}
-                </h2>
+                <div className="
+                    absolute
+                    top-0
+                    right-0
+                    w-52
+                    h-52
+                    bg-white/10
+                    rounded-full
+                    blur-3xl
+                " />
 
-                <p className="text-gray-600 mb-4">
-                    {used} / {isUnlimited ? "∞" : limit} recherches utilisées
-                </p>
+                <div className="
+                    relative
+                    z-10
+                    flex
+                    flex-col
+                    gap-6
+                ">
 
-                <UsageBar used={used} limit={limit} />
+                    <div className="max-w-2xl">
 
-                {isLimitReached && (
-                    <div className="mt-3 text-red-600 text-sm font-semibold">
-                        🚫 Limite atteinte — passe au plan supérieur
+                        <div className="
+                            inline-flex
+                            items-center
+                            gap-2
+                            px-3
+                            py-1.5
+                            rounded-full
+                            bg-white/10
+                            border
+                            border-white/20
+                            text-xs
+                            mb-4
+                        ">
+                            🚀 Dashboard SEO intelligent
+                        </div>
+
+                        <h1 className="
+                            text-3xl
+                            sm:text-4xl
+                            lg:text-5xl
+                            font-black
+                            leading-tight
+                            tracking-tight
+                            max-w-[620px]
+                        ">
+                            Analysez vos mots-clés
+                            et trouvez des niches
+                            rentables
+                        </h1>
+
                     </div>
-                )}
 
-                {isLimitReached && (
-                    <button
-                        onClick={() => navigate(`/${currentLang}/dashboard/pricing`)}
-                        className="mt-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded"
-                    >
-                        🚀 Upgrade maintenant
-                    </button>
-                )}
-
-                <ul className="space-y-2 text-sm text-gray-700 mt-4">
-                    {plans[currentPlan]?.features?.map((f) => (
-                        <li key={f} className="flex items-center gap-2">
-                            <span className="text-green-600">✓</span>
-                            {t(f)}
-                        </li>
-                    ))}
-                </ul>
+                </div>
 
             </div>
 
-            {isDev && (
-                <button
-                    onClick={resetUsage}
-                    className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
-                >
-                    🔄 Reset usage (DEV)
-                </button>
-            )}
+            {/* KPI */}
 
-            {!usage && (
-                <p className="text-red-500 text-sm mt-4">
-                    ⚠️ {t("serverError")}
-                </p>
-            )}
+            <div className="
+                grid
+                grid-cols-2
+                xl:grid-cols-4
+                gap-4
+            ">
+
+                {[
+                    {
+                        title: "Score SEO",
+                        value: score,
+                        color: "text-orange-500",
+                        bg: "bg-orange-100",
+                        icon: "🚀"
+                    },
+                    {
+                        title: "Volume SEO",
+                        value: formatNumber(volume),
+                        color: "",
+                        bg: "bg-indigo-100",
+                        icon: "📈"
+                    },
+                    {
+                        title: "CPC moyen",
+                        value: `${cpc.toFixed(2)}€`,
+                        color: "",
+                        bg: "bg-green-100",
+                        icon: "💸"
+                    },
+                    {
+                        title: "Utilisation",
+                        value: `${used}/${isUnlimited ? "∞" : limit}`,
+                        subtitle: "recherches",
+                        color: "",
+                        bg: "bg-purple-100",
+                        icon: "👑"
+                    }
+                ].map((card, index) => (
+
+                    <div
+                        key={index}
+                        className="
+                            bg-white
+                            rounded-2xl
+                            p-4
+                            shadow-sm
+                            overflow-hidden
+                        "
+                    >
+
+                        <p className="
+                            text-gray-400
+                            text-xs
+                            mb-3
+                        ">
+                            {card.title}
+                        </p>
+
+                        <div className="
+                            flex
+                            items-center
+                            justify-between
+                            gap-3
+                        ">
+
+                            <div>
+
+                                <h2 className={`
+                                    text-2xl
+                                    lg:text-4xl
+                                    font-black
+                                    truncate
+                                    ${card.color}
+                                `}>
+                                    {card.value}
+                                </h2>
+
+                                {card.subtitle && (
+                                    <p className="
+                                        text-xs
+                                        text-gray-400
+                                        mt-1
+                                    ">
+                                        {card.subtitle}
+                                    </p>
+                                )}
+
+                            </div>
+
+                            <div className={`
+                                w-12
+                                h-12
+                                rounded-xl
+                                flex
+                                items-center
+                                justify-center
+                                text-xl
+                                shrink-0
+                                ${card.bg}
+                            `}>
+                                {card.icon}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                ))}
+
+            </div>
+
+            {/* CHART */}
+
+            <div className="w-full">
+
+                <div className="
+                    bg-white
+                    rounded-2xl
+                    p-4
+                    lg:p-5
+                    shadow-sm
+                    overflow-hidden
+                    min-w-0
+                ">
+
+                    <h2 className="
+                        text-2xl
+                        lg:text-3xl
+                        font-black
+                        mb-1
+                    ">
+                        📈 Potentiel SEO
+                    </h2>
+
+                    <p className="
+                        text-gray-400
+                        text-sm
+                        lg:text-base
+                        mb-4
+                    ">
+                        Historique SEO sur 12 mois
+                    </p>
+
+                    {trendData.length > 0 ? (
+
+                        <div className="
+                            h-[320px]
+                            min-w-0
+                            w-full
+                        ">
+
+                            <ResponsiveContainer
+                                width="100%"
+                                height={300}
+                                minWidth={0}
+                            >
+
+                                <AreaChart data={trendData}>
+
+                                    <defs>
+
+                                        <linearGradient
+                                            id="colorSeo"
+                                            x1="0"
+                                            y1="0"
+                                            x2="0"
+                                            y2="1"
+                                        >
+
+                                            <stop
+                                                offset="0%"
+                                                stopColor="#22c55e"
+                                                stopOpacity={0.25}
+                                            />
+
+                                            <stop
+                                                offset="100%"
+                                                stopColor="#22c55e"
+                                                stopOpacity={0}
+                                            />
+
+                                        </linearGradient>
+
+                                    </defs>
+
+                                    <CartesianGrid
+                                        strokeDasharray="3 3"
+                                        vertical={false}
+                                        stroke="#f1f5f9"
+                                    />
+
+                                    <XAxis
+                                        dataKey="month"
+                                        tick={{ fontSize: 11 }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+
+                                    <YAxis
+                                        domain={[yMin, yMax]}
+                                        tick={{ fontSize: 11 }}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(v) =>
+                                            formatNumber(v)
+                                        }
+                                    />
+
+                                    <Tooltip
+                                        formatter={(v) =>
+                                            `${formatNumber(v)} recherches`
+                                        }
+                                    />
+
+                                    <Area
+                                        type="monotone"
+                                        dataKey="value"
+                                        stroke="#22c55e"
+                                        strokeWidth={3}
+                                        fill="url(#colorSeo)"
+                                    />
+
+                                </AreaChart>
+
+                            </ResponsiveContainer>
+
+                        </div>
+
+                    ) : (
+
+                        <div className="
+                            h-[260px]
+                            lg:h-[320px]
+                            flex
+                            items-center
+                            justify-center
+                            text-gray-400
+                            text-sm
+                            border
+                            border-dashed
+                            border-gray-200
+                            rounded-xl
+                        ">
+                            Aucune donnée SEO disponible
+                        </div>
+
+                    )}
+
+                </div>
+
+            </div>
+
+            {/* USAGE */}
+
+            <div className="
+                bg-white
+                rounded-2xl
+                shadow-sm
+                p-5
+            ">
+
+                <div className="
+                    flex
+                    flex-col
+                    lg:flex-row
+                    lg:items-center
+                    justify-between
+                    gap-4
+                    mb-5
+                ">
+
+                    <div>
+
+                        <h2 className="
+                            text-xl
+                            font-bold
+                        ">
+                            {t("currentPlan")} :
+                            {" "}
+                            {t(`plan_${currentPlan}`)}
+                        </h2>
+
+                        <p className="
+                            text-gray-500
+                            mt-1
+                            text-sm
+                        ">
+                            {used}
+                            {" / "}
+                            {isUnlimited ? "∞" : limit}
+                            {" recherches utilisées"}
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <UsageBar
+                    used={Number(used)}
+                    limit={
+                        isUnlimited
+                            ? Infinity
+                            : Number(limit)
+                    }
+                />
+
+            </div>
+
+            {/* DEV */}
+
+
 
         </div>
+
     );
+
 }

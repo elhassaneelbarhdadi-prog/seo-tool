@@ -2,21 +2,19 @@ import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { useEffect, useState, useMemo } from "react";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+
 /* ========================= */
 /* 🔥 CLEAN KEYWORD */
 /* ========================= */
-const cleanKeywordFn = (str = "") => {
-    let value = str
+const cleanKeyword = (str = "") => {
+    return str
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
-        .trim();
-
-    while (/^(a|à|de|d'|du|des)\s+/i.test(value)) {
-        value = value.replace(/^(a|à|de|d'|du|des)\s+/i, "").trim();
-    }
-
-    return value.replace(/\s+/g, " ");
+        .replace(/^(a|à|de|d'|du|des)\s+/i, "")
+        .trim()
+        .replace(/\s+/g, " ");
 };
 
 /* ========================= */
@@ -31,12 +29,10 @@ export default function AnnuairePage() {
 
     const [profiles, setProfiles] = useState([]);
     const [seoPage, setSeoPage] = useState(null);
-    const [loadingProfiles, setLoadingProfiles] = useState(true);
-    const [loadingSeo, setLoadingSeo] = useState(true);
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
     /* ========================= */
-    /* 🔐 PARSE SLUG */
+    /* 🔐 PARSE SLUG (ROBUSTE) */
     /* ========================= */
     const { keyword, city } = useMemo(() => {
 
@@ -44,12 +40,11 @@ export default function AnnuairePage() {
 
         const parts = slug.split("-").filter(Boolean);
 
-        const cityRaw = parts.pop();
-        const rawKeyword = parts.join(" ");
+        if (parts.length < 2) return { keyword: "", city: "" };
 
         return {
-            keyword: cleanKeywordFn(rawKeyword),
-            city: cityRaw?.toLowerCase() || ""
+            keyword: cleanKeyword(parts.slice(0, -1).join(" ")),
+            city: parts.slice(-1).join("-")
         };
 
     }, [slug]);
@@ -60,7 +55,7 @@ export default function AnnuairePage() {
     const cityLabel = capitalize(city);
 
     /* ========================= */
-    /* 🔥 LOAD SEO (SOURCE UNIQUE) */
+    /* 🔥 LOAD DATA (PARALLÈLE) */
     /* ========================= */
     useEffect(() => {
 
@@ -68,101 +63,55 @@ export default function AnnuairePage() {
 
         let cancelled = false;
 
-        const loadSeo = async () => {
+        const load = async () => {
             try {
-                const res = await fetch(
-                    `http://localhost:3001/api/seo-page?slug=${slug}`
-                );
-
-                const data = await res.json();
-
-                if (!cancelled) {
-                    setSeoPage(data);
-                    setLoadingSeo(false);
-                }
-
-            } catch {
-                if (!cancelled) {
-                    setSeoPage(null);
-                    setLoadingSeo(false);
-                }
-            }
-        };
-
-        loadSeo();
-
-        return () => {
-            cancelled = true;
-        };
-
-    }, [slug, isInvalid]);
-
-    /* ========================= */
-    /* 🔥 LOAD PROFILES */
-    /* ========================= */
-    useEffect(() => {
-
-        if (isInvalid) return;
-
-        let cancelled = false;
-
-        const loadProfiles = async () => {
-            try {
-                setLoadingProfiles(true);
+                setLoading(true);
                 setError("");
 
-                const res = await fetch(
-                    "http://localhost:3001/api/business-profile"
-                );
+                const [seoRes, profilesRes] = await Promise.all([
+                    fetch(`${API_URL}/seo-page?slug=${slug}`),
+                    fetch(`${API_URL}/business-profile`)
+                ]);
 
-                if (!res.ok) throw new Error("API error");
+                const seoData = await seoRes.json();
+                const profilesData = await profilesRes.json();
 
-                const data = await res.json();
+                if (cancelled) return;
 
-                if (!cancelled) {
-                    if (Array.isArray(data?.profiles)) {
+                setSeoPage(seoData);
 
-                        const filtered = data.profiles.filter(p => {
+                if (Array.isArray(profilesData?.profiles)) {
 
-                            const k = cleanKeywordFn(p?.keyword || "");
-                            const c = (p?.city || "").toLowerCase();
+                    const filtered = profilesData.profiles.filter(p => {
 
-                            return (
-                                (k.includes(keyword) || keyword.includes(k)) &&
-                                c.includes(city)
-                            );
-                        });
+                        const k = cleanKeyword(p?.keyword || "");
+                        const c = (p?.city || "").toLowerCase();
 
-                        setProfiles(filtered);
+                        return (
+                            (k.includes(keyword) || keyword.includes(k)) &&
+                            c.includes(city)
+                        );
+                    });
 
-                    } else {
-                        setProfiles([]);
-                    }
-
-                    setLoadingProfiles(false);
+                    setProfiles(filtered);
+                } else {
+                    setProfiles([]);
                 }
 
             } catch (err) {
                 console.error(err);
-
-                if (!cancelled) {
-                    setError("Impossible de charger les professionnels");
-                    setLoadingProfiles(false);
-                }
+                if (!cancelled) setError("Erreur de chargement");
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         };
 
-        loadProfiles();
+        load();
 
-        return () => {
-            cancelled = true;
-        };
+        return () => { cancelled = true };
 
-    }, [keyword, city, isInvalid]);
+    }, [slug, keyword, city, isInvalid]);
 
-    /* ========================= */
-    /* ❌ INVALID */
-    /* ========================= */
     if (isInvalid) {
         return <div className="p-10 text-center">❌ Page invalide</div>;
     }
@@ -183,49 +132,93 @@ export default function AnnuairePage() {
                 <title>{title}</title>
                 <meta name="description" content={description} />
             </Helmet>
+            {error && (
+                <div className="
+        bg-red-50
+        border
+        border-red-200
+        text-red-600
+        p-4
+        rounded-xl
+        mb-6
+    ">
+                    {error}
+                </div>
+            )}
+            <div className="text-center mb-10">
 
-            {/* H1 */}
-            <h1 className="text-3xl font-bold mb-4">
-                🔍 {keywordLabel} à {cityLabel}
-            </h1>
+                <h1 className="
+        text-4xl
+        lg:text-5xl
+        font-black
+        mb-4
+    ">
+                    📁 Annuaire SEO des entreprises
+                </h1>
+
+                <p className="
+        text-gray-500
+        text-lg
+        max-w-3xl
+        mx-auto
+        mb-6
+    ">
+                    Découvrez les meilleurs
+                    {` ${keywordLabel} `}
+                    à
+                    {` ${cityLabel} `}
+                    référencés dans notre annuaire SEO professionnel.
+                </p>
+
+            </div>
 
             {/* ========================= */}
-            {/* 🔥 SEO CONTENT (BACKEND ONLY) */}
+            {/* 🔥 SEO CONTENT */}
             {/* ========================= */}
-            {loadingSeo ? (
-                <p className="text-gray-500 mb-6">Chargement du contenu...</p>
+            {loading ? (
+                <p className="text-gray-500 mb-6">Chargement...</p>
             ) : seoPage?.content ? (
                 <div
                     className="text-gray-700 mb-6 space-y-4"
-                    dangerouslySetInnerHTML={{ __html: seoPage.content }}
+                    dangerouslySetInnerHTML={{
+                        __html: seoPage.content.replace(/<script.*?>.*?<\/script>/gi, "")
+                    }}
                 />
             ) : (
-                <p className="text-red-500 mb-6">
-                    Contenu SEO indisponible
-                </p>
+                <p className="text-red-500 mb-6">Contenu SEO indisponible</p>
             )}
 
             {/* ========================= */}
-            {/* 🔥 SEO DATA (SOURCE UNIQUE) */}
+            {/* 🔥 SEO DATA */}
             {/* ========================= */}
             {seoPage && (
-                <div className="bg-green-50 p-4 rounded-xl mb-6">
-                    💰 Potentiel estimé :{" "}
-                    <strong>{seoPage.revenue}€ / mois</strong>
-                    <br />
-                    ⚔️ Concurrence :{" "}
-                    <strong>{seoPage.competition}</strong>
+                <div className="bg-green-50 p-4 rounded-xl mb-6 space-y-2">
+
+                    <p>
+                        💰 Potentiel estimé :{" "}
+                        <strong>
+                            {seoPage.revenue
+                                ? `${seoPage.revenue.toLocaleString()}€ / mois`
+                                : "Non estimé"}
+                        </strong>
+                    </p>
+
+                    <p>
+                        ⚔️ Concurrence :{" "}
+                        <strong>
+                            {seoPage.competition
+                                ? `${seoPage.competition}/100`
+                                : "Non disponible"}
+                        </strong>
+                    </p>
+
                 </div>
             )}
 
             {/* ========================= */}
             {/* LISTING */}
             {/* ========================= */}
-            {loadingProfiles && <p>Chargement...</p>}
-
-            {error && <p className="text-red-500">{error}</p>}
-
-            {!loadingProfiles && profiles.length === 0 && (
+            {!loading && profiles.length === 0 && (
                 <div className="bg-gray-100 p-4 rounded-xl mb-8 text-center">
                     Aucun professionnel trouvé pour {keywordLabel} à {cityLabel}
                 </div>
@@ -259,9 +252,7 @@ export default function AnnuairePage() {
                 </div>
             )}
 
-            {/* ========================= */}
             {/* CTA */}
-            {/* ========================= */}
             <div className="bg-indigo-50 p-6 rounded-xl mb-10">
                 <p className="font-semibold mb-2">
                     🚀 Recevez des clients en SEO

@@ -1,214 +1,385 @@
 import express from "express";
 import Stripe from "stripe";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import db from "../config/database.js";
-import { PLANS } from "../config/plans.js";
-import "../config/env.js"; // 🔥 PREMIER IMPORT
-const router = express.Router();
+
+import { authMiddleware }
+    from "../middleware/auth.middleware.js";
+
+import db
+    from "../config/database.js";
+
+import { PLANS }
+    from "../config/plans.js";
+
+import "../config/env.js";
+
+const router =
+    express.Router();
 
 /* ========================= */
-/* 🔥 STRIPE INIT */
+/* STRIPE */
 /* ========================= */
 
-if (!process.env.STRIPE_SECRET_KEY) {
-    console.error("❌ STRIPE_SECRET_KEY manquant");
+if (
+    !process.env.STRIPE_SECRET_KEY
+) {
+
+    throw new Error(
+        "STRIPE_SECRET_KEY missing"
+    );
+
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const stripe =
+    new Stripe(
+        process.env.STRIPE_SECRET_KEY
+    );
+
+const FRONT_URL =
+
+    process.env.FRONT_URL
+    ||
+    "http://localhost:5173";
 
 /* ========================= */
-/* 💳 CHECKOUT */
+/* CHECKOUT */
 /* ========================= */
 
-router.post("/checkout", authMiddleware, async (req, res) => {
-    try {
-        const userId = req.user?.id;
-        let { plan, isYearly } = req.body;
+router.post(
 
-        console.log("👉 BODY:", req.body);
-        console.log("👉 USER:", req.user);
+    "/checkout",
 
-        /* ========================= */
-        /* 🔒 VALIDATION */
-        /* ========================= */
+    authMiddleware,
 
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
+    async (
+        req,
+        res
+    ) => {
 
-        if (!plan) {
-            return res.status(400).json({ error: "Plan manquant" });
-        }
+        try {
 
-        plan = plan.toUpperCase();
+            const userId =
+                req.user.id;
 
-        const selectedPlan = PLANS[plan];
+            let {
 
-        if (!selectedPlan) {
-            return res.status(400).json({ error: "Plan invalide" });
-        }
+                plan,
 
-        const priceId = isYearly
-            ? selectedPlan.yearlyPriceId
-            : selectedPlan.monthlyPriceId;
+                isYearly = false
 
-        if (!priceId) {
-            return res.status(400).json({ error: "price_id manquant" });
-        }
+            } = req.body;
 
-        console.log("👉 PLAN:", plan);
-        console.log("👉 PRICE ID:", priceId);
+            if (
+                !plan
+            ) {
 
-        /* ========================= */
-        /* 👤 USER */
-        /* ========================= */
+                return res
+                    .status(400)
+                    .json({
 
-        const user = await db.get(
-            "SELECT email, stripe_customer_id FROM users WHERE id = ?",
-            [userId]
-        );
+                        success: false,
 
-        if (!user?.email) {
-            return res.status(400).json({ error: "User email manquant" });
-        }
+                        error:
+                            "Missing plan"
 
-        let customerId = user.stripe_customer_id;
+                    });
 
-        /* ========================= */
-        /* 🆕 CREATE CUSTOMER */
-        /* ========================= */
+            }
 
-        if (!customerId) {
-            const customer = await stripe.customers.create({
-                email: user.email
-            });
+            /* string -> bool safe */
 
-            customerId = customer.id;
+            if (
+                typeof isYearly
+                === "string"
+            ) {
 
-            await db.run(
-                "UPDATE users SET stripe_customer_id = ? WHERE id = ?",
-                [customerId, userId]
-            );
+                isYearly =
+                    isYearly === "true";
 
-            console.log("🆕 CUSTOMER CREATED:", customerId);
-        }
+            }
 
-        /* ========================= */
-        /* 🔍 CHECK SUB */
-        /* ========================= */
+            plan =
+                String(
+                    plan
+                )
+                    .toUpperCase();
 
-        const subs = await stripe.subscriptions.list({
-            customer: customerId,
-            status: "active",
-            limit: 1
-        });
+            const selectedPlan =
+                PLANS[
+                plan
+                ];
 
-        /* ========================= */
-        /* 🔁 UPGRADE / DOWNGRADE */
-        /* ========================= */
+            if (
+                !selectedPlan
+            ) {
 
-        if (subs.data.length > 0) {
+                return res
+                    .status(400)
+                    .json({
 
-            const subscription = subs.data[0];
-            const itemId = subscription.items.data[0].id;
+                        success: false,
 
-            await stripe.subscriptions.update(subscription.id, {
-                items: [{
-                    id: itemId,
-                    price: priceId
-                }],
-                proration_behavior: "create_prorations"
-            });
+                        error:
+                            "Invalid plan"
 
-            await db.run(
-                "UPDATE users SET plan = ? WHERE id = ?",
-                [plan, userId]
-            );
+                    });
 
-            console.log("🔁 PLAN UPDATED:", userId, plan);
+            }
+
+            const priceId =
+
+                isYearly
+
+                    ?
+
+                    selectedPlan.yearlyPriceId
+
+                    :
+
+                    selectedPlan.monthlyPriceId;
+
+            if (
+                !priceId
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        success: false,
+
+                        error:
+                            "Missing Stripe price"
+
+                    });
+
+            }
+
+            const user =
+
+                await db.get(
+
+                    `
+
+SELECT
+
+email,
+
+stripe_customer_id,
+
+subscription_status
+
+FROM users
+
+WHERE id=?
+
+LIMIT 1
+
+`,
+
+                    [userId]
+
+                );
+
+            if (
+                !user
+            ) {
+
+                return res
+                    .status(404)
+                    .json({
+
+                        success: false,
+
+                        error:
+                            "User not found"
+
+                    });
+
+            }
+
+            if (
+                user.subscription_status
+                === "active"
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        success: false,
+
+                        error:
+                            "Already subscribed"
+
+                    });
+
+            }
+
+            let customerId =
+                user.stripe_customer_id;
+
+            /* ========================= */
+            /* CUSTOMER */
+            /* ========================= */
+
+            if (
+                !customerId
+            ) {
+
+                const customer =
+
+                    await stripe
+                        .customers
+                        .create({
+
+                            email:
+                                user.email
+
+                        });
+
+                customerId =
+                    customer.id;
+
+                await db.run(
+
+                    `
+
+UPDATE users
+
+SET stripe_customer_id=?
+
+WHERE id=?
+
+`,
+
+                    [
+
+                        customerId,
+
+                        userId
+
+                    ]
+
+                );
+
+            }
+
+            /* ========================= */
+            /* SESSION */
+            /* ========================= */
+            console.log("🔥 FRONT_URL:", FRONT_URL);
+            console.log("🔥 PLAN:", plan);
+            console.log("🔥 PRICE ID:", priceId);
+            console.log("🔥 YEARLY:", isYearly);
+            const session =
+
+                await stripe
+                    .checkout
+                    .sessions
+                    .create({
+
+                        mode:
+                            "subscription",
+
+                        customer:
+                            customerId,
+
+                        payment_method_types: [
+                            "card"
+                        ],
+
+                        line_items: [
+
+                            {
+
+                                price:
+                                    priceId,
+
+                                quantity: 1
+
+                            }
+
+                        ],
+
+                        metadata: {
+
+                            userId:
+                                String(
+                                    userId
+                                ),
+
+                            plan,
+
+                            billing:
+
+                                isYearly
+                                    ?
+                                    "yearly"
+                                    :
+                                    "monthly"
+
+                        },
+
+                        subscription_data: {
+
+                            metadata: {
+
+                                userId:
+                                    String(
+                                        userId
+                                    ),
+
+                                plan
+
+                            },
+
+                            trial_period_days: 3
+
+                        },
+
+                        success_url:
+                            `${FRONT_URL}/dashboard`,
+
+                        cancel_url:
+                            `${FRONT_URL}/pricing`
+
+                    });
 
             return res.json({
-                upgraded: true
+
+                success: true,
+
+                url:
+                    session.url
+
             });
+
         }
 
-        /* ========================= */
-        /* 🚀 NEW CHECKOUT */
-        /* ========================= */
+        catch (error) {
 
-        const session = await stripe.checkout.sessions.create({
-            mode: "subscription",
-            customer: customerId,
-            payment_method_types: ["card"],
-            line_items: [
-                {
-                    price: priceId,
-                    quantity: 1
-                }
-            ],
-            success_url: `${CLIENT_URL}/fr/dashboard`,
-            cancel_url: `${CLIENT_URL}/fr/dashboard/pricing`,
-            metadata: {
-                userId: String(userId),
-                plan: String(plan)
-            }
-        });
+            console.error("🔥 STRIPE FULL ERROR:");
+            console.error(error);
+            console.error("🔥 MESSAGE:", error.message);
+            console.error("🔥 TYPE:", error.type);
+            console.error("🔥 CODE:", error.code);
+            console.error("🔥 RAW:", error.raw);
 
-        console.log("✅ NEW CHECKOUT:", session.id);
+            return res
+                .status(500)
+                .json({
 
-        res.json({ url: session.url });
+                    success: false,
 
-    } catch (error) {
-        console.error("🔥 STRIPE ERROR:", error);
+                    error:
+                        "Stripe checkout failed"
 
-        res.status(500).json({
-            error: "Erreur Stripe",
-            details: error.message
-        });
+                });
+
+        }
+
     }
-});
 
-/* ========================= */
-/* 💳 CUSTOMER PORTAL */
-/* ========================= */
-
-router.post("/portal", authMiddleware, async (req, res) => {
-    try {
-
-        const userId = req.user?.id;
-
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-
-        const user = await db.get(
-            "SELECT stripe_customer_id FROM users WHERE id = ?",
-            [userId]
-        );
-
-        if (!user?.stripe_customer_id) {
-            return res.status(400).json({
-                error: "Aucun customer Stripe"
-            });
-        }
-
-        const session = await stripe.billingPortal.sessions.create({
-            customer: user.stripe_customer_id,
-            return_url: `${CLIENT_URL}/fr/dashboard`
-        });
-
-        res.json({ url: session.url });
-
-    } catch (error) {
-
-        console.error("❌ PORTAL ERROR:", error);
-
-        res.status(500).json({
-            error: "Erreur portail Stripe",
-            details: error.message
-        });
-    }
-});
+);
 
 export default router;

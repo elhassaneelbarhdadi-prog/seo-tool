@@ -1,151 +1,497 @@
 import Stripe from "stripe";
 import db from "../config/database.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+/* ========================= */
+/* STRIPE */
+/* ========================= */
 
-export const stripeWebhook = async (req, res) => {
+if (
+    !process.env.STRIPE_SECRET_KEY
+) {
 
-    const sig = req.headers["stripe-signature"];
+    throw new Error(
+        "Missing STRIPE_SECRET_KEY"
+    );
 
-    let event;
+}
 
-    try {
-        event = stripe.webhooks.constructEvent(
-            req.body,
-            sig,
-            process.env.STRIPE_WEBHOOK_SECRET
+if (
+    !process.env.STRIPE_WEBHOOK_SECRET
+) {
+
+    throw new Error(
+        "Missing STRIPE_WEBHOOK_SECRET"
+    );
+
+}
+
+const stripe =
+    new Stripe(
+        process.env.STRIPE_SECRET_KEY
+    );
+
+/* ========================= */
+/* IDEMPOTENCY */
+/* ========================= */
+
+const isEventProcessed =
+    async (eventId) => {
+
+        const existing =
+
+            await db.get(
+
+                `
+
+SELECT id
+
+FROM stripe_events
+
+WHERE event_id=?
+
+LIMIT 1
+
+`,
+
+                [eventId]
+
+            );
+
+        return !!existing;
+
+    };
+
+const saveEvent =
+    async (eventId) => {
+
+        await db.run(
+
+            `
+
+INSERT INTO stripe_events(
+
+event_id,
+
+created_at
+
+)
+
+VALUES(
+
+?,
+
+datetime('now')
+
+)
+
+`,
+
+            [eventId]
+
         );
-    } catch (err) {
-        console.error("❌ Webhook signature failed:", err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
 
-    try {
+    };
 
-        console.log("🔔 EVENT:", event.type);
+/* ========================= */
+/* PLAN */
+/* ========================= */
 
-        /* ========================= */
-        /* 💳 CHECKOUT SUCCESS */
-        /* ========================= */
-        if (event.type === "checkout.session.completed") {
+const getPlanFromPrice =
+    (priceId) => {
 
-            const session = event.data.object;
+        if (
 
-            const userId = session.metadata?.userId;
+            [
 
-            if (!userId) {
-                console.warn("⚠️ No userId in metadata");
-                return res.json({ received: true });
-            }
+                process.env
+                    .STRIPE_PRICE_PRO_MONTHLY,
 
-            if (!session.subscription) {
-                console.warn("⚠️ No subscription ID");
-                return res.json({ received: true });
-            }
+                process.env
+                    .STRIPE_PRICE_PRO_YEARLY
 
-            const subscription = await stripe.subscriptions.retrieve(session.subscription);
+            ]
 
-            const priceId = subscription.items.data[0].price.id;
+                .includes(
+                    priceId
+                )
 
-            let plan = "FREE";
+        ) {
+
+            return "PRO";
+
+        }
+
+        if (
+
+            [
+
+                process.env
+                    .STRIPE_PRICE_BUSINESS_MONTHLY,
+
+                process.env
+                    .STRIPE_PRICE_BUSINESS_YEARLY
+
+            ]
+
+                .includes(
+                    priceId
+                )
+
+        ) {
+
+            return "BUSINESS";
+
+        }
+
+        return "FREE";
+
+    };
+
+/* ========================= */
+/* WEBHOOK */
+/* ========================= */
+
+export const stripeWebhook =
+    async (req, res) => {
+
+        const sig =
+            req.headers[
+            "stripe-signature"
+            ];
+
+        let event;
+
+        try {
+
+            event =
+
+                stripe
+                    .webhooks
+                    .constructEvent(
+
+                        req.body,
+
+                        sig,
+
+                        process.env
+                            .STRIPE_WEBHOOK_SECRET
+
+                    );
+
+        }
+
+        catch (err) {
+
+            console.error(
+
+                "SIGNATURE:",
+
+                err.message
+
+            );
+
+            return res
+                .status(400)
+                .send(
+
+                    `Webhook Error:
+${err.message}`
+
+                );
+
+        }
+
+        try {
+
+            /* ========================= */
+            /* IDEMPOTENT */
+            /* ========================= */
 
             if (
-                priceId === process.env.STRIPE_PRICE_PRO_MONTHLY ||
-                priceId === process.env.STRIPE_PRICE_PRO_YEARLY
+
+                await isEventProcessed(
+                    event.id
+                )
+
             ) {
-                plan = "PRO";
+
+                return res.json({
+
+                    received: true
+
+                });
+
             }
 
             if (
-                priceId === process.env.STRIPE_PRICE_BUSINESS_MONTHLY ||
-                priceId === process.env.STRIPE_PRICE_BUSINESS_YEARLY
+                process.env.NODE_ENV
+                === "development"
             ) {
-                plan = "BUSINESS";
+
+                console.log(
+                    "EVENT:",
+                    event.type
+                );
+
             }
+
+            /* ========================= */
+            /* EVENTS */
+            /* ========================= */
+
+            switch (
+            event.type
+            ) {
+
+                case
+                    "checkout.session.completed": {
+
+                        const session =
+                            event.data.object;
+
+                        const userId =
+
+                            session.metadata
+                                ?.userId;
+
+                        if (
+                            !userId ||
+                            !session.subscription
+                        ) {
+
+                            break;
+
+                        }
+
+                        const subscription =
+
+                            await stripe
+                                .subscriptions
+                                .retrieve(
+
+                                    session.subscription
+
+                                );
+
+                        const priceId =
+
+                            subscription
+                                ?.items
+                                ?.data?.[0]
+                                ?.price
+                                ?.id;
+
+                        if (
+                            !priceId
+                        ) {
+
+                            break;
+
+                        }
+
+                        const plan =
+                            getPlanFromPrice(
+                                priceId
+                            );
+
+                        await db.run(
+
+                            `
+
+UPDATE users
+
+SET
+
+plan=?,
+
+subscription_id=?,
+
+subscription_status='active'
+
+WHERE id=?
+
+`,
+
+                            [
+
+                                plan,
+
+                                subscription.id,
+
+                                userId
+
+                            ]
+
+                        );
+
+                        break;
+
+                    }
+
+                case
+                    "invoice.paid": {
+
+                        const invoice =
+                            event.data.object;
+
+                        await db.run(
+
+                            `
+
+UPDATE users
+
+SET
+subscription_status='active'
+
+WHERE subscription_id=?
+
+`,
+
+                            [
+
+                                invoice
+                                    .subscription
+
+                            ]
+
+                        );
+
+                        break;
+
+                    }
+
+                case
+                    "invoice.payment_failed": {
+
+                        const invoice =
+                            event.data.object;
+
+                        await db.run(
+
+                            `
+
+UPDATE users
+
+SET
+subscription_status='past_due'
+
+WHERE subscription_id=?
+
+`,
+
+                            [
+
+                                invoice
+                                    .subscription
+
+                            ]
+
+                        );
+
+                        break;
+
+                    }
+
+                case
+                    "customer.subscription.deleted": {
+
+                        const subscription =
+                            event.data.object;
+
+                        await db.run(
+
+                            `
+
+UPDATE users
+
+SET
+
+plan='FREE',
+
+subscription_status='cancelled'
+
+WHERE subscription_id=?
+
+`,
+
+                            [
+
+                                subscription.id
+
+                            ]
+
+                        );
+
+                        break;
+
+                    }
+
+                default:
+
+                    break;
+
+            }
+
+            /* ========================= */
+            /* SAVE EVENT */
+            /* ========================= */
+
+            await saveEvent(
+                event.id
+            );
+
+            /* ========================= */
+            /* CLEAN OLD */
+            /* ========================= */
 
             await db.run(
-                `UPDATE users 
-                 SET plan = ?, 
-                     subscription_id = ?, 
-                     subscription_status = 'active'
-                 WHERE id = ?`,
-                [plan, session.subscription, userId]
+
+                `
+
+DELETE
+
+FROM stripe_events
+
+WHERE created_at
+
+<
+
+datetime(
+'now',
+'-30 day'
+)
+
+`
+
             );
 
-            console.log("✅ PLAN ACTIVATED:", userId, plan);
+            return res.json({
+
+                received: true
+
+            });
+
         }
 
-        /* ========================= */
-        /* 🔁 RENEWAL PAYMENT */
-        /* ========================= */
-        if (event.type === "invoice.paid") {
+        catch (error) {
 
-            const invoice = event.data.object;
+            console.error(
 
-            const subscriptionId = invoice.subscription;
+                "WEBHOOK:",
 
-            const user = await db.get(
-                "SELECT id FROM users WHERE subscription_id = ?",
-                [subscriptionId]
+                error.message
+
             );
 
-            if (user) {
-                await db.run(
-                    `UPDATE users 
-                     SET subscription_status = 'active'
-                     WHERE id = ?`,
-                    [user.id]
-                );
+            return res
+                .status(500)
+                .json({
 
-                console.log("💰 RENEWED:", user.id);
-            }
+                    error:
+                        "Webhook failed"
+
+                });
+
         }
 
-        /* ========================= */
-        /* ❌ SUB CANCELLED */
-        /* ========================= */
-        if (event.type === "customer.subscription.deleted") {
-
-            const subscription = event.data.object;
-
-            const user = await db.get(
-                "SELECT id FROM users WHERE subscription_id = ?",
-                [subscription.id]
-            );
-
-            if (user) {
-                await db.run(
-                    `UPDATE users 
-                     SET plan = 'FREE', 
-                         subscription_status = 'cancelled'
-                     WHERE id = ?`,
-                    [user.id]
-                );
-
-                console.log("🔻 USER DOWNGRADED:", user.id);
-            }
-        }
-
-        /* ========================= */
-        /* ⚠️ SUB UPDATE */
-        /* ========================= */
-        if (event.type === "customer.subscription.updated") {
-
-            const subscription = event.data.object;
-
-            if (subscription.cancel_at_period_end) {
-                console.log("⚠️ Will cancel:", subscription.id);
-            }
-        }
-
-        res.json({ received: true });
-
-    } catch (error) {
-
-        console.error("🔥 WEBHOOK ERROR:", error);
-
-        res.status(500).json({
-            error: "Webhook processing failed"
-        });
-    }
-};
+    };

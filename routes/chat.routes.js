@@ -1,87 +1,388 @@
 import express from "express";
 import OpenAI from "openai";
+import db from "../config/database.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
+import { getPlan } from "../config/plans.js";
 
 const router = express.Router();
 
 /* ========================= */
-/* 🔥 INIT OPENAI */
+/* OPENAI */
 /* ========================= */
 
 if (!process.env.OPENAI_API_KEY) {
-    console.error("❌ OPENAI_API_KEY manquant");
+    throw new Error(
+        "OPENAI_API_KEY manquant"
+    );
 }
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY
-});
+const openai =
+    new OpenAI({
+
+        apiKey:
+            process.env.OPENAI_API_KEY
+
+    });
+
+const MAX_PROMPT = 500;
+const MAX_KEYWORD = 100;
 
 /* ========================= */
-/* 🤖 SEO CHAT */
+/* SEO CHAT */
 /* ========================= */
 
-router.post("/seo", async (req, res) => {
-    try {
-        const { prompt, keyword, serp, products } = req.body;
+router.post(
+    "/seo",
+    authMiddleware,
+    async (req, res) => {
 
-        if (!prompt) {
-            return res.status(400).json({ error: "Prompt manquant" });
-        }
+        try {
 
-        console.log("👉 PROMPT:", prompt);
+            const userId =
+                req.user.id;
 
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                {
-                    role: "system",
-                    content: `
+            const prompt =
+
+                String(
+                    req.body.prompt
+                    ||
+                    ""
+                )
+
+                    .trim()
+
+                    .slice(
+                        0,
+                        MAX_PROMPT
+                    );
+
+            const keyword =
+
+                String(
+                    req.body.keyword
+                    ||
+                    ""
+                )
+
+                    .trim()
+
+                    .slice(
+                        0,
+                        MAX_KEYWORD
+                    );
+
+            const serp =
+
+                Array.isArray(
+                    req.body.serp
+                )
+
+                    ?
+
+                    req.body.serp
+                        .slice(0, 3)
+
+                    :
+
+                    [];
+
+            if (
+                !prompt
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Prompt required"
+
+                    });
+
+            }
+
+            /* ========================= */
+            /* PLAN */
+            /* ========================= */
+
+            const user =
+
+                await db.get(
+
+                    `
+
+SELECT
+plan
+
+FROM users
+
+WHERE id=?
+
+LIMIT 1
+
+`,
+
+                    [userId]
+
+                );
+
+            const planData =
+
+                getPlan(
+                    user?.plan
+                );
+
+            const limit =
+                planData.limit;
+
+            const usage =
+
+                await db.get(
+
+                    `
+
+SELECT
+
+COUNT(*) total
+
+FROM ai_usage
+
+WHERE user_id=?
+
+AND
+
+strftime(
+'%Y-%m',
+created_at
+)
+
+=
+
+strftime(
+'%Y-%m',
+'now'
+)
+
+`,
+
+                    [userId]
+
+                );
+
+            if (
+
+                limit !== null
+
+                &&
+
+                usage.total >= limit
+
+            ) {
+
+                return res
+                    .status(403)
+                    .json({
+
+                        error:
+                            "LIMIT_REACHED",
+
+                        used:
+                            usage.total,
+
+                        limit
+
+                    });
+
+            }
+
+            /* ========================= */
+            /* CONTEXT */
+            /* ========================= */
+
+            const topSerp =
+
+                serp
+
+                    .map(
+
+                        s =>
+
+                            `- ${String(
+                                s?.title
+                                ||
+                                ""
+                            )
+
+                                .slice(
+                                    0,
+                                    80
+                                )
+
+                            }`
+
+                    )
+
+                    .join("\n");
+
+            /* ========================= */
+            /* PROMPTS */
+            /* ========================= */
+
+            const systemPrompt = `
+
 Tu es un expert SEO senior.
 
-Ta mission :
-- proposer des niches SEO rentables
-- analyser le potentiel business
-- détecter la concurrence
-- donner des idées actionnables
+Réponds :
 
-Réponds en français.
+1. Analyse rapide
 
-Format OBLIGATOIRE pour chaque idée :
+2. Opportunité business
 
-1. Nom de la niche
-2. Pourquoi c'est rentable
-3. Niveau de concurrence (faible / moyen / élevé)
-4. Idée de monétisation
-`
-                },
-                {
-                    role: "user",
-                    content: `
-Contexte SEO :
+3. Niveau concurrence
 
-Keyword: ${keyword || "N/A"}
-SERP: ${serp ? JSON.stringify(serp) : "N/A"}
-Produits: ${products ? JSON.stringify(products) : "N/A"}
+4. Action recommandée
 
-Question :
+Réponse concise.
+`;
+
+            const userPrompt = `
+
+Mot-clé:
+${keyword || "N/A"}
+
+SERP:
+
+${topSerp || "aucun"}
+
+Question:
+
 ${prompt}
-`
-                }
-            ],
-            temperature: 0.7
-        });
 
-        const result = response.choices?.[0]?.message?.content || "";
+`;
 
-        res.json({ result });
+            /* ========================= */
+            /* OPENAI */
+            /* ========================= */
 
-    } catch (error) {
-        console.error("🔥 AI ERROR:", error);
+            const response =
 
-        res.status(500).json({
-            error: "Erreur OpenAI",
-            details: error.message
-        });
-    }
-});
+                await openai
+                    .chat
+                    .completions
+                    .create({
+
+                        model:
+                            "gpt-4o-mini",
+
+                        messages: [
+
+                            {
+
+                                role:
+                                    "system",
+
+                                content:
+                                    systemPrompt
+
+                            },
+
+                            {
+
+                                role:
+                                    "user",
+
+                                content:
+                                    userPrompt
+
+                            }
+
+                        ],
+
+                        temperature:
+                            0.6,
+
+                        max_tokens:
+                            500
+
+                    });
+
+            const result =
+
+                response
+                    .choices?.[0]
+                    ?.message
+                    ?.content
+
+                ||
+
+                "Aucune réponse";
+
+            /* ========================= */
+            /* TRACK */
+            /* ========================= */
+
+            await db.run(
+
+                `
+
+INSERT INTO
+ai_usage(
+
+user_id,
+
+message
+
+)
+
+VALUES(
+
+?,
+
+?
+
+)
+
+`,
+
+                [
+
+                    userId,
+
+                    prompt
+
+                ]
+
+            );
+
+            return res.json({
+
+                result
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+
+                "AI:",
+
+                error.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "AI error"
+
+                });
+
+        }
+
+    });
 
 export default router;

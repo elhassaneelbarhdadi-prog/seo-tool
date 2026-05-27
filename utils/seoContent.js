@@ -1,43 +1,74 @@
 /* ========================= */
-/* 🧠 CLEAN */
+/* 🧠 CLEAN (UPGRADED) */
 /* ========================= */
-const cleanKeyword = (keyword) => {
-    if (!keyword) return "";
-
+const cleanKeyword = (keyword = "") => {
     return keyword
         .toLowerCase()
-        .trim()
-        .replace(/\s+/g, " ");
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/['’]/g, " ")
+        .replace(/[^a-z0-9\s-]/g, " ")
+        .replace(/-/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 };
 
 /* ========================= */
-/* 🧠 EXTRACT MAIN WORD */
+/* 🧠 MAIN WORD (SMART) */
 /* ========================= */
 const getMainWord = (keyword) => {
-    return keyword.split(" ")[0];
+
+    const stopWords = [
+        "de", "a", "le", "la", "les", "du", "des",
+        "un", "une", "pour", "avec", "sur"
+    ];
+
+    const weakWords = ["meilleur", "top", "guide", "comparatif"];
+
+    const words = keyword.split(" ");
+
+    return words.find(
+        w => !stopWords.includes(w) && !weakWords.includes(w)
+    ) || words[0];
 };
 
 /* ========================= */
-/* 🧠 PLURAL SAFE */
+/* 🧠 PLURAL (SAFE) */
 /* ========================= */
-const pluralize = (word) => {
+const pluralize = (word = "") => {
+
     if (!word) return word;
 
+    const irregular = {
+        cheval: "chevaux",
+        travail: "travaux"
+    };
+
+    if (irregular[word]) return irregular[word];
+
+    if (word.endsWith("al")) return word.replace(/al$/, "aux");
+    if (word.endsWith("eau")) return word + "x";
     if (word.endsWith("s")) return word;
-    if (word.endsWith("al")) return word.replace("al", "aux");
 
     return word + "s";
 };
 
 /* ========================= */
-/* 🧠 TYPE */
+/* 🧠 TYPE (UPGRADED) */
 /* ========================= */
-export const detectKeywordType = (keyword) => {
+export const detectKeywordType = (keyword = "") => {
+
     const k = keyword.toLowerCase();
 
-    const service = ["plombier", "coach", "avocat", "répar", "agence"];
+    const serviceKeywords = [
+        "plombier", "coach", "avocat", "agence",
+        "consultant", "freelance", "expert",
+        "reparation", "depannage", "installation"
+    ];
 
-    if (service.some(w => k.includes(w))) return "service";
+    if (serviceKeywords.some(w => k.includes(w))) {
+        return "service";
+    }
 
     return "product";
 };
@@ -64,60 +95,48 @@ const getBusinessLabel = (keyword) => {
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 /* ========================= */
-/* 🧠 DYNAMIC DESCRIPTION */
+/* 🧠 DESCRIPTION (BOOSTED) */
 /* ========================= */
-const generateDescription = (keyword, city, business) => {
+const generateDescription = (keyword, business) => {
 
     const intros = [
-        `Trouvez facilement des ${business} à ${city}.`,
-        `Découvrez les meilleurs ${business} disponibles à ${city}.`,
-        `À ${city}, comparez les ${business} pour ${keyword}.`
+        `Trouvez facilement des ${business} adaptés à vos besoins.`,
+        `Découvrez les meilleurs ${business} pour "${keyword}".`,
+        `Comparez les offres de ${business} disponibles.`
     ];
 
     const middles = [
-        `Comparez les prix, les avis clients et les prestations pour "${keyword}".`,
-        `Analysez les offres disponibles et choisissez la meilleure solution pour "${keyword}".`,
-        `Les professionnels de ${city} proposent différentes options adaptées à "${keyword}".`
+        `Analysez les prix, les avis clients et les prestations pour "${keyword}".`,
+        `Choisissez la solution la plus rentable selon votre besoin.`,
+        `Plusieurs options existent selon votre budget et vos objectifs.`
     ];
 
     const endings = [
-        `Notre plateforme vous permet de gagner du temps et de trouver rapidement le bon ${business}.`,
-        `Gagnez en visibilité et trouvez les meilleurs services en quelques clics.`,
-        `Identifiez rapidement des professionnels fiables à ${city}.`
+        `Notre plateforme vous aide à faire le bon choix rapidement.`,
+        `Gagnez du temps en accédant directement aux meilleures solutions.`,
+        `Identifiez facilement les opportunités les plus intéressantes.`
     ];
 
-    return `
-${pick(intros)}
-
-${pick(middles)}
-
-${pick(endings)}
-    `;
+    return `${pick(intros)} ${pick(middles)} ${pick(endings)}`;
 };
 
 /* ========================= */
-/* 🧠 FAQ DYNAMIQUE */
+/* 🧠 FAQ (BOOSTED) */
 /* ========================= */
-const generateFAQ = (keyword, city) => {
-
-    const priceTemplates = [
-        `Les prix pour ${keyword} à ${city} varient selon la qualité et les prestations.`,
-        `À ${city}, le coût de ${keyword} dépend du niveau de service proposé.`,
-    ];
-
-    const choiceTemplates = [
-        `Pour choisir ${keyword}, il est important de comparer les avis et les prix.`,
-        `Un bon ${keyword} doit être fiable, bien noté et disponible rapidement.`,
-    ];
+const generateFAQ = (keyword) => {
 
     return [
         {
-            q: `Quel est le prix de ${keyword} à ${city} ?`,
-            a: pick(priceTemplates)
+            q: `Quel est le prix de ${keyword} ?`,
+            a: `Le prix dépend de plusieurs facteurs comme la qualité, la localisation et le niveau de service.`
         },
         {
             q: `Comment choisir ${keyword} ?`,
-            a: pick(choiceTemplates)
+            a: `Comparez les avis, les tarifs et les prestations pour faire le meilleur choix.`
+        },
+        {
+            q: `${capitalize(keyword)} est-il rentable ?`,
+            a: `Oui, surtout si la demande est forte et la concurrence modérée.`
         }
     ];
 };
@@ -125,38 +144,42 @@ const generateFAQ = (keyword, city) => {
 /* ========================= */
 /* 🚀 LANDING */
 /* ========================= */
-export const generateLandingContent = (rawKeyword, city) => {
+export const generateLandingContent = (rawKeyword) => {
 
     const keyword = cleanKeyword(rawKeyword);
+
+    if (!keyword) return null;
+
     const business = getBusinessLabel(keyword);
 
     return {
-        title: `${capitalize(keyword)} à ${city}`,
-        description: generateDescription(keyword, city, business),
+        title: `${capitalize(keyword)} : analyse SEO et opportunité`,
+        description: generateDescription(keyword, business),
         business,
-        faq: generateFAQ(keyword, city)
+        faq: generateFAQ(keyword)
     };
 };
 
 /* ========================= */
 /* 🚀 CTA */
 /* ========================= */
-export const generateCTA = (keyword, city, business) => {
+export const generateCTA = (keyword, business) => {
 
     const clean = cleanKeyword(keyword);
 
     const titles = [
-        `${capitalize(clean)} à ${city} ?`,
-        `Besoin de ${clean} à ${city} ?`,
+        `${capitalize(clean)} ?`,
+        `Besoin de ${clean} ?`,
+        `Envie de clients en ${clean} ?`
     ];
 
     return {
         title: pick(titles),
-        subtitle: `Recevez des clients en tant que ${business} à ${city}`,
+        subtitle: `Attirez des clients en tant que ${business}`,
         bullets: [
             "Visibilité sur Google",
             "Clients qualifiés",
-            "Sans engagement"
+            "Trafic SEO gratuit"
         ],
         button: "🚀 S’inscrire gratuitement"
     };
@@ -165,5 +188,5 @@ export const generateCTA = (keyword, city, business) => {
 /* ========================= */
 /* ✨ UTILS */
 /* ========================= */
-const capitalize = (str) =>
-    str.charAt(0).toUpperCase() + str.slice(1);
+const capitalize = (str = "") =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1) : "";

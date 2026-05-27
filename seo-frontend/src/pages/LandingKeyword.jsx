@@ -1,167 +1,184 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet";
-import { useMemo, useEffect, useState } from "react";
 
-/* ========================= */
-/* 🌍 CITY FALLBACK MAP */
-/* ========================= */
-const COUNTRY_CITY_MAP = {
-    fr: "paris",
-    en: "london",
-    es: "madrid",
-    de: "berlin"
-};
+import { Helmet } from "react-helmet";
+import { useParams, useNavigate } from "react-router-dom";
+import { useSeoData } from "../hooks/useSeoData";
+import { useMemo } from "react";
+import { formatNumber } from "../utils/format";
+
+const capitalize = (s) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
 
 export default function LandingKeyword() {
 
-    const { keyword: slug, lang } = useParams();
+    const { keyword, lang = "fr" } = useParams();
     const navigate = useNavigate();
 
-    const [seoPage, setSeoPage] = useState(null);
+    const cleanKeyword = useMemo(
+        () => decodeURIComponent(keyword || "").toLowerCase(),
+        [keyword]
+    );
 
-    const currentLang = lang || "fr";
+    const slug = useMemo(
+        () => cleanKeyword.replace(/\s+/g, "-"),
+        [cleanKeyword]
+    );
 
-    /* ========================= */
-    /* 🌍 DETECT USER CITY */
-    /* ========================= */
-    const detectedCity = useMemo(() => {
-        try {
-            const browserLang = navigator.language.split("-")[0];
-            return COUNTRY_CITY_MAP[browserLang] || "paris";
-        } catch {
-            return "paris";
-        }
-    }, []);
+    const { seo, loading } = useSeoData(slug);
 
-    /* ========================= */
-    /* 🔐 PARSE SLUG */
-    /* ========================= */
-    const { keyword, city } = useMemo(() => {
+    if (!cleanKeyword) return null;
 
-        if (!slug || typeof slug !== "string") {
-            return { keyword: "", city: "" };
-        }
-
-        const parts = slug.split("-").filter(Boolean);
-
-        // CAS 1 → seulement keyword
-        if (parts.length === 1) {
-            return {
-                keyword: decodeURIComponent(parts[0]),
-                city: detectedCity
-            };
-        }
-
-        // CAS 2 → keyword + city
-        const city = parts.pop();
-        const keyword = parts.join(" ");
-
-        return {
-            keyword: decodeURIComponent(keyword),
-            city: decodeURIComponent(city)
-        };
-
-    }, [slug, detectedCity]);
-
-    /* ========================= */
-    /* 🔄 AUTO REDIRECT SEO */
-    /* ========================= */
-    useEffect(() => {
-        if (!slug) return;
-
-        const parts = slug.split("-");
-
-        if (parts.length === 1 && keyword && city) {
-            navigate(`/${currentLang}/landing/${slug}-${city}`, { replace: true });
-        }
-
-    }, [slug, keyword, city, navigate, currentLang]);
-
-    /* ========================= */
-    /* 🔥 FETCH BACKEND SEO */
-    /* ========================= */
-    useEffect(() => {
-
-        if (!slug) return;
-
-        fetch(`http://localhost:3001/api/seo-page?slug=${slug}`)
-            .then(res => res.json())
-            .then(data => setSeoPage(data))
-            .catch(() => setSeoPage(null));
-
-    }, [slug]);
-
-    /* ========================= */
-    /* ❌ INVALID */
-    /* ========================= */
-    if (!keyword || !city) {
-        return <div className="p-10 text-center">❌ Page invalide</div>;
+    if (loading) {
+        return (
+            <div className="p-10 text-center text-gray-500">
+                ⏳ Analyse SEO en cours...
+            </div>
+        );
     }
 
-    /* ========================= */
-    /* 🔤 FORMAT */
-    /* ========================= */
-    const capitalize = (str) =>
-        str ? str.charAt(0).toUpperCase() + str.slice(1) : "";
+    if (!seo) {
+        return (
+            <div className="p-10 text-center text-red-500">
+                ❌ Données indisponibles
+            </div>
+        );
+    }
 
-    const keywordLabel = capitalize(keyword);
-    const cityLabel = capitalize(city);
+    const k = capitalize(cleanKeyword);
 
-    /* ========================= */
-    /* 🔥 SEO META */
-    /* ========================= */
-    const title = `${keywordLabel} à ${cityLabel}`;
-    const description = seoPage?.content?.slice(0, 155) || "";
+    /* 🔒 SAFE DATA */
+    const volume = Number(seo.volume) || 0;
+    const cpc = Number(seo.cpc) || 0;
+    const difficulty = Number(seo.difficulty) || 0;
+    const score = Number(seo.score) || 0;
 
-    /* ========================= */
-    /* 🔗 URL PROJET */
-    /* ========================= */
-    const projectUrl = `/${currentLang}/projet/${encodeURIComponent(keyword)}`;
+    /* 🔥 ROI REALISTE */
+    const trafficPosition1 = Math.floor(volume * 0.28);
 
-    /* ========================= */
-    /* UI */
-    /* ========================= */
+    const conversionRate =
+        difficulty >= 70 ? 0.01 :
+            difficulty >= 40 ? 0.02 :
+                0.03;
+
+    const avgOrderValue =
+        cpc > 2 ? 120 :
+            cpc > 1 ? 80 :
+                40;
+
+    const revenue =
+        seo.revenue ??
+        Math.floor(trafficPosition1 * conversionRate * avgOrderValue);
+
+    const difficultyColor =
+        difficulty > 70
+            ? "text-red-500"
+            : difficulty > 40
+                ? "text-yellow-500"
+                : "text-green-500";
+
+    const scoreColor =
+        score > 70
+            ? "text-green-500"
+            : score > 40
+                ? "text-yellow-500"
+                : "text-red-500";
+
+    /* 🔥 SAFE TREND */
+    const trend = Array.isArray(seo.trend) ? seo.trend : [10];
+    const maxTrend = Math.max(...trend, 1);
+
     return (
-        <div className="max-w-4xl mx-auto p-10">
+        <div className="max-w-5xl mx-auto p-6 space-y-6">
 
-            {/* SEO */}
             <Helmet>
-                <title>{title}</title>
-                <meta name="description" content={description} />
+                <title>{k} : analyse SEO complète</title>
+                <meta
+                    name="description"
+                    content={`Analyse SEO du mot-clé ${k}. Volume, concurrence, revenus estimés.`}
+                />
             </Helmet>
 
-            {/* TITLE */}
-            <h1 className="text-4xl font-bold mb-4">
-                🚀 {keywordLabel} à {cityLabel}
-            </h1>
+            {/* HERO */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-8 rounded-2xl shadow-xl">
+                <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                    🚀 {k}
+                </h1>
 
-            {/* CONTENT */}
-            {seoPage?.content ? (
-                <div
-                    className="prose max-w-none text-gray-700 mb-6"
-                    dangerouslySetInnerHTML={{ __html: seoPage.content }}
-                />
-            ) : (
-                <p className="text-gray-500">Chargement...</p>
-            )}
+                <p className="opacity-90">
+                    Opportunité SEO détectée
+                </p>
+
+                <div className={`text-5xl font-bold mt-4 ${scoreColor}`}>
+                    {score}
+                    <span className="text-lg ml-2">/100</span>
+                </div>
+            </div>
+
+            {/* KPI */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+                <div className="bg-white p-4 rounded-xl shadow">
+                    <p className="text-gray-500 text-sm">📈 Volume</p>
+                    <p className="text-xl font-bold">
+                        {formatNumber(volume)}
+                    </p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl shadow">
+                    <p className="text-gray-500 text-sm">💰 CPC</p>
+                    <p className="text-xl font-bold">
+                        {cpc.toFixed(2)} €
+                    </p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl shadow">
+                    <p className="text-gray-500 text-sm">💸 Revenus</p>
+                    <p className="text-xl font-bold text-green-600">
+                        {formatNumber(revenue)} €
+                    </p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl shadow">
+                    <p className="text-gray-500 text-sm">⚔️ Difficulté</p>
+                    <p className={`text-xl font-bold ${difficultyColor}`}>
+                        {difficulty}
+                    </p>
+                </div>
+
+            </div>
+
+            {/* TREND */}
+            <div className="bg-white p-6 rounded-xl shadow">
+                <h2 className="font-bold mb-4">📈 Tendance</h2>
+
+                <div className="flex items-end gap-2 h-32">
+                    {trend.map((v, i) => (
+                        <div
+                            key={i}
+                            className="bg-indigo-500 w-full rounded"
+                            style={{
+                                height: `${(v / maxTrend) * 100}%`
+                            }}
+                        />
+                    ))}
+                </div>
+            </div>
 
             {/* CTA */}
-            <div className="flex gap-4 flex-wrap mt-6">
+            <div className="bg-gradient-to-r from-black to-gray-900 text-white p-8 rounded-2xl text-center shadow-xl">
+                <h2 className="text-2xl font-bold mb-2">
+                    🚀 Lance ton business sur "{k}"
+                </h2>
 
                 <button
-                    onClick={() => navigate(projectUrl)}
-                    className="bg-indigo-600 text-white px-6 py-3 rounded-xl"
+                    onClick={() =>
+                        navigate(`/${lang}/dashboard/keywords`, {
+                            state: { autoKeyword: cleanKeyword }
+                        })
+                    }
+                    className="bg-white text-black px-6 py-3 rounded-xl font-bold hover:scale-105 transition"
                 >
-                    🚀 Lancer mon projet
+                    🔥 Analyser ce mot-clé
                 </button>
-
-                <button
-                    onClick={() => window.history.back()}
-                    className="border px-6 py-3 rounded-xl"
-                >
-                    ← Retour
-                </button>
-
             </div>
 
         </div>

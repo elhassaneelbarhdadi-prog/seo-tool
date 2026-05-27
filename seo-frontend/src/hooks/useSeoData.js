@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-console.log("SEO HOOK LOADED");
+
 /* ========================= */
-/* 🔥 HOOK GLOBAL SEO */
+/* 🔥 HOOK SEO (PRODUCTION) */
 /* ========================= */
 export function useSeoData(slug) {
 
@@ -17,11 +17,31 @@ export function useSeoData(slug) {
 
         let cancelled = false;
 
-        const load = async () => {
+        const fetchSEO = async () => {
+
             try {
+                setData(prev => ({ ...prev, loading: true }));
+
+                const token = localStorage.getItem("token");
+
                 const res = await fetch(
-                    `http://localhost:3001/api/seo-page?slug=${slug}`
+                    `${import.meta.env.VITE_API_URL}/api/seo-page?slug=${slug}`,
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
                 );
+
+                if (!res.ok) {
+
+                    if (res.status === 403) {
+                        throw new Error("LIMIT_REACHED");
+                    }
+
+                    throw new Error("API_ERROR");
+                }
 
                 const json = await res.json();
 
@@ -34,17 +54,19 @@ export function useSeoData(slug) {
                 }
 
             } catch (e) {
+                console.error("SEO ERROR:", e.message);
+
                 if (!cancelled) {
                     setData({
                         seo: null,
                         loading: false,
-                        error: "Erreur API"
+                        error: e.message
                     });
                 }
             }
         };
 
-        load();
+        fetchSEO();
 
         return () => {
             cancelled = true;

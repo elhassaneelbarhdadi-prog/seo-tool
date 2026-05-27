@@ -1,20 +1,185 @@
 import express from "express";
-import { register, login, getUser } from "../controllers/auth.controller.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
 import rateLimit from "express-rate-limit";
 
-const router = express.Router();
+import {
+    register,
+    login,
+    getUser
+}
+    from "../controllers/auth.controller.js";
 
-/* 🔒 Anti brute force */
-const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 10,
-    message: "Too many login attempts"
-});
+import {
+    authMiddleware
+}
+    from "../middleware/auth.middleware.js";
 
+const router =
+    express.Router();
+
+/* ========================= */
+/* RATE LIMIT */
+/* ========================= */
+
+const loginLimiter =
+    rateLimit({
+
+        windowMs:
+            15 * 60 * 1000,
+
+        max: 10,
+
+        standardHeaders: true,
+
+        legacyHeaders: false,
+
+        message: {
+
+            error:
+                "Too many login attempts. Try again later."
+
+        }
+
+    });
+
+const registerLimiter =
+    rateLimit({
+
+        windowMs:
+            60 * 60 * 1000,
+
+        max: 5,
+
+        standardHeaders: true,
+
+        legacyHeaders: false,
+
+        message: {
+
+            error:
+                "Too many accounts created"
+
+        }
+
+    });
+
+/* ========================= */
 /* ROUTES */
-router.post("/register", register);
-router.post("/login", loginLimiter, login); // ✅ FIX
-router.get("/me", authMiddleware, getUser);
+/* ========================= */
+
+router.post(
+
+    "/register",
+
+    registerLimiter,
+
+    register
+
+);
+
+router.post(
+
+    "/login",
+
+    loginLimiter,
+
+    login
+
+);
+
+router.get(
+
+    "/me",
+
+    authMiddleware,
+
+    getUser
+
+);
+
+/* ========================= */
+/* DEV GOOGLE CALLBACK */
+/* ========================= */
+
+if (
+    process.env.NODE_ENV
+    === "development"
+) {
+
+    router.get(
+
+        "/google/callback",
+
+        rateLimit({
+
+            windowMs:
+                60000,
+
+            max: 10
+
+        }),
+
+        async (
+            req,
+            res
+        ) => {
+
+            const code =
+
+                String(
+
+                    req.query.code
+                    ||
+                    ""
+
+                )
+
+                    .slice(
+                        0,
+                        500
+                    );
+
+            if (
+                !code
+            ) {
+
+                return res
+                    .status(400)
+                    .send(
+
+                        "Missing code"
+
+                    );
+
+            }
+
+            console.log(
+                "GOOGLE CALLBACK RECEIVED"
+            );
+
+            return res.send(`
+
+<h2>
+
+Google callback reçu ✅
+
+</h2>
+
+<p>
+
+Code récupéré
+
+</p>
+
+`);
+
+        }
+
+    );
+
+}
+
+/* ========================= */
+/* EXPORT */
+/* ========================= */
 
 export default router;

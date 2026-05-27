@@ -3,159 +3,405 @@ import "./config/env.js";
 import fs from "fs";
 import express from "express";
 import cors from "cors";
+import rateLimit from "express-rate-limit";
 
-/* DEBUG (DEV ONLY) */
-if (process.env.NODE_ENV === "development") {
-    console.log("📁 .env exists:", fs.existsSync("./.env"));
-}
+import googleAdsTest from "./routes/googleads.test.js";
 
-/* ROUTES */
-import authRoutes from "./routes/auth.routes.js";
-import keywordRoutes from "./routes/keyword.routes.js";
-import seoRoutes from "./routes/seo.routes.js";
-import chatRoutes from "./routes/chat.routes.js";
-import stripeRoutes from "./routes/stripe.routes.js";
-import nicheRoutes from "./routes/niche.routes.js";
-import plansRoutes from "./routes/plans.routes.js";
-import devRoutes from "./routes/dev.routes.js";
-import businessRoutes from "./routes/businessProfile.routes.js";
-import seoPageRoutes from "./routes/seoPage.routes.js";
+/* ========================= */
+/* 🚀 INIT */
+/* ========================= */
+
 const app = express();
-const PORT = 3001;
+
+const PORT =
+    process.env.PORT || 3001;
+
+/* ========================= */
+/* 🔍 DEBUG ENV */
+/* ========================= */
+
+if (
+    process.env.NODE_ENV === "development"
+) {
+
+    console.log(
+        "📁 .env exists:",
+        fs.existsSync("./.env")
+    );
+
+}
 
 /* ========================= */
 /* 🌍 CONFIG */
 /* ========================= */
-const FRONT_URL = process.env.FRONT_URL || "http://localhost:5173";
+
+const FRONT_URL =
+    process.env.FRONT_URL
+    || "http://localhost:5173";
 
 /* ========================= */
-/* 🔥 CORS */
+/* 🛡 RATE LIMIT */
 /* ========================= */
-app.use(cors({
-    origin: FRONT_URL,
-    credentials: true
-}));
+
+app.use(
+
+    rateLimit({
+
+        windowMs:
+            60 * 1000,
+
+        max: 100
+
+    })
+
+);
 
 /* ========================= */
-/* 🔥 JSON */
+/* 🌍 CORS */
 /* ========================= */
+
+app.use(
+
+    cors({
+
+        origin: (origin, cb) => {
+
+            if (!origin) {
+                return cb(null, true);
+            }
+
+            if (
+                origin.startsWith(
+                    "http://localhost"
+                )
+            ) {
+
+                return cb(null, true);
+
+            }
+
+            if (
+                origin === FRONT_URL
+            ) {
+
+                return cb(null, true);
+
+            }
+
+            return cb(
+                new Error(
+                    "Not allowed by CORS"
+                )
+            );
+
+        },
+
+        credentials: true
+
+    })
+
+);
+
+/* ========================= */
+/* 🔥 JSON PARSER */
+/* IMPORTANT */
+/* AVANT LES ROUTES */
+/* ========================= */
+
 app.use(express.json());
+
+/* ========================= */
+/* 📦 ROUTES IMPORT */
+/* ========================= */
+
+import stripeRoutes
+    from "./routes/stripe.routes.js";
+
+import authRoutes
+    from "./routes/auth.routes.js";
+
+import keywordRoutes
+    from "./routes/keyword.routes.js";
+
+import seoRoutes
+    from "./routes/seo.routes.js";
+
+import seoPageRoutes
+    from "./routes/seoPage.routes.js";
+
+import chatRoutes
+    from "./routes/chat.routes.js";
+
+import nicheRoutes
+    from "./routes/niche.routes.js";
+
+import plansRoutes
+    from "./routes/plans.routes.js";
+
+import devRoutes
+    from "./routes/dev.routes.js";
+
+import businessRoutes
+    from "./routes/businessProfile.routes.js";
 
 /* ========================= */
 /* 🌍 ROUTES */
 /* ========================= */
 
-// 👉 AUTH
-app.use("/api/auth", authRoutes);
+app.use(
+    "/api/stripe",
+    stripeRoutes
+);
 
-// 👉 KEYWORDS
-app.use("/api/keyword", keywordRoutes);
+app.use(
+    "/api/auth",
+    authRoutes
+);
 
-// 👉 SEO
-app.use("/api/seo", seoRoutes); // ✅ FIX ICI
+app.use(
+    "/api/keyword",
+    keywordRoutes
+);
 
-// 👉 SEO PAGE
-app.use("/api/seo-page", seoPageRoutes);
+app.use(
+    "/api/seo",
+    seoRoutes
+);
 
-// 👉 AUTRES
-app.use("/api/plans", plansRoutes);
-app.use("/api/business-profile", businessRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/niche", nicheRoutes);
-app.use("/api/stripe", stripeRoutes);
+app.use(
+    "/api/seo-page",
+    seoPageRoutes
+);
+
+app.use(
+    "/api/chat",
+    chatRoutes
+);
+
+app.use(
+    "/api/niche",
+    nicheRoutes
+);
+
+app.use(
+    "/api/plans",
+    plansRoutes
+);
+
+app.use(
+    "/api/test",
+    googleAdsTest
+);
+
+app.use(
+    "/api/business-profile",
+    businessRoutes
+);
+
 /* ========================= */
 /* 🧪 DEV */
 /* ========================= */
-if (process.env.NODE_ENV === "development") {
-    app.use("/api/dev", devRoutes);
+
+if (
+    process.env.NODE_ENV
+    === "development"
+) {
+
+    app.use(
+        "/api/dev",
+        devRoutes
+    );
+
 }
 
 /* ========================= */
-/* ROOT */
+/* 🏠 ROOT */
 /* ========================= */
-app.get("/", (req, res) => {
-    res.send("🚀 SEO SaaS API running");
-});
 
-/* ========================= */
-/* 🔥 SITEMAP */
-/* ========================= */
-app.get("/sitemap.xml", (req, res) => {
+app.get(
 
-    const BASE_URL = FRONT_URL;
+    "/",
 
-    const cities = ["paris", "lyon", "marseille"];
-    const jobs = ["plombier", "coiffeur", "coach-sportif"];
-    const langs = ["fr", "en"];
+    (req, res) => {
 
-    let urls = "";
+        res.send(
+            "🚀 SEO SaaS API running"
+        );
 
-    langs.forEach(lang => {
-        cities.forEach(city => {
-            jobs.forEach(job => {
-                urls += `
-                <url>
-                    <loc>${BASE_URL}/${lang}/annuaire/${job}-${city}</loc>
-                    <changefreq>weekly</changefreq>
-                    <priority>0.8</priority>
-                </url>`;
-            });
-        });
-    });
+    }
 
-    langs.forEach(lang => {
-        urls += `
-        <url>
-            <loc>${BASE_URL}/${lang}</loc>
-            <changefreq>daily</changefreq>
-            <priority>1.0</priority>
-        </url>`;
-    });
-
-    res.set("Content-Type", "application/xml");
-
-    res.send(`
-        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-            ${urls}
-        </urlset>
-    `);
-});
+);
 
 /* ========================= */
-/* 🔥 ROBOTS */
+/* 🗺️ SITEMAP */
 /* ========================= */
-app.get("/robots.txt", (req, res) => {
-    res.type("text/plain");
-    res.send(`
-User-agent: *
+
+app.get(
+
+    "/sitemap.xml",
+
+    async (req, res) => {
+
+        const BASE_URL =
+            FRONT_URL;
+
+        const cities = [
+            "paris",
+            "lyon",
+            "marseille"
+        ];
+
+        const jobs = [
+            "plombier",
+            "coiffeur",
+            "coach-sportif"
+        ];
+
+        const langs = [
+            "fr",
+            "en"
+        ];
+
+        let urls = "";
+
+        for (const lang of langs) {
+
+            for (const city of cities) {
+
+                for (const job of jobs) {
+
+                    urls += `
+                    <url>
+                        <loc>
+                        ${BASE_URL}/${lang}/annuaire/${job}-${city}
+                        </loc>
+
+                        <changefreq>
+                        weekly
+                        </changefreq>
+
+                        <priority>
+                        0.8
+                        </priority>
+
+                    </url>`;
+
+                }
+
+            }
+
+        }
+
+        res.set(
+            "Content-Type",
+            "application/xml"
+        );
+
+        res.send(`
+
+            <urlset
+            xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+                ${urls}
+
+            </urlset>
+
+        `);
+
+    }
+
+);
+
+/* ========================= */
+/* 🤖 ROBOTS */
+/* ========================= */
+
+app.get(
+
+    "/robots.txt",
+
+    (req, res) => {
+
+        res.type("text/plain");
+
+        res.send(
+
+            `User-agent: *
 Allow: /
+Sitemap: ${FRONT_URL}/sitemap.xml`
 
-Sitemap: ${FRONT_URL}/sitemap.xml
-    `);
-});
+        );
 
-/* ========================= */
-/* 404 */
-/* ========================= */
-app.use((req, res) => {
-    console.log("❌ 404 HIT:", req.method, req.originalUrl);
-    res.status(404).json({
-        error: "Route not found",
-        path: req.originalUrl
-    });
-});
+    }
+
+);
 
 /* ========================= */
-/* ERROR */
+/* ❌ 404 */
 /* ========================= */
-app.use((err, req, res, next) => {
-    console.error("🔥 GLOBAL ERROR:", err);
-    res.status(500).json({
-        error: "Internal server error"
-    });
-});
+
+app.use(
+
+    (req, res) => {
+
+        res.status(404).json({
+
+            error:
+                "Route not found",
+
+            path:
+                req.originalUrl
+
+        });
+
+    }
+
+);
 
 /* ========================= */
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+/* 💥 ERROR HANDLER */
+/* ========================= */
+
+app.use(
+
+    (err, req, res, next) => {
+
+        console.error(
+            "🔥 ERROR:",
+            err.message
+        );
+
+        const status =
+            err.status || 500;
+
+        res.status(status).json({
+
+            error:
+
+                err.message
+                ||
+                "Internal server error"
+
+        });
+
+    }
+
+);
+
+/* ========================= */
+/* 🚀 START */
+/* ========================= */
+
+app.listen(
+
+    PORT,
+
+    () => {
+
+        console.log(
+            `🚀 Server running on http://localhost:${PORT}`
+        );
+
+    }
+
+);

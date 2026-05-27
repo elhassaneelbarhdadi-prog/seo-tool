@@ -1,4 +1,4 @@
-export function generateBusinessIdea(keyword, difficulty) {
+export function generateBusinessIdea(keyword, difficulty, volume = 0, cpc = 0) {
 
     if (!keyword) return null;
 
@@ -8,37 +8,72 @@ export function generateBusinessIdea(keyword, difficulty) {
     /* 🎯 POSITIONNEMENT */
     /* ========================= */
 
-    let angle = "Produit simple avec différenciation";
+    let angle = "Offre simple avec différenciation claire";
 
     if (difficulty > 70) {
-        angle = "Niche ultra spécifique + branding fort";
+        angle = "Hyper niche + branding + offre premium";
     } else if (difficulty > 50) {
         angle = "Produit + contenu SEO + preuve sociale";
+    } else {
+        angle = "Offre simple + rapide à lancer";
     }
 
     /* ========================= */
-    /* 💰 PRIX */
+    /* 💰 PRIX (basé sur CPC) */
     /* ========================= */
 
-    const price = difficulty > 70 ? 49 : difficulty > 50 ? 29 : 19;
+    let price = 19;
+
+    if (cpc > 1.5) price = 59;
+    else if (cpc > 0.8) price = 39;
+    else if (cpc > 0.3) price = 29;
 
     /* ========================= */
-    /* 🚀 TRAFIC */
+    /* 🚀 TRAFIC (basé sur difficulté) */
     /* ========================= */
 
-    let traffic = "SEO + contenu long tail";
+    let traffic = "SEO long tail + contenu simple";
 
     if (difficulty > 70) {
-        traffic = "SEO + TikTok Ads + influence";
+        traffic = "SEO + Ads + influenceurs + branding";
     } else if (difficulty > 50) {
-        traffic = "SEO + Pinterest + Ads légères";
+        traffic = "SEO + Pinterest + contenu blog";
     }
 
+    /* ========================= */
+    /* 🧠 TYPE DE BUSINESS */
+    /* ========================= */
+
+    let type = "boutique";
+
+    if (cpc > 1) type = "service premium";
+    else if (volume > 5000) type = "media + affiliation";
+    else if (difficulty < 40) type = "micro-niche e-commerce";
+
+    /* ========================= */
+    /* 🎣 HOOK */
+    /* ========================= */
+
+    const hook = `Le meilleur ${niche} pour gagner du temps et éviter les erreurs`;
+
+    /* ========================= */
+    /* 💡 IDÉE FINALE */
+    /* ========================= */
+
     return {
-        product: `Boutique spécialisée ${niche}`,
+        type,
+        product: `${type} spécialisée ${niche}`,
         angle,
         price,
         traffic,
-        hook: `Découvrez le meilleur ${niche} sans perdre de temps`,
+        hook,
+
+        // 🔥 BONUS utile
+        potential:
+            volume > 5000
+                ? "fort"
+                : volume > 1000
+                    ? "moyen"
+                    : "faible"
     };
 }

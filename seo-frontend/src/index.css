@@ -2,63 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
-
-/* BASE */
-
+/* ========================= */
+/* 🌍 BASE */
+/* ========================= */
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 }
 
-
+/* ========================= */
 /* BODY */
-
+/* ========================= */
 body {
   margin: 0;
   font-family: system-ui;
-  background: linear-gradient(180deg,
-      #f8fafc 0%,
-      #eef2ff 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
 }
 
-/* TABLE */
-
-table {
+/* ========================= */
+/* TABLE (SCOPED ✅) */
+/* ========================= */
+.table-custom {
   width: 100%;
   border-collapse: collapse;
   background: white;
 }
 
-th,
-td {
+.table-custom th,
+.table-custom td {
   border: 1px solid #e5e7eb;
   padding: 10px;
 }
 
-th {
+.table-custom th {
   background-color: #f9fafb;
   text-align: left;
   font-weight: 600;
 }
 
-tr:hover {
+.table-custom tr:hover {
   background-color: #f3f4f6;
 }
 
-@keyframes growth {
-  0% {
-    width: 0%;
-  }
-
-  100% {
-    width: 75%;
-  }
-}
-
-.animate-growth {
-  animation: growth 2s ease-out forwards;
-}
+/* ========================= */
+/* 🎯 ANIMATIONS */
+/* ========================= */
 
 @keyframes growth {
   0% {
@@ -82,6 +71,27 @@ tr:hover {
   }
 }
 
+/* 👉 version propre */
 .animate-growth {
-  animation: growth 2s ease-out forwards, pulseGlow 2s infinite;
+  animation: growth 1.5s ease-out forwards;
+}
+
+.animate-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* 👉 combo optionnel */
+.animate-growth-glow {
+  animation: growth 1.5s ease-out forwards, pulseGlow 2s infinite;
+}
+
+#root {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.dark {
+  background: #0f172a;
+  color: #e2e8f0;
 }

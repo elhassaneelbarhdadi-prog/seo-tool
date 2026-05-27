@@ -1,82 +1,78 @@
 import express from "express";
-import Stripe from "stripe";
-import sqlite3 from "sqlite3";
 
-const router = express.Router();
+import {
+    stripeWebhook
+}
+    from "../controllers/billing.controller.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const db = new sqlite3.Database("./database.sqlite");
+const router =
+    express.Router();
 
 /* ========================= */
-/* 🔔 STRIPE WEBHOOK */
+/* STRIPE WEBHOOK */
 /* ========================= */
-router.post("/webhook", express.raw({ type: "application/json" }), (req, res) => {
 
-    const sig = req.headers["stripe-signature"];
+/*
 
-    let event;
+IMPORTANT
 
-    try {
-        event = stripe.webhooks.constructEvent(
-            req.body,
-            sig,
-            process.env.STRIPE_WEBHOOK_SECRET
-        );
-    } catch (err) {
-        console.log("❌ Webhook error:", err.message);
-        return res.sendStatus(400);
-    }
+- jamais authMiddleware
+- express.raw obligatoire
+- route AVANT express.json()
+- logique dans controller uniquement
 
-    const data = event.data.object;
+*/
 
-    /* ========================= */
-    /* 💰 CHECKOUT SUCCESS */
-    /* ========================= */
-    if (event.type === "checkout.session.completed") {
+router.post(
 
-        const customerId = data.customer;
+    "/webhook",
 
-        db.run(
-            "UPDATE users SET plan = 'PRO', stripe_customer_id = ? WHERE stripe_customer_id = ?",
-            [customerId, customerId],
-            (err) => {
-                if (err) console.log(err.message);
-                else console.log("✅ User upgraded via checkout:", customerId);
-            }
-        );
-    }
+    express.raw({
 
-    /* ========================= */
-    /* 🔄 SUBSCRIPTION ACTIVE */
-    /* ========================= */
-    if (event.type === "invoice.paid") {
+        type:
+            "application/json",
 
-        const customerId = data.customer;
+        limit:
+            "1mb"
 
-        db.run(
-            "UPDATE users SET plan = 'PRO' WHERE stripe_customer_id = ?",
-            [customerId]
-        );
+    }),
 
-        console.log("💰 Subscription renewed:", customerId);
-    }
+    stripeWebhook
 
-    /* ========================= */
-    /* ❌ SUBSCRIPTION CANCELLED */
-    /* ========================= */
-    if (event.type === "customer.subscription.deleted") {
+);
 
-        const customerId = data.customer;
+/* ========================= */
+/* DEV HEALTH */
+/* ========================= */
 
-        db.run(
-            "UPDATE users SET plan = 'FREE' WHERE stripe_customer_id = ?",
-            [customerId]
-        );
+if (
+    process.env.NODE_ENV
+    === "development"
+) {
 
-        console.log("❌ Subscription cancelled:", customerId);
-    }
+    router.get(
 
-    res.json({ received: true });
-});
+        "/health",
+
+        (req, res) => {
+
+            return res.json({
+
+                ok: true,
+
+                service:
+                    "stripe-webhook",
+
+                timestamp:
+                    new Date()
+                        .toISOString()
+
+            });
+
+        }
+
+    );
+
+}
 
 export default router;

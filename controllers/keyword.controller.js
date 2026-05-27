@@ -1,247 +1,1105 @@
+
 import db from "../config/database.js";
 import { generateKeywordIdeas } from "../services/ai.service.js";
 import { PLANS } from "../config/plans.js";
+import { fetchRealSEO } from "../services/seoReal.service.js";
+import { fetchSerpData } from "../services/serper.js";
 
 /* ========================= */
-/* 🔥 HELPER USAGE */
+/* HELPER USAGE */
 /* ========================= */
-const incrementUsage = async (userId, keyword = "ai") => {
-    if (!userId) return;
 
-    console.log("✅ INCREMENT USAGE:", userId, keyword);
+const incrementUsage = async (
+    userId,
+    keyword = "ai"
+) => {
 
-    await db.run(`
-        INSERT INTO ai_usage (user_id, message, created_at)
-        VALUES (?, ?, datetime('now'))
-    `, [userId, keyword]);
-};
-
-/* ========================= */
-/* 📊 USAGE */
-/* ========================= */
-export const getUsage = async (req, res) => {
     try {
+
+        if (!userId) return;
+
+        console.log("🔥 INCREMENT:", {
+            userId,
+            keyword
+        });
+
+        await db.run(
+            `
+            INSERT INTO ai_usage(
+                user_id,
+                message,
+                created_at
+            )
+            VALUES(
+                ?,
+                ?,
+                datetime('now')
+            )
+            `,
+            [
+                Number(userId),
+                String(keyword)
+            ]
+        );
+
+        console.log("✅ USAGE INSERTED");
+
+    }
+
+    catch (err) {
+
+        console.error(
+            "❌ INCREMENT ERROR:",
+            err
+        );
+
+    }
+
+};
+/* ========================= */
+/* USAGE */
+/* ========================= */
+
+
+
+
+
+export const getUsage = async (req, res) => {
+
+    try {
+
         const userId = req.user.id;
 
-        const result = await db.get(`
-            SELECT COUNT(*) as total
-            FROM ai_usage
-            WHERE user_id = ?
-            AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
-        `, [userId]);
+        /* USER */
 
         const user = await db.get(
-            "SELECT plan FROM users WHERE id = ?",
+            `
+            SELECT
+                plan,
+                subscription_status
+            FROM users
+            WHERE id=?
+            `,
             [userId]
         );
 
-        const plan = user?.plan || "FREE";
-        const planData = PLANS[plan] || PLANS.FREE;
+        const planKey =
+            String(user?.plan || "FREE")
+                .toUpperCase();
+
+        const plan =
+            PLANS[planKey] || PLANS.FREE;
+
+        /* ========================= */
+        /* COUNT REAL USAGE */
+        /* ========================= */
+
+        const result = await db.get(
+            `
+            SELECT COUNT(*) as total
+            FROM ai_usage
+            WHERE user_id=?
+            AND strftime('%Y-%m', created_at)
+            =
+            strftime('%Y-%m', 'now')
+            `,
+            [userId]
+        );
+
+        const used =
+            Number(result?.total || 0);
 
         const limit =
-            planData.limit === null || planData.limit === undefined
-                ? Infinity
-                : planData.limit;
+            plan.limit === null
+                ? null
+                : Number(plan.limit);
 
-        res.json({
-            used: result?.total || 0,
+        console.log("🔥 USAGE:", {
+            used,
             limit,
-            plan
+            plan: plan.key
         });
 
-    } catch (error) {
-        console.error("USAGE ERROR:", error);
-        res.status(500).json({ error: "Usage error" });
+        return res.json({
+
+            used,
+
+            limit,
+
+            plan: plan.key,
+
+            remaining:
+                limit === null
+                    ? null
+                    : Math.max(limit - used, 0)
+
+        });
+
     }
-};
 
-/* ========================= */
-/* 📜 HISTORY */
-/* ========================= */
-export const getKeywordHistory = async (req, res) => {
-    try {
-        const userId = req.user?.id;
+    catch (error) {
 
-        const rows = await db.all(`
-            SELECT *
-            FROM keywords
-            WHERE user_id = ?
-            AND deleted = 0
-            ORDER BY id DESC
-        `, [userId]);
-
-        res.json(rows);
-
-    } catch (error) {
-        console.error("HISTORY ERROR:", error);
-        res.status(500).json({ error: "History error" });
-    }
-};
-
-/* ========================= */
-/* 🤖 AI KEYWORDS */
-/* ========================= */
-export const generateAIKeywords = async (req, res) => {
-    try {
-        const { keyword } = req.body;
-        const userId = req.user?.id;
-
-        if (!keyword?.trim()) {
-            return res.status(400).json({ error: "Keyword required" });
-        }
-
-        const ideas = await generateKeywordIdeas(keyword);
-
-        await incrementUsage(userId, keyword);
-
-        res.json({ keyword, ideas });
-
-    } catch (error) {
-        console.error("AI ERROR:", error);
-        res.status(500).json({ error: "AI keyword generation error" });
-    }
-};
-
-/* ========================= */
-/* 🔍 ANALYZE */
-/* ========================= */
-export const analyzeKeyword = async (req, res) => {
-    try {
-
-        const { keyword } = req.body;
-        const userId = req.user?.id;
-
-        if (!keyword?.trim()) {
-            return res.status(400).json({ error: "Keyword required" });
-        }
-
-        const user = await db.get(
-            "SELECT plan FROM users WHERE id = ?",
-            [userId]
+        console.error(
+            "USAGE ERROR:",
+            error
         );
 
-        const plan = user?.plan || "FREE";
-        const planData = PLANS[plan] || PLANS.FREE;
+        return res.status(500).json({
 
-        const limit =
-            planData.limit === null ? Infinity : planData.limit;
+            error: "usage error"
 
-        const usage = await db.get(`
-            SELECT COUNT(*) as total
-            FROM ai_usage
-            WHERE user_id = ?
-            AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
-        `, [userId]);
+        });
 
-        if (limit !== Infinity && usage.total >= limit) {
-            return res.status(403).json({
-                error: "Limit reached"
-            });
+    }
+
+};
+/* ========================= */
+/* HISTORY */
+/* ========================= */
+
+export const getKeywordHistory =
+    async (req, res) => {
+
+        try {
+
+            const rows =
+
+                await db.all(
+
+                    `
+
+SELECT *
+
+FROM keywords
+
+WHERE user_id=?
+AND (
+    deleted=0
+    OR deleted IS NULL
+)
+
+ORDER BY
+created_at DESC
+
+`,
+
+                    [req.user.id]
+
+                );
+
+            return res
+                .json(rows);
+
         }
 
-        /* FAKE DATA */
-        const volume = Math.floor(Math.random() * 50000) + 1000;
-        const difficulty = Math.floor(Math.random() * 100);
-        const cpc = Number((Math.random() * 5).toFixed(2));
+        catch (err) {
 
-        const score = 100 - difficulty;
-        const revenue = Math.round(volume * 0.02 * cpc);
+            console.error(
 
-        const trend = Array.from({ length: 12 }, (_, i) =>
-            Math.round(1000 + Math.sin(i) * 300 + Math.random() * 200)
-        );
+                "HISTORY ERROR:",
 
-        const products = [
-            {
-                title: `${keyword} premium`,
-                price: Math.round(cpc * 20),
-                link: "#",
-                thumbnail: "https://via.placeholder.com/150"
+                err.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Failed history"
+
+                });
+
+        }
+
+    };
+
+/* ========================= */
+/* DELETE ALL */
+/* ========================= */
+
+export const deleteAllKeywords =
+    async (req, res) => {
+
+        try {
+
+            const userId =
+                req.user?.id;
+
+            if (
+                !userId
+            ) {
+
+                return res
+                    .status(401)
+                    .json({
+
+                        error:
+                            "Unauthorized"
+
+                    });
+
             }
-        ];
 
-        const serp = Array.from({ length: 5 }, (_, i) => ({
-            title: `${keyword} résultat ${i + 1}`,
-            link: `https://site${i + 1}.com/${keyword.replace(/\s/g, "-")}`,
-            snippet: "Description SEO simulée"
-        }));
+            await db.run(
 
-        await db.run(`
-            INSERT INTO keywords
-            (keyword, volume, difficulty, cpc, intent, score, revenue, user_id, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-        `, [
-            keyword,
-            volume,
-            difficulty,
-            cpc,
-            "commercial",
-            score,
-            revenue,
-            userId
-        ]);
+                `
 
-        await incrementUsage(userId, keyword);
+UPDATE keywords
 
-        res.json({
-            keyword,
-            volume,
-            difficulty,
-            cpc,
-            score,
-            revenue,
-            trend,
-            products,
-            serp
-        });
+SET deleted=1
 
-    } catch (error) {
-        console.error("ANALYZE ERROR:", error);
-        res.status(500).json({ error: "Keyword analyze error" });
-    }
-};
+WHERE user_id=?
 
-/* ========================= */
-/* 🗑 DELETE */
-/* ========================= */
-export const deleteKeyword = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const userId = req.user?.id;
+`,
 
-        await db.run(`
-            UPDATE keywords
-            SET deleted = 1
-            WHERE id = ? AND user_id = ?
-        `, [id, userId]);
+                [userId]
 
-        res.json({ success: true });
+            );
 
-    } catch (error) {
-        console.error("DELETE ERROR:", error);
-        res.status(500).json({ error: "Delete error" });
-    }
-}; export const getKeywordSuggestions = async (req, res) => {
-    try {
-        const { keyword, lang = "fr" } = req.body;
+            return res.json({
 
-        if (!keyword?.trim()) {
-            return res.status(400).json({ error: "Keyword required" });
+                success: true
+
+            });
+
         }
 
-        const suffixes = {
-            fr: ["pas cher", "avis", "comparatif", "meilleur", "prix"],
-            en: ["cheap", "review", "comparison", "best", "price"]
-        };
+        catch (err) {
 
-        const selected = suffixes[lang] || suffixes.fr;
+            console.error(
 
-        const suggestions = selected.map(s => `${keyword} ${s}`);
+                "DELETE ALL:",
 
-        res.json({ keyword, suggestions });
+                err.message
 
-    } catch (error) {
-        console.error("SUGGEST ERROR:", error);
-        res.status(500).json({ error: "Suggestion error" });
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Delete failed"
+
+                });
+
+        }
+
+    };
+
+/* ========================= */
+/* DELETE ONE */
+/* ========================= */
+
+export const deleteKeyword = async (req, res) => {
+
+    try {
+
+        /* ========================= */
+        /* VALIDATION ID */
+        /* ========================= */
+
+        const id =
+            Number(req.params.id);
+
+        if (
+            !Number.isInteger(id)
+            || id <= 0
+        ) {
+
+            return res.status(400).json({
+                error: "Invalid keyword id"
+            });
+
+        }
+
+        /* ========================= */
+        /* DELETE SOFT */
+        /* ========================= */
+
+        await db.run(
+            `
+            UPDATE keywords
+            SET deleted=1
+            WHERE id=?
+            AND user_id=?
+            `,
+            [
+                id,
+                req.user.id
+            ]
+        );
+
+        return res.json({
+
+            success: true
+
+        });
+
     }
+
+    catch (error) {
+
+        console.error(
+            "DELETE KEYWORD ERROR:",
+            error
+        );
+
+        return res.status(500).json({
+
+            error:
+                "Delete failed"
+
+        });
+
+    }
+
 };
+/* ========================= */
+/* AI */
+/* ========================= */
+
+export const generateAIKeywords =
+    async (req, res) => {
+
+        try {
+
+            const keyword =
+
+                String(
+                    req.body.keyword
+                    ||
+                    ""
+                )
+
+                    .trim()
+
+                    .slice(0, 100);
+
+            const userId =
+                req.user?.id;
+
+            if (
+                !keyword
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Keyword required"
+
+                    });
+
+            }
+
+            const ideas =
+
+                await generateKeywordIdeas(
+                    keyword
+                );
+
+            await incrementUsage(
+                userId,
+                keyword
+            );
+
+            return res.json({
+
+                keyword,
+
+                ideas
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(
+
+                "AI ERROR:",
+
+                err.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "AI error"
+
+                });
+
+        }
+
+    };
+
+/* ========================= */
+/* ANALYZE */
+/* ========================= */
+
+export const analyzeKeyword =
+    async (req, res) => {
+
+        try {
+
+            const keyword =
+
+                String(
+                    req.body.keyword
+                    ||
+                    ""
+                )
+
+                    .trim()
+
+                    .toLowerCase()
+
+                    .slice(0, 100);
+
+            const userId =
+                req.user?.id;
+
+            if (
+                !keyword
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Keyword required"
+
+                    });
+
+            }
+
+            if (
+                !userId
+            ) {
+
+                return res
+                    .status(401)
+                    .json({
+
+                        error:
+                            "Unauthorized"
+
+                    });
+
+            }
+
+            if (
+                process.env.NODE_ENV
+                === "development"
+            ) {
+
+                console.log(
+                    "ANALYZE:",
+                    keyword
+                );
+
+            }
+
+            const user =
+
+                await db.get(
+
+                    `
+
+SELECT
+plan
+
+FROM users
+
+WHERE id=?
+
+`,
+
+                    [userId]
+
+                );
+
+            const limit =
+
+                PLANS[
+                    user?.plan
+                    ||
+                    "FREE"
+                ]
+                    ?.limit
+                ??
+                null;
+
+            const usage =
+
+                await db.get(
+
+                    `
+
+SELECT
+COUNT(*) as total
+
+FROM ai_usage
+
+WHERE user_id=?
+
+AND strftime(
+'%Y-%m',
+created_at
+)
+
+=
+
+strftime(
+'%Y-%m',
+'now'
+)
+
+`,
+
+                    [userId]
+
+                );
+
+            if (
+
+                limit !== null
+
+                &&
+
+                usage.total >= limit
+
+            ) {
+
+                return res
+                    .status(403)
+                    .json({
+
+                        error:
+                            "Limit reached"
+
+                    });
+
+            }
+
+            const existing =
+
+                await db.get(
+
+                    `
+
+SELECT id
+
+FROM keywords
+
+WHERE
+
+keyword=?
+
+AND user_id=?
+
+AND (
+ deleted=0
+ OR deleted IS NULL
+)
+
+`,
+
+                    [
+
+                        keyword,
+
+                        userId
+
+                    ]
+
+                );
+
+            const real =
+                await fetchRealSEO(
+                    keyword
+                );
+
+            const serpData =
+                await fetchSerpData(
+                    keyword
+                );
+
+            const volume =
+                Number(
+                    real?.volume
+                )
+                || 0;
+
+            const difficulty =
+                Number(
+                    real?.difficulty
+                )
+                || 0;
+
+            const cpc =
+                Number(
+                    real?.cpc
+                )
+                || 0;
+
+            const estimatedTrafficPosition1 =
+
+                Number(
+                    real?.trafficPosition1
+                )
+
+                ||
+
+                Math.floor(
+                    volume * 0.28
+                );
+
+            const estimatedROI =
+
+                Number(
+                    real?.roiScore
+                )
+
+                ||
+
+                Math.floor(
+
+                    estimatedTrafficPosition1
+
+                    *
+
+                    0.02
+
+                    *
+
+                    Math.max(
+                        cpc * 100,
+                        20
+                    )
+
+                );
+
+            const volumeScore =
+
+                Math.min(
+                    40,
+                    Math.log10(
+                        volume + 1
+                    ) * 10
+                );
+
+            const cpcScore =
+
+                Math.min(
+                    30,
+                    cpc * 10
+                );
+
+            const difficultyScore =
+
+                Math.max(
+                    0,
+                    (100 - difficulty)
+                    * 0.3
+                );
+
+            const score =
+
+                Math.round(
+
+                    volumeScore +
+
+                    cpcScore +
+
+                    difficultyScore
+
+                );
+
+            const competition =
+
+                difficulty >= 80
+                    ? "hard"
+                    :
+                    difficulty >= 50
+                        ? "medium"
+                        :
+                        "easy";
+
+            const verdict =
+
+                score >= 70
+                    ? "GO"
+                    :
+                    score >= 40
+                        ? "WAIT"
+                        :
+                        "NO_GO";
+
+            const trend =
+
+                Array.isArray(
+                    real?.trend
+                )
+                    ?
+                    real.trend
+                    :
+                    [];
+
+            if (existing) {
+
+                await db.run(
+
+                    `
+
+UPDATE keywords
+
+SET
+
+volume=?,
+
+difficulty=?,
+
+cpc=?,
+
+score=?,
+
+revenue=?,
+
+trend=?,
+
+created_at=datetime('now')
+
+WHERE id=?
+
+`,
+
+                    [
+
+                        volume,
+
+                        difficulty,
+
+                        cpc,
+
+                        score,
+
+                        estimatedROI,
+
+                        JSON.stringify(
+                            trend
+                        ),
+
+                        existing.id
+
+                    ]
+
+                );
+
+            } else {
+
+                await db.run(
+
+                    `
+
+INSERT INTO keywords(
+
+keyword,
+
+volume,
+
+difficulty,
+
+cpc,
+
+score,
+
+revenue,
+
+trend,
+
+user_id
+
+)
+
+VALUES(
+
+?,
+
+?,
+
+?,
+
+?,
+
+?,
+
+?,
+
+?,
+
+?
+
+)
+
+`,
+
+                    [
+
+                        keyword,
+
+                        volume,
+
+                        difficulty,
+
+                        cpc,
+
+                        score,
+
+                        estimatedROI,
+
+                        JSON.stringify(
+                            trend
+                        ),
+
+                        userId
+
+                    ]
+
+                );
+
+            }
+
+            await incrementUsage(
+                userId,
+                keyword
+            );
+
+            return res.json({
+
+                keyword,
+
+                volume,
+
+                difficulty,
+
+                cpc,
+
+                score,
+
+                competition,
+
+                verdict,
+
+                revenue:
+                    estimatedROI,
+
+                roiScore:
+                    estimatedROI,
+
+                estimatedTrafficPosition1,
+
+                intents:
+                    real?.intents
+                    ||
+                    {},
+
+                trend,
+
+                serp:
+
+                    Array.isArray(
+                        serpData?.organic
+                    )
+
+                        ?
+
+                        serpData
+                            .organic
+                            .map(
+
+                                item => ({
+
+                                    title:
+                                        item.title,
+
+                                    link:
+                                        item.link,
+
+                                    snippet:
+                                        item.snippet,
+
+                                    position:
+                                        item.position
+
+                                })
+
+                            )
+
+                        : [],
+
+                suggestions:
+
+                    Array.isArray(
+                        serpData
+                            ?.relatedSearches
+                    )
+
+                        ?
+
+                        serpData
+                            .relatedSearches
+                            .map(
+                                s => s.query
+                            )
+
+                        : [],
+
+                questions:
+
+                    Array.isArray(
+                        serpData
+                            ?.peopleAlsoAsk
+                    )
+
+                        ?
+
+                        serpData
+                            .peopleAlsoAsk
+                            .map(
+                                q => q.question
+                            )
+
+                        : [],
+
+                ideas:
+                    real?.ideas
+                    ||
+                    []
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+
+                "ANALYZE ERROR:",
+
+                error.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Analyze error"
+
+                });
+
+        }
+
+    };
+
+/* ========================= */
+/* SUGGESTIONS */
+/* ========================= */
+
+export const getKeywordSuggestions =
+    async (req, res) => {
+
+        try {
+
+            const keyword =
+
+                String(
+                    req.body.keyword
+                    ||
+                    ""
+                )
+
+                    .trim()
+
+                    .slice(0, 100);
+
+            if (
+                !keyword
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Keyword required"
+
+                    });
+
+            }
+
+            const serpData =
+
+                await fetchSerpData(
+                    keyword
+                );
+
+            const suggestions =
+
+                Array.isArray(
+                    serpData
+                        ?.relatedSearches
+                )
+
+                    ?
+
+                    serpData
+                        .relatedSearches
+                        .map(
+                            s => s.query
+                        )
+
+                    : [];
+
+            return res.json({
+
+                keyword,
+
+                suggestions
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(
+
+                "SUGGESTION ERROR:",
+
+                err.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Suggestion error"
+
+                });
+
+        }
+
+    };

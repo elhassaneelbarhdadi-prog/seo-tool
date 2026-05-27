@@ -1,81 +1,221 @@
-import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
-export default function DifficultyCircle({ difficulty }) {
+const SIZE = 70;
+const STROKE = 6;
 
-    const { t } = useTranslation();
+const EASY = 30;
+const MEDIUM = 70;
 
-    const value = useMemo(() => {
-        return Math.min(Math.max(Number(difficulty) || 0, 0), 100);
-    }, [difficulty]);
+export default function DifficultyCircle({
 
-    const radius = 28;
-    const stroke = 6;
-    const normalizedRadius = radius;
-    const circumference = 2 * Math.PI * normalizedRadius;
-    const offset = circumference - (value / 100) * circumference;
+    difficulty = 0
 
-    const color = useMemo(() => {
-        if (value <= 30) return "#22c55e";
-        if (value <= 70) return "#f59e0b";
-        return "#ef4444";
-    }, [value]);
+}) {
 
-    const label = useMemo(() => {
-        if (value <= 30) return t("easy") || "Facile";
-        if (value <= 70) return t("medium") || "Moyen";
-        return t("hard") || "Difficile";
-    }, [value, t]);
+    const { t } =
+        useTranslation();
+
+    /* ========================= */
+    /* SAFE VALUE */
+    /* ========================= */
+
+    const value =
+        Math.min(
+            Math.max(
+                Number(difficulty) || 0,
+                0
+            ),
+            100
+        );
+
+    /* ========================= */
+    /* SVG */
+    /* ========================= */
+
+    const radius =
+        (SIZE / 2) - STROKE;
+
+    const circumference =
+        2 * Math.PI * radius;
+
+    const offset =
+        circumference -
+        ((value / 100)
+            * circumference);
+
+    /* ========================= */
+    /* COLOR */
+    /* ========================= */
+
+    let color =
+        "#ef4444";
+
+    if (value <= EASY) {
+        color = "#22c55e";
+    }
+
+    else if (
+        value <= MEDIUM
+    ) {
+
+        color =
+            "#f59e0b";
+
+    }
+
+    /* ========================= */
+    /* LABEL */
+    /* ========================= */
+
+    let label =
+        t("hard");
+
+    if (value <= EASY) {
+        label =
+            t("easy");
+    }
+
+    else if (
+        value <= MEDIUM
+    ) {
+
+        label =
+            t("medium");
+
+    }
+
+    const ariaText =
+
+        `${t("difficulty")} ${value}/100 - ${label}`;
 
     return (
-        <div className="flex flex-col items-center justify-center">
 
-            <svg width="70" height="70" className="transform -rotate-90">
+        <div
+            className="
+            flex
+            flex-col
+            items-center
+            justify-center
+            "
+        >
 
-                {/* fond */}
+            <svg
+
+                width={SIZE}
+
+                height={SIZE}
+
+                role="img"
+
+                aria-label={
+                    ariaText
+                }
+
+                className="
+                -rotate-90
+                "
+
+            >
+
+                <title>
+                    {ariaText}
+                </title>
+
+                {/* background */}
+
                 <circle
+
                     stroke="#e5e7eb"
+
                     fill="transparent"
-                    strokeWidth={stroke}
-                    r={normalizedRadius}
-                    cx="35"
-                    cy="35"
+
+                    strokeWidth={STROKE}
+
+                    r={radius}
+
+                    cx={SIZE / 2}
+
+                    cy={SIZE / 2}
+
                 />
 
-                {/* progression */}
+                {/* progress */}
+
                 <circle
+
                     stroke={color}
+
                     fill="transparent"
-                    strokeWidth={stroke}
+
+                    strokeWidth={STROKE}
+
                     strokeLinecap="round"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={offset}
-                    r={normalizedRadius}
-                    cx="35"
-                    cy="35"
+
+                    strokeDasharray={
+                        circumference
+                    }
+
+                    strokeDashoffset={
+                        offset
+                    }
+
+                    r={radius}
+
+                    cx={SIZE / 2}
+
+                    cy={SIZE / 2}
+
                     style={{
-                        transition: "stroke-dashoffset 0.6s ease"
+
+                        transition:
+                            "stroke-dashoffset .6s ease, stroke .3s ease"
+
                     }}
+
                 />
 
-                {/* TEXTE */}
+                {/* center text */}
+
                 <text
+
                     x="50%"
+
                     y="50%"
+
                     textAnchor="middle"
-                    dy=".3em"
-                    className="text-sm font-bold fill-gray-700 rotate-90 origin-center"
+
+                    dominantBaseline="middle"
+
+                    transform={`rotate(90 ${SIZE / 2} ${SIZE / 2})`}
+
+                    className="
+                    text-sm
+                    font-bold
+                    fill-gray-700
+                    "
+
                 >
+
                     {value}
+
                 </text>
 
             </svg>
 
-            {/* LABEL */}
-            <span className="text-xs mt-1 text-gray-500">
+            <span
+                className="
+                text-xs
+                mt-1
+                text-gray-500
+                "
+            >
+
                 {label}
+
             </span>
 
         </div>
+
     );
+
 }

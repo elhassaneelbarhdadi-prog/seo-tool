@@ -1,4 +1,4 @@
-export function generateFullFunnel(keyword, difficulty) {
+export function generateFullFunnel(keyword, difficulty, volume = 0, cpc = 0) {
 
     if (!keyword) return null;
 
@@ -8,45 +8,95 @@ export function generateFullFunnel(keyword, difficulty) {
     /* 🎯 POSITIONNEMENT */
     /* ========================= */
 
-    const hook = `Comment profiter de ${niche} sans perdre de temps`;
+    const hook = `Comment réussir avec ${niche} sans perdre de temps ni d'argent`;
 
-    const headline = `Le meilleur ${niche} pour obtenir des résultats rapidement`;
+    const headline = `Le système complet pour maîtriser ${niche} rapidement`;
 
-    const subheadline = `Une méthode simple et efficace utilisée par des centaines d’utilisateurs`;
+    const subheadline = volume > 5000
+        ? `Déjà adopté par des milliers d’utilisateurs`
+        : `Une méthode simple et efficace, testée et approuvée`;
 
     /* ========================= */
-    /* 💰 OFFRE */
+    /* 🎯 AVATAR (important SaaS) */
     /* ========================= */
 
-    const price = difficulty > 70 ? 49 : difficulty > 50 ? 29 : 19;
+    const target =
+        difficulty > 70
+            ? "Professionnels / experts"
+            : difficulty > 40
+                ? "Intermédiaires"
+                : "Débutants";
 
-    const offer = `Accès immédiat + stratégie complète + bonus exclusifs`;
+    /* ========================= */
+    /* 💰 PRICING (basé CPC) */
+    /* ========================= */
+
+    let price = 19;
+
+    if (cpc > 1.5) price = 79;
+    else if (cpc > 0.8) price = 49;
+    else if (cpc > 0.3) price = 29;
 
     /* ========================= */
     /* 📈 TRAFIC */
     /* ========================= */
 
-    let traffic = "SEO + contenu long tail";
+    let traffic = "SEO long tail + contenu";
 
     if (difficulty > 70) {
-        traffic = "TikTok Ads + SEO + influenceurs";
+        traffic = "SEO + Ads + influenceurs + branding";
     } else if (difficulty > 50) {
-        traffic = "SEO + Pinterest + Ads";
+        traffic = "SEO + Pinterest + contenu blog";
     }
 
     /* ========================= */
-    /* 📦 UPSELL */
+    /* 📦 OFFRE */
     /* ========================= */
 
-    const upsell = `Pack premium ${niche} (+ coaching + templates)`;
+    const offer = `
+✔ Accès immédiat à la stratégie ${niche}
+✔ Méthode étape par étape
+✔ Templates prêts à l'emploi
+✔ Bonus exclusifs
+`;
+
+    /* ========================= */
+    /* 🚀 UPSELL */
+    /* ========================= */
+
+    const upsell = `Coaching avancé + optimisation complète ${niche}`;
+
+    /* ========================= */
+    /* 🧠 PROOF (conversion clé) */
+    /* ========================= */
+
+    const proof =
+        volume > 5000
+            ? "🔥 Forte demande sur ce marché"
+            : "📈 Opportunité encore peu exploitée";
+
+    /* ========================= */
+    /* ⚡ URGENCE */
+    /* ========================= */
+
+    const urgency =
+        difficulty > 70
+            ? "Marché compétitif → agir rapidement"
+            : "Profitez de cette opportunité avant saturation";
 
     return {
         hook,
         headline,
         subheadline,
+
+        target,
         offer,
         price,
+
         traffic,
-        upsell
+        upsell,
+
+        proof,
+        urgency
     };
 }

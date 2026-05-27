@@ -1,28 +1,70 @@
-
+import { useCallback } from "react";
 
 export function useSeoScore() {
 
     /* ========================= */
-    /* 🔤 LABEL */
+    /* 🎯 GET SCORE */
     /* ========================= */
-    const getScoreLabel = (score = 0) => {
-
-        if (score > 85) return "🔴 Très difficile";
-        if (score > 65) return "🟠 Concurrentiel";
-        if (score > 40) return "🟡 Opportunité moyenne";
-        return "🟢 Facile à rank";
-
-    };
+    const getScore = useCallback((data = {}) => {
+        return Number(data?.scoreFinal ?? data?.score) || 0;
+    }, []);
 
     /* ========================= */
-    /* 📊 UTILISE LE SCORE EXISTANT */
+    /* 🎨 META */
     /* ========================= */
-    const getScore = (data = {}) => {
-        return data.score ?? 50;
-    };
+    const getScoreMeta = useCallback((score = 0) => {
+
+        if (score >= 75) {
+            return {
+                label: "🚀 Forte opportunité",
+                color: "text-green-600",
+                bg: "bg-green-100",
+                badge: "GO"
+            };
+        }
+
+        if (score >= 50) {
+            return {
+                label: "⚡ Opportunité moyenne",
+                color: "text-yellow-600",
+                bg: "bg-yellow-100",
+                badge: "WAIT"
+            };
+        }
+
+        if (score >= 30) {
+            return {
+                label: "⚠️ Difficile",
+                color: "text-orange-500",
+                bg: "bg-orange-100",
+                badge: "HARD"
+            };
+        }
+
+        return {
+            label: "❌ Très difficile",
+            color: "text-red-600",
+            bg: "bg-red-100",
+            badge: "NO_GO"
+        };
+    }, []);
+
+    /* ========================= */
+    /* 🎯 FULL OBJECT */
+    /* ========================= */
+    const getSeoData = useCallback((data = {}) => {
+        const score = getScore(data);
+        const meta = getScoreMeta(score);
+
+        return {
+            score,
+            ...meta
+        };
+    }, [getScore, getScoreMeta]);
 
     return {
-        getScoreLabel,
-        getScore
+        getScore,
+        getScoreMeta,
+        getSeoData // 🔥 super utile pour UI
     };
 }

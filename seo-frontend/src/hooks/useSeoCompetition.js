@@ -5,7 +5,6 @@ import { useMemo } from "react";
 /* 🎯 INTENTION */
 /* ========================= */
 const detectIntent = (keyword = "") => {
-
     const k = keyword.toLowerCase();
 
     if (/(acheter|prix|boutique|shop|pas cher)/.test(k)) return "ecommerce";
@@ -16,48 +15,63 @@ const detectIntent = (keyword = "") => {
 };
 
 /* ========================= */
-/* 🔥 HOOK CLEAN */
+/* 🧠 TYPE DOMAINE */
+/* ========================= */
+const detectType = (domain = "") => {
+    const d = domain.toLowerCase();
+
+    if (/(amazon|cdiscount|fnac)/.test(d)) return "marketplace";
+    if (/(shop|store|boutique)/.test(d)) return "ecommerce";
+    if (/(blog|magazine|media)/.test(d)) return "media";
+
+    return "site";
+};
+
+/* ========================= */
+/* 🔥 HOOK */
 /* ========================= */
 export function useSeoCompetition(result) {
 
     return useMemo(() => {
 
         const keyword = result?.keyword || "";
-        const volume = result?.volume || 0;
-        const revenueBase = result?.revenue || 0;
+        const volume = Number(result?.volume) || 0;
+        const revenueBase = Number(result?.revenue) || 0;
 
         if (!keyword) return [];
 
         /* ========================= */
         /* 🔥 SERP RÉELLE */
         /* ========================= */
-        if (result?.serp?.length) {
+        if (Array.isArray(result?.serp) && result.serp.length > 0) {
 
             return result.serp.slice(0, 10).map((r, i) => {
 
                 const domain =
                     r.link?.replace(/^https?:\/\//, "").split("/")[0] || "unknown";
 
-                const hash = (str) =>
-                    str.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+                // 🔒 hash stable
+                const seed = domain
+                    .split("")
+                    .reduce((acc, c) => acc + c.charCodeAt(0), 0);
 
-                const seed = hash(domain);
+                const type = detectType(domain);
 
-                let type = "media";
+                // ✅ authority plus réaliste
+                const authority = Math.min(95, 30 + (seed % 65));
 
-                if (domain.includes("amazon") || domain.includes("cdiscount")) {
-                    type = "marketplace";
-                } else if (domain.includes("shop") || domain.includes("store")) {
-                    type = "ecommerce";
-                } else if (domain.includes("blog")) {
-                    type = "blog";
-                }
+                // ✅ trafic basé position (IMPORTANT)
+                const positionFactor = 1 - (i * 0.08); // top 1 = 100%, top 10 ≈ 20%
 
-                const authority = 40 + (seed % 60);
+                const traffic = Math.max(
+                    10,
+                    Math.round(volume * positionFactor * 0.3)
+                );
 
-                /* ✅ basé sur backend */
-                const traffic = Math.round(volume * (0.5 + (seed % 50) / 100));
-                const revenue = Math.round(revenueBase * (0.5 + (seed % 50) / 100));
+                const revenue = Math.max(
+                    1,
+                    Math.round(revenueBase * positionFactor * 0.3)
+                );
 
                 return {
                     site: domain,
@@ -67,79 +81,86 @@ export function useSeoCompetition(result) {
                     authority,
                     traffic,
                     revenue,
-                    strategy: "SEO + contenu"
+                    strategy:
+                        type === "marketplace"
+                            ? "Ads + SEO produit"
+                            : "SEO + contenu"
                 };
             });
         }
 
         /* ========================= */
-        /* 🔄 FALLBACK */
+        /* 🔄 FALLBACK INTELLIGENT */
         /* ========================= */
         const intent = detectIntent(keyword);
         const niche = keyword.replaceAll(" ", "-");
 
-        if (intent === "ecommerce") {
-            return [
-                {
-                    site: "amazon.fr",
-                    type: "marketplace",
-                    position: 1,
-                    authority: 95,
-                    traffic: volume * 10,
-                    revenue: revenueBase * 10,
-                    strategy: "Marketplace + Ads"
-                },
-                {
-                    site: `${niche}-shop.com`,
-                    type: "ecommerce",
-                    position: 2,
-                    authority: 65,
-                    traffic: volume,
-                    revenue: revenueBase,
-                    strategy: "Niche + SEO"
-                }
-            ];
-        }
+        const baseTraffic = Math.max(50, volume * 0.3);
+        const baseRevenue = Math.max(10, revenueBase * 0.3);
 
-        if (intent === "affiliate") {
-            return [
-                {
-                    site: "media-site.com",
-                    type: "media",
-                    position: 1,
-                    authority: 80,
-                    traffic: volume * 2,
-                    revenue: revenueBase * 2,
-                    strategy: "Comparatif + affiliation"
-                }
-            ];
-        }
+        switch (intent) {
 
-        if (intent === "blog") {
-            return [
-                {
-                    site: "blog-expert.com",
-                    type: "blog",
-                    position: 1,
-                    authority: 70,
-                    traffic: volume,
-                    revenue: revenueBase * 0.5,
-                    strategy: "SEO contenu"
-                }
-            ];
-        }
+            case "ecommerce":
+                return [
+                    {
+                        site: "amazon.fr",
+                        type: "marketplace",
+                        position: 1,
+                        authority: 95,
+                        traffic: baseTraffic * 2,
+                        revenue: baseRevenue * 2,
+                        strategy: "Marketplace + Ads"
+                    },
+                    {
+                        site: `${niche}-shop.com`,
+                        type: "ecommerce",
+                        position: 2,
+                        authority: 60,
+                        traffic: baseTraffic,
+                        revenue: baseRevenue,
+                        strategy: "Niche + SEO"
+                    }
+                ];
 
-        return [
-            {
-                site: `${niche}-site.com`,
-                type: "mixed",
-                position: 1,
-                authority: 60,
-                traffic: volume,
-                revenue: revenueBase,
-                strategy: "SEO niche"
-            }
-        ];
+            case "affiliate":
+                return [
+                    {
+                        site: `${niche}-comparatif.com`,
+                        type: "media",
+                        position: 1,
+                        authority: 75,
+                        traffic: baseTraffic,
+                        revenue: baseRevenue,
+                        strategy: "Comparatif + affiliation"
+                    }
+                ];
+
+            case "blog":
+                return [
+                    {
+                        site: `${niche}-blog.com`,
+                        type: "blog",
+                        position: 1,
+                        authority: 65,
+                        traffic: baseTraffic,
+                        revenue: baseRevenue * 0.5,
+                        strategy: "SEO contenu"
+                    }
+                ];
+
+            default:
+                return [
+                    {
+                        site: `${niche}-site.com`,
+                        type: "mixed",
+                        position: 1,
+                        authority: 55,
+                        traffic: baseTraffic,
+                        revenue: baseRevenue,
+                        strategy: "SEO niche"
+                    }
+                ];
+        }
 
     }, [result]);
 }

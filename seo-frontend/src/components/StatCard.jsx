@@ -1,6 +1,13 @@
 
+// eslint-disable-next-line no-unused-vars
+import { motion } from "framer-motion";
 
-export default function StatCard({ title, value }) {
+export default function StatCard({ title, value, suffix = "", fallback = "-" }) {
+
+    const safeValue =
+        value !== undefined && value !== null && value !== ""
+            ? value
+            : fallback;
 
     return (
         <motion.div
@@ -12,8 +19,10 @@ export default function StatCard({ title, value }) {
             <p className="text-sm text-gray-500 dark:text-gray-400">
                 {title}
             </p>
+
             <h2 className="text-2xl font-bold mt-2">
-                {value}
+                {safeValue}
+                {safeValue !== fallback && suffix}
             </h2>
         </motion.div>
     );

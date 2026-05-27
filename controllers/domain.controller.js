@@ -1,13 +1,152 @@
-import { generateFakeDomainData } from "../services/domain.service.js";
+import { generateFakeDomainData }
+    from "../services/domain.service.js";
 
-export const getDomainData = (req, res) => {
-    const { domain } = req.body;
+/* ========================= */
+/* DOMAIN VALIDATION */
+/* ========================= */
 
-    if (!domain) {
-        return res.status(400).json({ error: "Domain manquant" });
-    }
+const isValidDomain = (
+    domain
+) => {
 
-    const data = generateFakeDomainData(domain);
+    return /^(?!-)(?:[a-z0-9-]{1,63}\.)+[a-z]{2,}$/i
+        .test(domain);
 
-    res.json(data);
 };
+
+/* ========================= */
+/* GET DOMAIN DATA */
+/* ========================= */
+
+export const getDomainData =
+    (req, res) => {
+
+        try {
+
+            /* ========================= */
+            /* AUTH */
+            /* ========================= */
+
+            if (
+                !req.user?.id
+            ) {
+
+                return res
+                    .status(401)
+                    .json({
+
+                        error:
+                            "Unauthorized"
+
+                    });
+
+            }
+
+            let {
+                domain = ""
+            } = req.body;
+
+            /* ========================= */
+            /* VALIDATION */
+            /* ========================= */
+
+            domain =
+                String(domain)
+                    .trim()
+                    .toLowerCase()
+                    .slice(0, 255);
+
+            if (
+                !domain
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Domain requis"
+
+                    });
+
+            }
+
+            if (
+                !isValidDomain(
+                    domain
+                )
+            ) {
+
+                return res
+                    .status(400)
+                    .json({
+
+                        error:
+                            "Domain invalide"
+
+                    });
+
+            }
+
+            /* ========================= */
+            /* DATA */
+            /* ========================= */
+
+            const data =
+
+                generateFakeDomainData(
+                    domain
+                );
+
+            if (
+                !data
+            ) {
+
+                throw new Error(
+                    "No data generated"
+                );
+
+            }
+
+            /* ========================= */
+            /* RESPONSE */
+            /* ========================= */
+
+            return res.json({
+
+                domain,
+
+                ...data,
+
+                source:
+                    "simulated",
+
+                simulated:
+                    true
+
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+
+                "DOMAIN ERROR:",
+
+                error.message
+
+            );
+
+            return res
+                .status(500)
+                .json({
+
+                    error:
+                        "Domain analysis error"
+
+                });
+
+        }
+
+    };

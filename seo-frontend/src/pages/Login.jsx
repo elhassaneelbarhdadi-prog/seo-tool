@@ -21,9 +21,8 @@ export default function Login() {
     useEffect(() => {
         const token = localStorage.getItem("token");
 
-        // 🔥 important : uniquement sur /login
-        if (token && window.location.pathname.includes("/login")) {
-            navigate(`/${currentLang}/dashboard`);
+        if (token) {
+            navigate(`/${currentLang}/dashboard`, { replace: true });
         }
     }, [navigate, currentLang]);
 
@@ -38,8 +37,6 @@ export default function Login() {
         setError("");
         setLoading(true);
 
-        console.log("🚀 LOGIN START");
-
         try {
             const res = await fetch("http://localhost:3001/api/auth/login", {
                 method: "POST",
@@ -49,40 +46,26 @@ export default function Login() {
                 body: JSON.stringify({ email, password })
             });
 
-            console.log("📡 RESPONSE STATUS:", res.status);
+            const data = await res.json().catch(() => null);
 
-            const text = await res.text();
-            console.log("📦 RAW RESPONSE:", text);
-
-            let data;
-            try {
-                data = JSON.parse(text);
-            } catch {
-                console.error("❌ JSON PARSE ERROR");
-                throw new Error("Réponse serveur invalide");
-            }
-
-            console.log("✅ DATA:", data);
-            console.log("TOKEN:", data.token);
             if (!res.ok) {
-                throw new Error(data?.error || "Login failed");
+                throw new Error(data?.error || "Email ou mot de passe incorrect");
             }
 
             if (!data?.token) {
                 throw new Error("Token manquant");
             }
 
+            /* ✅ SAVE TOKEN */
             localStorage.setItem("token", data.token);
 
-            console.log("🎯 REDIRECT");
-
-            navigate(`/${currentLang}/dashboard`);
+            /* ✅ REDIRECT */
+            navigate(`/${currentLang}/dashboard`, { replace: true });
 
         } catch (err) {
             console.error("❌ LOGIN ERROR:", err);
-            setError(err.message);
+            setError(err.message || "Erreur serveur");
         } finally {
-            console.log("🛑 LOGIN END");
             setLoading(false);
         }
     };
@@ -126,9 +109,9 @@ export default function Login() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="bg-blue-600 text-white p-3 rounded hover:bg-blue-700 transition"
+                        className="bg-blue-600 text-white p-3 rounded hover:bg-blue-700 transition disabled:opacity-50"
                     >
-                        {loading ? t("loading") : t("submit")}
+                        {loading ? "⏳ " + t("loading") : t("submit")}
                     </button>
 
                 </form>

@@ -1,4 +1,4 @@
-export function generateLandingPage(keyword, difficulty) {
+export function generateLandingPage(keyword, difficulty, volume = 0, cpc = 0) {
 
     if (!keyword) return null;
 
@@ -10,23 +10,11 @@ export function generateLandingPage(keyword, difficulty) {
 
     let angle = "default";
 
-    if (
-        niche.includes("argent") ||
-        niche.includes("gagner") ||
-        niche.includes("revenu")
-    ) {
+    if (/(argent|revenu|gagner|money)/.test(niche)) {
         angle = "money";
-    } else if (
-        niche.includes("trafic") ||
-        niche.includes("seo") ||
-        niche.includes("visiteurs")
-    ) {
+    } else if (/(trafic|seo|visiteurs)/.test(niche)) {
         angle = "traffic";
-    } else if (
-        niche.includes("business") ||
-        niche.includes("dropshipping") ||
-        niche.includes("ecommerce")
-    ) {
+    } else if (/(business|dropshipping|ecommerce)/.test(niche)) {
         angle = "business";
     }
 
@@ -40,57 +28,88 @@ export function generateLandingPage(keyword, difficulty) {
     switch (angle) {
 
         case "money":
-            headline = `Générez vos premiers revenus avec ${niche} en moins de 30 jours`;
-            subheadline = `Une méthode simple pour transformer ${niche} en source de revenus`;
+            headline = `Générez des revenus avec ${niche} sans expérience`;
+            subheadline = volume > 5000
+                ? `Déjà adopté par des milliers d’utilisateurs`
+                : `Une méthode simple pour monétiser rapidement`;
             break;
 
         case "traffic":
-            headline = `Attirez du trafic qualifié avec ${niche} sans dépendre des pubs`;
-            subheadline = `Une stratégie simple pour générer du trafic gratuitement`;
+            headline = `Obtenez du trafic qualifié avec ${niche} sans publicité`;
+            subheadline = `Une stratégie SEO durable et gratuite`;
             break;
 
         case "business":
-            headline = `Lancez un business rentable en ${niche} même en partant de zéro`;
-            subheadline = `Un système clé en main pour créer votre projet rapidement`;
+            headline = `Lancez votre business en ${niche} dès aujourd’hui`;
+            subheadline = `Un système clé en main pour démarrer rapidement`;
             break;
 
         default:
             if (difficulty > 70) {
-                headline = `Prenez une longueur d’avance sur ${niche} malgré la concurrence`;
-                subheadline = `Une méthode optimisée pour se démarquer rapidement`;
+                headline = `Dominez ${niche} malgré une forte concurrence`;
+                subheadline = `Une approche avancée pour se différencier`;
             } else if (difficulty < 40) {
-                headline = `Profitez de ${niche} avant vos concurrents`;
-                subheadline = `Une opportunité simple à exploiter dès aujourd’hui`;
+                headline = `Profitez de ${niche} avant tout le monde`;
+                subheadline = `Une opportunité simple à exploiter maintenant`;
             } else {
-                headline = `Obtenez vos premiers résultats avec ${niche} en moins de 7 jours`;
-                subheadline = `Une méthode simple pour passer à l’action rapidement`;
+                headline = `Obtenez des résultats avec ${niche} rapidement`;
+                subheadline = `Une méthode claire pour passer à l’action`;
             }
     }
+
+    /* ========================= */
+    /* 💰 PRICING */
+    /* ========================= */
+
+    let price = 19;
+
+    if (cpc > 1.5) price = 79;
+    else if (cpc > 0.8) price = 49;
+    else if (cpc > 0.3) price = 29;
 
     /* ========================= */
     /* 🎁 OFFRE */
     /* ========================= */
 
-    const offer = "Accès immédiat + stratégie complète + templates + bonus exclusifs";
+    const offer = [
+        "Accès immédiat",
+        "Stratégie complète",
+        "Templates prêts à l'emploi",
+        "Bonus exclusifs"
+    ];
 
     /* ========================= */
     /* 🚀 CTA */
     /* ========================= */
 
-    let cta = `Lancer mon projet`;
+    let cta = "Lancer maintenant";
 
-    if (angle === "money") {
-        cta = "Générer mes premiers revenus";
-    } else if (angle === "traffic") {
-        cta = "Attirer du trafic maintenant";
-    } else if (angle === "business") {
-        cta = "Créer mon business";
-    }
+    if (angle === "money") cta = "Générer mes revenus";
+    if (angle === "traffic") cta = "Obtenir du trafic";
+    if (angle === "business") cta = "Créer mon business";
+
+    /* ========================= */
+    /* 🧠 PROOF + URGENCY */
+    /* ========================= */
+
+    const proof =
+        volume > 5000
+            ? "🔥 Forte demande sur ce marché"
+            : "📈 Opportunité encore peu exploitée";
+
+    const urgency =
+        difficulty > 70
+            ? "Marché compétitif → agir rapidement"
+            : "Profitez de cette opportunité avant saturation";
 
     return {
         headline,
         subheadline,
         offer,
-        cta
+        cta,
+        price,
+        proof,
+        urgency,
+        angle
     };
 }

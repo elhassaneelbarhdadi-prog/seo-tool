@@ -1,9 +1,7 @@
-import { useState } from "react";
-import useApi from "../hooks/useApi";
+import { useState, useRef } from "react";
+import { request } from "../services/api";
 
 export default function SEOChat({ result }) {
-
-    const api = useApi();
 
     const isDev = import.meta.env.DEV;
 
@@ -12,18 +10,21 @@ export default function SEOChat({ result }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const abortRef = useRef(null);
+
     const isLimitReached = result?.limitReached;
 
     /* ========================= */
     /* HANDLE ASK */
     /* ========================= */
-
     const handleAsk = async () => {
 
-        if (!question.trim()) return;
+        if (!question.trim() || loading) return;
 
-        // 🔥 bloque seulement en prod
-        if (!isDev && isLimitReached) return;
+        if (!isDev && isLimitReached) {
+            setError("Limite atteinte — passe au plan PRO");
+            return;
+        }
 
         setLoading(true);
         setError("");
@@ -31,66 +32,86 @@ export default function SEOChat({ result }) {
 
         try {
 
-            const data = await api.post("/chat/seo", {
-                prompt: question,
-                keyword: result?.keyword,
-                serp: result?.serp,
-                products: result?.products
-            });
+            // 🔥 cancel previous request
+            if (abortRef.current) {
+                abortRef.current.abort();
+            }
 
-            if (!data) return;
+            const controller = new AbortController();
+            abortRef.current = controller;
+
+            const data = await request(
+                "/chat/seo",
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        prompt: question,
+                        keyword: result?.keyword,
+                        serp: result?.serp,
+                        products: result?.products
+                    }),
+                    signal: controller.signal // ✅ clean
+                }
+            );
 
             setAnswer(data?.result || "Pas de réponse de l'IA");
 
         } catch (err) {
 
-            console.error("CHAT ERROR:", err);
-            setError("Une erreur est survenue avec l'IA");
+            if (err.name !== "AbortError") {
+                console.error("CHAT ERROR:", err);
+                setError("Une erreur est survenue avec l'IA");
+            }
 
         } finally {
-
             setLoading(false);
         }
     };
 
     /* ========================= */
-    /* UI */
+    /* ENTER HANDLER */
     /* ========================= */
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleAsk();
+        }
+    };
 
     return (
 
         <div className="bg-white p-6 rounded-2xl shadow mt-6">
 
-            {/* TITLE */}
             <h2 className="text-xl font-bold mb-4">
                 🤖 Coach SEO IA
             </h2>
 
-            {/* INPUT */}
+            {!isDev && isLimitReached && (
+                <div className="mb-4 text-sm text-orange-500">
+                    🔒 Limite atteinte — upgrade pour continuer
+                </div>
+            )}
+
             <textarea
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Ex: Est-ce une bonne niche ? Comment me positionner ?"
-                className="w-full border p-4 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                onKeyDown={handleKeyDown}
+                placeholder="Ex: Est-ce une bonne niche ?"
+                className="w-full border p-4 rounded-xl mb-4"
             />
 
-            {/* BUTTON */}
             <button
                 onClick={handleAsk}
-                disabled={loading}
-                className="bg-black text-white px-6 py-3 rounded-xl disabled:opacity-50 hover:opacity-90 transition"
+                disabled={loading || (!isDev && isLimitReached)}
+                className="bg-black text-white px-6 py-3 rounded-xl disabled:opacity-50"
             >
                 {loading ? "🤖 Analyse..." : "💬 Demander à l'IA"}
             </button>
 
-            {/* ERROR */}
             {error && (
-                <p className="text-red-500 mt-4">
-                    {error}
-                </p>
+                <p className="text-red-500 mt-4">{error}</p>
             )}
 
-            {/* ANSWER */}
             {answer && (
                 <div className="bg-gray-100 p-5 mt-5 rounded-xl whitespace-pre-line">
                     {answer}

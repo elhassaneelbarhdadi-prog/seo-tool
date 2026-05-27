@@ -6,7 +6,11 @@ export default function UsageBar({ used = 0, limit = 1 }) {
     /* 🔐 SAFE VALUES */
     /* ========================= */
     const safeUsed = Math.max(0, Number(used) || 0);
-    const safeLimit = limit === Infinity ? Infinity : Math.max(1, Number(limit) || 1);
+
+    const safeLimit =
+        limit === Infinity || limit === -1
+            ? Infinity
+            : Math.max(1, Number(limit) || 1);
 
     /* ========================= */
     /* 📊 CALCUL */
@@ -21,9 +25,19 @@ export default function UsageBar({ used = 0, limit = 1 }) {
     /* ========================= */
     const color = useMemo(() => {
         if (percent >= 100) return "bg-red-500";
-        if (percent >= 70) return "bg-orange-400";
+        if (percent >= 80) return "bg-orange-400";
         return "bg-blue-500";
     }, [percent]);
+
+    /* ========================= */
+    /* 🧠 LABEL */
+    /* ========================= */
+    const label = useMemo(() => {
+        if (safeLimit === Infinity) return "Illimité";
+        if (percent >= 100) return "Limite atteinte";
+        if (percent >= 80) return "Bientôt limité";
+        return "Utilisation";
+    }, [percent, safeLimit]);
 
     /* ========================= */
     /* UI */
@@ -32,7 +46,7 @@ export default function UsageBar({ used = 0, limit = 1 }) {
         <div className="w-full">
 
             <div className="flex justify-between text-sm mb-1">
-                <span>Utilisation</span>
+                <span>{label}</span>
                 <span>
                     {safeUsed} / {safeLimit === Infinity ? "∞" : safeLimit}
                 </span>
@@ -44,7 +58,7 @@ export default function UsageBar({ used = 0, limit = 1 }) {
                     className={`h-3 ${color} transition-all duration-500`}
                     style={{
                         width: `${percent}%`,
-                        minWidth: percent > 0 ? "6px" : "0px" // 👈 UX bonus
+                        minWidth: percent > 0 ? "6px" : "0px"
                     }}
                 />
 

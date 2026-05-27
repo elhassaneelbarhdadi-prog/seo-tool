@@ -7,17 +7,31 @@ import es from "./locales/es.json";
 import de from "./locales/de.json";
 
 /* ========================= */
-/* 🌍 LANG INIT */
+/* 🌍 CONFIG */
 /* ========================= */
-const savedLang = localStorage.getItem("lang");
-
 const supported = ["fr", "en", "es", "de"];
 
-// fallback safe
-const initialLang = supported.includes(savedLang) ? savedLang : "fr";
+/* ========================= */
+/* 🔍 DETECT LANG (SMART) */
+/* ========================= */
+const getInitialLang = () => {
+    const saved = localStorage.getItem("lang");
+
+    if (saved && supported.includes(saved)) {
+        return saved;
+    }
+
+    const browserLang = navigator.language.split("-")[0];
+
+    if (supported.includes(browserLang)) {
+        return browserLang;
+    }
+
+    return "fr";
+};
 
 /* ========================= */
-/* 🚀 INIT I18N */
+/* 🚀 INIT */
 /* ========================= */
 i18n
     .use(initReactI18next)
@@ -29,25 +43,36 @@ i18n
             de: { translation: de }
         },
 
-        lng: initialLang,
+        lng: getInitialLang(),
         fallbackLng: "fr",
-
         supportedLngs: supported,
 
-        // 🔥 IMPORTANT pour éviter bugs langue
         load: "languageOnly",
         cleanCode: true,
 
         interpolation: {
-            escapeValue: false // React safe
+            escapeValue: false
         },
 
-        // 🔥 IMPORTANT pour tes {{variables}}
         returnNull: false,
         returnEmptyString: false,
 
-        // 🔥 DEBUG (désactive en prod)
-        debug: false
+        /* ========================= */
+        /* 🔥 FIX CONSOLE SPAM */
+        /* ========================= */
+        debug: false,                 // ❌ stop logs
+        saveMissing: false,           // ❌ stop missingKey spam
+        missingKeyHandler: () => { }, // ❌ silence total
+
+        /* BONUS UX */
+        parseMissingKeyHandler: (key) => key // affiche la clé au lieu de vide
     });
+
+/* ========================= */
+/* 🔁 SYNC LOCALSTORAGE */
+/* ========================= */
+i18n.on("languageChanged", (lng) => {
+    localStorage.setItem("lang", lng);
+});
 
 export default i18n;

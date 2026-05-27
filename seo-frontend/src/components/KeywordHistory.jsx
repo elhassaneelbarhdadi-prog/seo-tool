@@ -1,136 +1,316 @@
 import ScoreCircle from "./ScoreCircle";
 import DifficultyCircle from "./DifficultyCircle";
 import { useTranslation } from "react-i18next";
+import { formatNumber } from "../utils/format";
 
-export default function KeywordHistory({ history, deleteKeyword, onSelect }) {
+export default function KeywordHistory({
+    history = [],
+    deleteKeyword,
+    onSelect
+}) {
 
     const { t } = useTranslation();
 
-    if (!Array.isArray(history) || history.length === 0) {
-        return (
-            <div className="bg-white shadow rounded-xl p-6 mt-6">
-                <h2 className="font-bold text-lg mb-4">
-                    {t("history")}
-                </h2>
-                <p className="text-gray-400">
-                    {t("noData")}
-                </p>
-            </div>
-        );
+    const hasHistory =
+        Array.isArray(history) &&
+        history.length > 0;
+
+    if (!hasHistory) {
+        return null;
     }
 
     return (
 
-        <div className="bg-white shadow rounded-xl p-6 mt-6">
+        <div className="
+            bg-white
+            shadow
+            rounded-xl
+            p-6
+            w-full
+            overflow-hidden
+        ">
 
-            <h2 className="font-bold text-lg mb-6">
-                {t("history")}
-            </h2>
+            {/* HEADER */}
 
-            <div className="overflow-x-auto">
+            <div className="mb-6">
 
-                <table className="w-full text-sm">
+                <h2 className="
+                    text-2xl
+                    font-bold
+                    text-gray-900
+                ">
+                    📚 Historique des mots-clés
+                </h2>
 
-                    {/* HEADER */}
-                    <thead>
-                        <tr className="text-gray-400 text-xs uppercase border-b">
-                            <th className="py-3 text-left">{t("keyword")}</th>
-                            <th className="py-3 text-left">{t("volume")}</th>
-                            <th className="py-3 text-center">{t("difficulty")}</th>
-                            <th className="py-3 text-left">CPC</th>
-                            <th className="py-3 text-center">{t("score")}</th>
-                            <th className="py-3 text-left">{t("potential")}</th>
-                            <th className="py-3 text-center">{t("action")}</th>
-                        </tr>
-                    </thead>
+                <p className="
+                    text-sm
+                    text-gray-400
+                    mt-1
+                ">
+                    Dernières analyses enregistrées
+                </p>
 
-                    {/* BODY */}
-                    <tbody className="divide-y">
+            </div>
 
-                        {history.map((item) => {
+            {/* LIST */}
 
-                            const score = Number(item?.score) || 0;
-                            const difficulty = Number(item?.difficulty) || 0;
-                            const volume = Number(item?.volume) || 0;
-                            const cpc = Number(item?.cpc) || 0;
+            <div className="space-y-4">
 
-                            return (
+                {history.map((item) => {
 
-                                <tr key={item?.id} className="hover:bg-gray-50 transition">
+                    const score =
+                        Number(item?.score) || 0;
 
-                                    {/* KEYWORD (CLICABLE 🔥) */}
-                                    <td
-                                        className="py-4 font-semibold text-blue-600 cursor-pointer hover:underline"
-                                        onClick={() => onSelect && onSelect(item.keyword)}
-                                    >
-                                        {item?.keyword || "-"}
-                                    </td>
+                    const difficulty =
+                        Number(item?.difficulty) || 0;
 
-                                    {/* VOLUME */}
-                                    <td className="py-4">
-                                        {volume.toLocaleString()}
-                                    </td>
+                    const volume =
+                        Number(item?.volume) || 0;
 
-                                    {/* DIFFICULTY */}
-                                    <td className="py-4 text-center">
-                                        <div className="flex justify-center">
-                                            <DifficultyCircle difficulty={difficulty} />
-                                        </div>
-                                    </td>
+                    const cpcValue =
+                        Number(item?.cpc);
 
-                                    {/* CPC */}
-                                    <td className="py-4">
-                                        <span className="whitespace-nowrap">
-                                            {cpc > 0 ? `${cpc.toFixed(2)} €` : "-"}
-                                        </span>
-                                    </td>
+                    const cpcDisplay =
+                        isNaN(cpcValue)
+                            ? "-"
+                            : `${cpcValue.toFixed(2)} €`;
 
-                                    {/* SCORE */}
-                                    <td className="py-4 text-center">
-                                        <div className="flex justify-center">
-                                            <ScoreCircle score={score} />
-                                        </div>
-                                    </td>
+                    const potential =
+                        score >= 70
+                            ? {
+                                label: t("high"),
+                                color: "green",
+                                icon: "🔥"
+                            }
+                            : score >= 40
+                                ? {
+                                    label: t("medium"),
+                                    color: "yellow",
+                                    icon: "⚡"
+                                }
+                                : {
+                                    label: t("low"),
+                                    color: "gray",
+                                    icon: "❌"
+                                };
 
-                                    {/* POTENTIAL */}
-                                    <td className="py-4">
-                                        {score >= 70 ? (
-                                            <span className="text-green-600 font-semibold">
-                                                🔥 {t("high")}
-                                            </span>
-                                        ) : score >= 40 ? (
-                                            <span className="text-yellow-600 font-semibold">
-                                                ⚡ {t("medium")}
-                                            </span>
-                                        ) : (
-                                            <span className="text-gray-400">
-                                                {t("low")}
-                                            </span>
-                                        )}
-                                    </td>
+                    return (
 
-                                    {/* DELETE */}
-                                    <td className="py-4 text-center">
-                                        <button
-                                            onClick={() => deleteKeyword(item.id)}
-                                            className="bg-red-100 text-red-600 px-3 py-1 rounded hover:bg-red-200 text-sm transition"
-                                        >
-                                            {t("delete")}
-                                        </button>
-                                    </td>
+                        <div
+                            key={item?.id}
+                            className="
+                                flex
+                                flex-col
+                                md:flex-row
+                                md:items-center
+                                justify-between
+                                gap-4
+                                p-4
+                                border
+                                rounded-xl
+                                hover:shadow-md
+                                transition
+                                bg-white
+                                w-full
+                            "
+                        >
 
-                                </tr>
+                            {/* LEFT */}
 
-                            );
-                        })}
+                            <div className="
+                                flex
+                                flex-col
+                                w-full
+                                md:w-1/4
+                                min-w-0
+                            ">
 
-                    </tbody>
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        onSelect?.(
+                                            item.keyword
+                                        )
+                                    }
+                                    className="
+                                        text-indigo-600
+                                        font-semibold
+                                        hover:underline
+                                        text-left
+                                        break-words
+                                    "
+                                >
+                                    {item?.keyword || "-"}
+                                </button>
 
-                </table>
+                                <p className="
+                                    text-xs
+                                    text-gray-400
+                                    mt-1
+                                ">
+                                    {formatNumber(volume)} recherches
+                                </p>
+
+                            </div>
+
+                            {/* CENTER */}
+
+                            <div className="
+                                flex
+                                items-center
+                                justify-between
+                                md:justify-center
+                                gap-6
+                                w-full
+                                md:w-2/4
+                            ">
+
+                                <div className="text-center">
+
+                                    <DifficultyCircle
+                                        difficulty={difficulty}
+                                    />
+
+                                    <p className="
+                                        text-xs
+                                        text-gray-400
+                                        mt-1
+                                    ">
+                                        {t("difficulty")}
+                                    </p>
+
+                                </div>
+
+                                <div className="
+                                    text-center
+                                    min-w-[70px]
+                                ">
+
+                                    <p className="
+                                        font-semibold
+                                        text-lg
+                                    ">
+                                        {cpcDisplay}
+                                    </p>
+
+                                    <p className="
+                                        text-xs
+                                        text-gray-400
+                                    ">
+                                        CPC
+                                    </p>
+
+                                </div>
+
+                                <div className="text-center">
+
+                                    <ScoreCircle
+                                        score={score}
+                                    />
+
+                                    <p className="
+                                        text-xs
+                                        text-gray-400
+                                        mt-1
+                                    ">
+                                        {t("score")}
+                                    </p>
+
+                                </div>
+
+                            </div>
+
+                            {/* RIGHT */}
+
+                            <div className="
+                                flex
+                                items-center
+                                justify-between
+                                md:justify-end
+                                gap-3
+                                w-full
+                                md:w-1/4
+                            ">
+
+                                <span
+                                    className={`
+                                        text-sm
+                                        font-medium
+                                        px-3
+                                        py-1
+                                        rounded-full
+                                        whitespace-nowrap
+
+                                        ${potential.color === "green"
+                                            ? "bg-green-100 text-green-600"
+                                            : ""}
+
+                                        ${potential.color === "yellow"
+                                            ? "bg-yellow-100 text-yellow-600"
+                                            : ""}
+
+                                        ${potential.color === "gray"
+                                            ? "bg-gray-100 text-gray-500"
+                                            : ""}
+                                    `}
+                                >
+                                    {potential.icon} {potential.label}
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+
+                                        if (!deleteKeyword) {
+                                            return;
+                                        }
+
+                                        const confirmDelete =
+                                            window.confirm(
+                                                t("confirmDelete")
+                                            );
+
+                                        if (!confirmDelete) {
+                                            return;
+                                        }
+
+                                        try {
+
+                                            await deleteKeyword(
+                                                item.id
+                                            );
+
+                                        } catch (err) {
+
+                                            console.error(
+                                                "DELETE UI ERROR:",
+                                                err
+                                            );
+
+                                        }
+
+                                    }}
+                                    className="
+                                        text-red-500
+                                        text-sm
+                                        hover:underline
+                                    "
+                                >
+                                    {t("delete")}
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    );
+
+                })}
 
             </div>
 
         </div>
 
     );
+
 }

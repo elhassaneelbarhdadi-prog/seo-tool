@@ -1,160 +1,566 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+
 import { getNichesAI } from "../services/api";
+import { formatNumber } from "../utils/format";
 
-export default function EasyNiches({ result, onSelect }) {
+export default function EasyNiches({
 
-    const navigate = useNavigate();
-    const { lang } = useParams();
-    const currentLang = lang || "fr";
+    result,
 
-    const [loadingKeyword, setLoadingKeyword] = useState(null);
-    const [niches, setNiches] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [limited, setLimited] = useState(false);
+    onSelect
+
+}) {
+
+    const navigate =
+        useNavigate();
+
+    const { lang } =
+        useParams();
+
+    const { t } =
+        useTranslation();
+
+    const currentLang =
+        lang || "fr";
+
+    const keyword =
+        result?.keyword || "";
+
+    const [
+
+        loadingKeyword,
+
+        setLoadingKeyword
+
+    ] =
+        useState(null);
+
+    const [
+
+        niches,
+
+        setNiches
+
+    ] =
+        useState([]);
+
+    const [
+
+        loading,
+
+        setLoading
+
+    ] =
+        useState(false);
+
+    const [
+
+        limited,
+
+        setLimited
+
+    ] =
+        useState(false);
 
     /* ========================= */
-    /* 📡 LOAD NICHES */
+    /* LOAD */
     /* ========================= */
+
     useEffect(() => {
 
-        if (!result?.keyword) {
+        if (!keyword) {
+
             setNiches([]);
+
             return;
+
         }
 
-        let isMounted = true;
+        let mounted = true;
+
+        const controller =
+            new AbortController();
 
         const load = async () => {
 
-            setLoading(true);
-            setLimited(false);
-
             try {
-                const data = await getNichesAI(result.keyword);
 
-                console.log("NICHES API 👉", data);
+                setLoading(true);
+
+                setLimited(false);
+
+                const data =
+
+                    await getNichesAI(
+
+                        keyword,
+
+                        {
+
+                            signal:
+                                controller.signal
+
+                        }
+
+                    );
+
+                if (
+                    !mounted
+                ) return;
 
                 let list = [];
 
-                if (Array.isArray(data)) {
+                if (
+                    Array.isArray(
+                        data
+                    )
+                ) {
+
                     list = data;
-                } else if (Array.isArray(data?.niches)) {
-                    list = data.niches;
+
                 }
 
-                const unique = list.filter(
-                    (item, index, self) =>
-                        item?.keyword &&
-                        index === self.findIndex(i => i.keyword === item.keyword)
+                else if (
+
+                    Array.isArray(
+                        data?.niches
+                    )
+
+                ) {
+
+                    list =
+                        data.niches;
+
+                }
+
+                /* O(n) UNIQUE */
+
+                const seen =
+                    new Set();
+
+                const unique =
+
+                    list.filter(
+
+                        item => {
+
+                            const k =
+                                item?.keyword;
+
+                            if (
+                                !k
+                                ||
+                                seen.has(k)
+                            ) {
+
+                                return false;
+
+                            }
+
+                            seen.add(k);
+
+                            return true;
+
+                        }
+
+                    );
+
+                setNiches(unique);
+
+                setLimited(
+                    !!data?.limited
                 );
 
-                if (isMounted) {
-                    setNiches(unique);
-                    setLimited(data?.limited || false);
-                }
-
-            } catch (err) {
-
-                console.error("❌ NICHES ERROR:", err);
-
-                if (err.code === "UPGRADE_REQUIRED") {
-                    navigate(`/${currentLang}/dashboard/pricing`);
-                    return;
-                }
-
-                if (isMounted) setNiches([]);
-
-            } finally {
-                if (isMounted) setLoading(false);
             }
+
+            catch (err) {
+
+                if (
+
+                    err.name === "AbortError"
+
+                    ||
+
+                    controller.signal.aborted
+
+                ) {
+
+                    return;
+
+                }
+
+                console.error(
+
+                    "NICHES:",
+
+                    err.message
+
+                );
+
+                if (
+                    mounted
+                ) {
+
+                    setNiches([]);
+
+                }
+
+            }
+
+            finally {
+
+                if (
+
+                    mounted
+
+                    &&
+
+                    !controller.signal.aborted
+
+                ) {
+
+                    setLoading(false);
+
+                }
+
+            }
+
         };
 
         load();
 
-        return () => { isMounted = false; };
+        return () => {
 
-    }, [result?.keyword, navigate, currentLang]);
+            mounted = false;
+
+            controller.abort();
+
+        };
+
+    }, [keyword]);
+
+    /* ========================= */
+    /* NAV */
+    /* ========================= */
 
     const goToNichesPage = () => {
-        navigate(`/${currentLang}/dashboard/niches`);
+
+        navigate(
+
+            `/${currentLang}/dashboard/niches`
+
+        );
+
     };
 
+    /* ========================= */
+    /* UI */
+    /* ========================= */
+
     return (
-        <div className="bg-white shadow rounded-xl p-6 mt-6">
 
-            {/* CTA */}
+        <div
+            className="
+bg-white
+shadow
+rounded-2xl
+p-6
+mt-6
+space-y-4
+overflow-hidden
+w-full
+"
+        >
+
             <div
-                onClick={goToNichesPage}
-                className="group mb-4 p-5 rounded-xl cursor-pointer
-                bg-gradient-to-r from-purple-600 to-indigo-600 text-white
-                hover:scale-105 transition"
+
+                onClick={
+                    goToNichesPage
+                }
+
+                className="
+
+group
+p-5
+rounded-xl
+cursor-pointer
+
+bg-gradient-to-r
+
+from-purple-600
+to-indigo-600
+
+text-white
+
+hover:scale-[1.02]
+
+transition
+
+"
+
             >
+
                 <p className="font-bold text-lg">
-                    🤖 Générateur de niches SEO
+
+                    🚀 {t(
+                        "find_profitable_niche"
+                    )}
+
                 </p>
-                <p className="text-sm text-purple-100">
-                    Trouvez des idées business rentables
+
+                <p
+                    className="
+text-sm
+text-purple-100
+"
+                >
+
+                    {t(
+                        "niche_subtitle"
+                    )}
+
                 </p>
+
             </div>
 
-            {/* LOADING */}
             {loading && (
-                <p className="text-sm text-gray-500 mb-3">
-                    ⏳ Génération...
+
+                <p
+                    className="
+text-sm
+text-gray-500
+"
+                >
+
+                    ⏳ {t(
+                        "loading_niches"
+                    )}
+
                 </p>
+
             )}
 
-            {/* EMPTY */}
-            {!loading && niches.length === 0 && (
-                <p className="text-sm text-gray-400">
-                    Aucune suggestion
-                </p>
-            )}
+            {
 
-            {/* LIST */}
-            <div className="flex flex-wrap gap-2">
-                {niches.map((n, i) => {
+                !loading
+                &&
+                niches.length === 0
 
-                    const k = n.keyword;
+                && (
 
-                    return (
-                        <button
-                            key={i}
-                            disabled={loadingKeyword === k}
-                            onClick={async () => {
+                    <p
+                        className="
+text-sm
+text-gray-400
+"
+                    >
 
-                                if (loadingKeyword) return;
+                        {t(
+                            "no_niches"
+                        )}
 
-                                setLoadingKeyword(k);
+                    </p>
 
-                                try {
-                                    await onSelect(k);
-                                } catch (err) {
-                                    console.error("SELECT ERROR:", err);
-                                }
+                )
 
-                                setLoadingKeyword(null);
-                            }}
-                            className={`px-4 py-2 rounded
-                            ${loadingKeyword === k
-                                    ? "bg-gray-400"
-                                    : "bg-blue-500 hover:bg-blue-600 text-white"
-                                }`}
-                        >
-                            {loadingKeyword === k ? "⏳" : k}
-                        </button>
-                    );
-                })}
+            }
+
+            <div
+                className="
+grid
+grid-cols-1
+md:grid-cols-2
+gap-3
+"
+            >
+
+                {
+
+                    niches.map(
+                        n => {
+
+                            const k =
+                                n.keyword;
+
+                            const volume =
+                                Number(
+                                    n.volume
+                                );
+
+                            return (
+
+                                <button
+
+                                    key={k}
+
+                                    disabled={
+                                        loadingKeyword === k
+                                    }
+
+                                    onClick={async () => {
+
+                                        if (
+                                            loadingKeyword
+                                        )
+                                            return;
+
+                                        setLoadingKeyword(k);
+
+                                        try {
+
+                                            await onSelect(
+                                                k
+                                            );
+
+                                        }
+                                        catch (err) {
+
+                                            console.error(
+
+                                                "SELECT:",
+
+                                                err.message
+
+                                            );
+
+                                        }
+                                        finally {
+
+                                            setLoadingKeyword(
+                                                null
+                                            );
+
+                                        }
+
+                                    }}
+
+                                    className={`
+
+p-4
+
+rounded-xl
+
+border
+
+text-left
+
+transition
+
+flex
+
+flex-col
+
+gap-1
+
+${loadingKeyword === k
+
+                                            ?
+
+                                            "bg-gray-100 cursor-not-allowed"
+
+                                            :
+
+                                            "bg-white hover:border-indigo-400 hover:shadow-sm"
+
+                                        }
+
+`}
+
+                                >
+
+                                    <p
+                                        className="
+font-semibold
+text-gray-800
+break-words
+"
+                                    >
+
+                                        {k}
+
+                                    </p>
+
+                                    {!Number.isNaN(
+                                        volume
+                                    ) && (
+
+                                            <p
+                                                className="
+text-xs
+text-gray-500
+"
+                                            >
+
+                                                {formatNumber(
+                                                    volume
+                                                )}
+
+                                                {" "}
+                                                recherches/mois
+
+                                            </p>
+
+                                        )}
+
+                                    {
+
+                                        loadingKeyword === k
+
+                                        && (
+
+                                            <p
+                                                className="
+text-xs
+text-gray-400
+"
+                                            >
+
+                                                ⏳ Analyse...
+
+                                            </p>
+
+                                        )
+
+                                    }
+
+                                </button>
+
+                            );
+
+                        })
+
+                }
+
             </div>
 
-            {/* 🔥 LIMIT MESSAGE */}
-            {limited && (
-                <div className="mt-4 text-sm text-orange-500">
-                    🔒 3 niches affichées — passe au plan PRO pour débloquer tout
-                </div>
-            )}
+            {
+
+                limited
+
+                && (
+
+                    <div
+                        className="
+text-sm
+text-orange-500
+mt-2
+"
+                    >
+
+                        🔒 {t(
+                            "limited_niches"
+                        )}
+
+                    </div>
+
+                )
+
+            }
 
         </div>
+
     );
+
 }

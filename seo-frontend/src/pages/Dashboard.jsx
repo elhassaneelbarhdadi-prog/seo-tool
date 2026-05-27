@@ -24,7 +24,7 @@ export default function Dashboard() {
 
     const { t, i18n } = useTranslation();
 
-    const isDev = import.meta.env.DEV;
+
 
     const [usage, setUsage] = useState(null);
 
@@ -138,31 +138,11 @@ export default function Dashboard() {
     /* 🔥 RESET DEV */
     /* ========================= */
 
-    const resetUsage = async () => {
 
-        try {
 
-            await request(
-                "/dev/reset-usage",
-                {
-                    method: "POST"
-                }
-            );
 
-            await loadUsage();
 
-        }
 
-        catch (err) {
-
-            console.error(
-                "RESET ERROR:",
-                err
-            );
-
-        }
-
-    };
 
     /* ========================= */
     /* 📡 LOAD DATA */

@@ -13,6 +13,7 @@
     "build:clean": "npm run clean && vite build"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.9",
     "i18next": "^26.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

@@ -61,47 +61,11 @@ app.use(
 /* ========================= */
 
 app.use(
-
     cors({
-
-        origin: (origin, cb) => {
-
-            if (!origin) {
-                return cb(null, true);
-            }
-
-            if (
-                origin.startsWith(
-                    "http://localhost"
-                )
-            ) {
-
-                return cb(null, true);
-
-            }
-
-            if (
-                origin === FRONT_URL
-            ) {
-
-                return cb(null, true);
-
-            }
-
-            return cb(
-                new Error(
-                    "Not allowed by CORS"
-                )
-            );
-
-        },
-
+        origin: true,
         credentials: true
-
     })
-
 );
-
 /* ========================= */
 /* 🔥 JSON PARSER */
 /* IMPORTANT */
@@ -392,16 +356,11 @@ app.use(
 /* 🚀 START */
 /* ========================= */
 
-app.listen(
+const PORT = process.env.PORT || 3001;
 
-    PORT,
+app.listen(PORT, () => {
+    console.log(`Server running on ${PORT}`);
+});
 
-    () => {
 
-        console.log(
-            `🚀 Server running on http://localhost:${PORT}`
-        );
 
-    }
-
-);

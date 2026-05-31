@@ -44,21 +44,17 @@ if (!FRONT_URL) {
 /* ========================= */
 
 router.post(
-
     "/checkout",
-
     authMiddleware,
+    async (req, res) => {
 
-    async (
-        req,
-        res
-    ) => {
+        console.log("🚀 CHECKOUT ROUTE CALLED");
 
         try {
 
             const userId =
                 req.user.id;
-
+            console.log("🚀 USER:", userId);
             let {
 
                 plan,

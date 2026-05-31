@@ -38,7 +38,7 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const res = await fetch("http://localhost:3001/api/auth/login", {
+            const res = await fetch("https://seo-tool-api-lo6k.onrender.com/api/auth/login", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"

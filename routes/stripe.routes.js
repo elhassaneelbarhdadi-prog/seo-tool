@@ -34,12 +34,11 @@ const stripe =
         process.env.STRIPE_SECRET_KEY
     );
 
-const FRONT_URL =
+const FRONT_URL = process.env.FRONT_URL;
 
-    process.env.FRONT_URL
-    ||
-    "http://localhost:5173";
-
+if (!FRONT_URL) {
+    throw new Error("FRONT_URL missing");
+}
 /* ========================= */
 /* CHECKOUT */
 /* ========================= */
@@ -215,55 +214,70 @@ LIMIT 1
 
             }
 
-            let customerId =
-                user.stripe_customer_id;
+            let customerId = null;
 
-            /* ========================= */
-            /* CUSTOMER */
-            /* ========================= */
+            try {
 
-            if (
-                !customerId
-            ) {
+                if (user.stripe_customer_id) {
 
-                const customer =
+                    const existingCustomer =
+                        await stripe.customers.retrieve(
+                            user.stripe_customer_id
+                        );
 
-                    await stripe
-                        .customers
-                        .create({
+                    if (
+                        existingCustomer &&
+                        !existingCustomer.deleted
+                    ) {
 
-                            email:
-                                user.email
+                        customerId =
+                            existingCustomer.id;
 
-                        });
+                        console.log(
+                            "✅ Customer Stripe existant :",
+                            customerId
+                        );
+                    }
+                }
 
-                customerId =
-                    customer.id;
+            } catch (error) {
 
-                await db.run(
-
-                    `
-
-UPDATE users
-
-SET stripe_customer_id=?
-
-WHERE id=?
-
-`,
-
-                    [
-
-                        customerId,
-
-                        userId
-
-                    ]
-
+                console.log(
+                    "⚠️ Ancien customer Stripe invalide détecté"
                 );
 
-            }
+                await db.run(
+                    `
+        UPDATE users
+        SET stripe_customer_id = NULL
+        WHERE id = ?
+        `,
+                    [userId]
+                );
 
+                customerId = null;
+            }
+            if (!customerId) {
+
+                const customer =
+                    await stripe.customers.create({
+                        email: user.email
+                    });
+
+                customerId = customer.id;
+
+                await db.run(
+                    `
+        UPDATE users
+        SET stripe_customer_id=?
+        WHERE id=?
+        `,
+                    [
+                        customerId,
+                        userId
+                    ]
+                );
+            }
             /* ========================= */
             /* SESSION */
             /* ========================= */

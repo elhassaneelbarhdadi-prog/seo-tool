@@ -1,18 +1,10 @@
 import dotenv from "dotenv";
 
-const result = dotenv.config();
+import dotenv from "dotenv";
 
-/* ========================= */
-/* ENV CHECK */
-/* ========================= */
+dotenv.config();
 
-if (result.error) {
-
-    console.error("❌ Impossible de charger .env");
-    throw result.error;
-
-}
-
+console.log("✅ Environment loaded");
 if (process.env.NODE_ENV === "development") {
 
     console.log("📦 ENV LOADED");

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <url>
+    <loc>https://referenciaseo.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr</loc>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr/login</loc>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr/register</loc>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr/dashboard/keywords</loc>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr/dashboard/niches</loc>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr/annuaire</loc>
+  </url>
+
+  <url>
+    <loc>https://referenciaseo.com/fr/pricing</loc>
+  </url>
+
+</urlset>

@@ -7,26 +7,61 @@ import rateLimit from "express-rate-limit";
 
 import googleAdsTest from "./routes/googleads.test.js";
 
-import stripeRoutes from "./routes/stripe.routes.js";
-import authRoutes from "./routes/auth.routes.js";
-import keywordRoutes from "./routes/keyword.routes.js";
-import seoRoutes from "./routes/seo.routes.js";
-import seoPageRoutes from "./routes/seoPage.routes.js";
-import chatRoutes from "./routes/chat.routes.js";
-import nicheRoutes from "./routes/niche.routes.js";
-import plansRoutes from "./routes/plans.routes.js";
-import devRoutes from "./routes/dev.routes.js";
-import businessRoutes from "./routes/businessProfile.routes.js";
+/* ========================= */
+/* ROUTES */
+/* ========================= */
+
+import stripeWebhookRoutes
+    from "./routes/stripeWebhook.routes.js";
+
+import stripeRoutes
+    from "./routes/stripe.routes.js";
+
+import authRoutes
+    from "./routes/auth.routes.js";
+
+import keywordRoutes
+    from "./routes/keyword.routes.js";
+
+import seoRoutes
+    from "./routes/seo.routes.js";
+
+import seoPageRoutes
+    from "./routes/seoPage.routes.js";
+
+import chatRoutes
+    from "./routes/chat.routes.js";
+
+import nicheRoutes
+    from "./routes/niche.routes.js";
+
+import plansRoutes
+    from "./routes/plans.routes.js";
+
+import devRoutes
+    from "./routes/dev.routes.js";
+
+import businessRoutes
+    from "./routes/businessProfile.routes.js";
+
+/* ========================= */
+/* INIT */
+/* ========================= */
 
 const app = express();
 
-const PORT = process.env.PORT || 3001;
+const PORT =
+    process.env.PORT || 3001;
 
-if (process.env.NODE_ENV === "development") {
+if (
+    process.env.NODE_ENV === "development"
+) {
+
     console.log(
         "📁 .env exists:",
         fs.existsSync("./.env")
     );
+
 }
 
 const FRONT_URL =
@@ -56,8 +91,53 @@ app.use(
 );
 
 /* ========================= */
-/* IMPORTANT STRIPE WEBHOOK */
+/* STRIPE WEBHOOK */
+/* IMPORTANT */
 /* AVANT express.json() */
+/* ========================= */
+
+app.use(
+    "/api/stripe",
+    stripeWebhookRoutes
+);
+
+/* ========================= */
+/* JSON PARSER */
+/* ========================= */
+
+app.use(
+    express.json({
+        limit: "2mb"
+    })
+);
+
+/* ========================= */
+/* DEBUG JSON */
+/* ========================= */
+
+app.use((req, res, next) => {
+
+    if (
+        process.env.NODE_ENV === "development"
+    ) {
+
+        console.log(
+            "JSON PARSER:",
+            req.method,
+            req.originalUrl,
+            req.body
+        );
+
+    }
+
+    next();
+
+});
+
+/* ========================= */
+/* STRIPE ROUTES */
+/* CHECKOUT ETC */
+/* APRÈS express.json() */
 /* ========================= */
 
 app.use(
@@ -66,41 +146,83 @@ app.use(
 );
 
 /* ========================= */
-/* JSON PARSER */
+/* AUTRES ROUTES */
 /* ========================= */
 
-app.use(express.json());
+app.use(
+    "/api/auth",
+    authRoutes
+);
+
+app.use(
+    "/api/keyword",
+    keywordRoutes
+);
+
+app.use(
+    "/api/seo",
+    seoRoutes
+);
+
+app.use(
+    "/api/seo-page",
+    seoPageRoutes
+);
+
+app.use(
+    "/api/chat",
+    chatRoutes
+);
+
+app.use(
+    "/api/niche",
+    nicheRoutes
+);
+
+app.use(
+    "/api/plans",
+    plansRoutes
+);
+
+app.use(
+    "/api/test",
+    googleAdsTest
+);
+
+app.use(
+    "/api/business-profile",
+    businessRoutes
+);
 
 /* ========================= */
-/* ROUTES */
+/* DEV */
 /* ========================= */
 
-app.use("/api/auth", authRoutes);
-app.use("/api/keyword", keywordRoutes);
-app.use("/api/seo", seoRoutes);
-app.use("/api/seo-page", seoPageRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/niche", nicheRoutes);
-app.use("/api/plans", plansRoutes);
-app.use("/api/test", googleAdsTest);
-app.use("/api/business-profile", businessRoutes);
+if (
+    process.env.NODE_ENV === "development"
+) {
 
-if (process.env.NODE_ENV === "development") {
     app.use(
         "/api/dev",
         devRoutes
     );
+
 }
 
 /* ========================= */
 /* ROOT */
 /* ========================= */
 
-app.get("/", (req, res) => {
-    res.send(
-        "🚀 SEO SaaS API running"
-    );
-});
+app.get(
+    "/",
+    (req, res) => {
+
+        res.send(
+            "🚀 SEO SaaS API running"
+        );
+
+    }
+);
 
 /* ========================= */
 /* SITEMAP */
@@ -110,7 +232,8 @@ app.get(
     "/sitemap.xml",
     async (req, res) => {
 
-        const BASE_URL = FRONT_URL;
+        const BASE_URL =
+            FRONT_URL;
 
         const cities = [
             "paris",
@@ -132,7 +255,9 @@ app.get(
         let urls = "";
 
         for (const lang of langs) {
+
             for (const city of cities) {
+
                 for (const job of jobs) {
 
                     urls += `
@@ -143,7 +268,9 @@ app.get(
 </url>`;
 
                 }
+
             }
+
         }
 
         res.set(
@@ -156,6 +283,7 @@ app.get(
 ${urls}
 </urlset>
 `);
+
     }
 );
 
@@ -186,8 +314,13 @@ app.use(
     (req, res) => {
 
         res.status(404).json({
-            error: "Route not found",
-            path: req.originalUrl
+
+            error:
+                "Route not found",
+
+            path:
+                req.originalUrl
+
         });
 
     }
@@ -202,15 +335,19 @@ app.use(
 
         console.error(
             "🔥 ERROR:",
-            err.message
+            err
         );
 
         res
-            .status(err.status || 500)
+            .status(
+                err.status || 500
+            )
             .json({
+
                 error:
                     err.message ||
                     "Internal server error"
+
             });
 
     }
@@ -221,7 +358,9 @@ app.use(
 /* ========================= */
 
 app.listen(PORT, () => {
+
     console.log(
         `🚀 Server running on port ${PORT}`
     );
+
 });

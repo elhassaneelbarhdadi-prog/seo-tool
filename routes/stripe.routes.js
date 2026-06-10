@@ -48,11 +48,30 @@ router.post(
     authMiddleware,
     async (req, res) => {
 
+        console.log("================================");
         console.log("🚀 CHECKOUT ROUTE CALLED");
+        console.log("🚀 METHOD:", req.method);
+        console.log("🚀 URL:", req.originalUrl);
+        console.log("🚀 CONTENT-TYPE:", req.headers["content-type"]);
         console.log("🚀 HEADERS:", req.headers);
         console.log("🚀 BODY:", req.body);
+        console.log("================================");
 
         try {
+
+            const userId = req.user?.id;
+
+            console.log("🚀 USER ID:", userId);
+            console.log("🚀 USER:", req.user);
+
+            if (!userId) {
+
+                return res.status(401).json({
+                    success: false,
+                    error: "Unauthorized"
+                });
+
+            }
 
             if (!req.body) {
 
@@ -68,12 +87,21 @@ router.post(
                 plan,
                 isYearly = false
             } = req.body;
-            /* string -> bool safe */
 
-            if (
-                typeof isYearly
-                === "string"
-            ) {
+            console.log("🚀 PLAN RAW:", plan);
+            console.log("🚀 YEARLY RAW:", isYearly);
+
+            if (!plan) {
+
+                return res.status(400).json({
+                    success: false,
+                    error: "Missing plan",
+                    body: req.body
+                });
+
+            }
+
+            if (typeof isYearly === "string") {
 
                 isYearly =
                     isYearly === "true";
@@ -81,120 +109,79 @@ router.post(
             }
 
             plan =
-                String(
-                    plan
-                )
+                String(plan)
                     .toUpperCase();
 
+            console.log("🚀 PLAN NORMALIZED:", plan);
+            console.log("🚀 YEARLY NORMALIZED:", isYearly);
+
             const selectedPlan =
-                PLANS[
-                plan
-                ];
+                PLANS[plan];
 
-            if (
-                !selectedPlan
-            ) {
+            console.log(
+                "🚀 SELECTED PLAN:",
+                selectedPlan
+            );
 
-                return res
-                    .status(400)
-                    .json({
+            if (!selectedPlan) {
 
-                        success: false,
-
-                        error:
-                            "Invalid plan"
-
-                    });
+                return res.status(400).json({
+                    success: false,
+                    error: "Invalid plan",
+                    availablePlans: Object.keys(PLANS)
+                });
 
             }
 
             const priceId =
-
                 isYearly
+                    ? selectedPlan.yearlyPriceId
+                    : selectedPlan.monthlyPriceId;
 
-                    ?
+            console.log("🚀 PRICE ID:", priceId);
 
-                    selectedPlan.yearlyPriceId
+            if (!priceId) {
 
-                    :
-
-                    selectedPlan.monthlyPriceId;
-
-            if (
-                !priceId
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        error:
-                            "Missing Stripe price"
-
-                    });
+                return res.status(400).json({
+                    success: false,
+                    error: "Missing Stripe price"
+                });
 
             }
 
             const user =
-
                 await db.get(
-
                     `
-
-SELECT
-
-email,
-
-stripe_customer_id,
-
-subscription_status
-
-FROM users
-
-WHERE id=?
-
-LIMIT 1
-
-`,
-
+                    SELECT
+                        email,
+                        stripe_customer_id,
+                        subscription_status
+                    FROM users
+                    WHERE id=?
+                    LIMIT 1
+                    `,
                     [userId]
-
                 );
 
-            if (
-                !user
-            ) {
+            console.log("🚀 DB USER:", user);
 
-                return res
-                    .status(404)
-                    .json({
+            if (!user) {
 
-                        success: false,
-
-                        error:
-                            "User not found"
-
-                    });
+                return res.status(404).json({
+                    success: false,
+                    error: "User not found"
+                });
 
             }
 
             if (
-                user.subscription_status
-                === "active"
+                user.subscription_status === "active"
             ) {
 
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        error:
-                            "Already subscribed"
-
-                    });
+                return res.status(400).json({
+                    success: false,
+                    error: "Already subscribed"
+                });
 
             }
 
@@ -218,137 +205,127 @@ LIMIT 1
                             existingCustomer.id;
 
                         console.log(
-                            "✅ Customer Stripe existant :",
+                            "✅ Existing Stripe customer:",
                             customerId
                         );
+
                     }
+
                 }
 
             } catch (error) {
 
                 console.log(
-                    "⚠️ Ancien customer Stripe invalide détecté"
+                    "⚠️ Invalid Stripe customer detected"
                 );
+
+                console.log(error);
 
                 await db.run(
                     `
-        UPDATE users
-        SET stripe_customer_id = NULL
-        WHERE id = ?
-        `,
+                    UPDATE users
+                    SET stripe_customer_id = NULL
+                    WHERE id = ?
+                    `,
                     [userId]
                 );
 
-                customerId = null;
             }
+
             if (!customerId) {
+
+                console.log(
+                    "🆕 Creating Stripe customer"
+                );
 
                 const customer =
                     await stripe.customers.create({
                         email: user.email
                     });
 
-                customerId = customer.id;
+                customerId =
+                    customer.id;
+
+                console.log(
+                    "✅ New customer:",
+                    customerId
+                );
 
                 await db.run(
                     `
-        UPDATE users
-        SET stripe_customer_id=?
-        WHERE id=?
-        `,
+                    UPDATE users
+                    SET stripe_customer_id=?
+                    WHERE id=?
+                    `,
                     [
                         customerId,
                         userId
                     ]
                 );
+
             }
-            /* ========================= */
-            /* SESSION */
-            /* ========================= */
+
             console.log("🔥 FRONT_URL:", FRONT_URL);
             console.log("🔥 PLAN:", plan);
             console.log("🔥 PRICE ID:", priceId);
             console.log("🔥 YEARLY:", isYearly);
+
             const session =
+                await stripe.checkout.sessions.create({
 
-                await stripe
-                    .checkout
-                    .sessions
-                    .create({
+                    mode: "subscription",
 
-                        mode:
-                            "subscription",
+                    customer: customerId,
 
-                        customer:
-                            customerId,
+                    payment_method_types: [
+                        "card"
+                    ],
 
-                        payment_method_types: [
-                            "card"
-                        ],
+                    line_items: [
+                        {
+                            price: priceId,
+                            quantity: 1
+                        }
+                    ],
 
-                        line_items: [
+                    metadata: {
+                        userId: String(userId),
+                        plan,
+                        billing:
+                            isYearly
+                                ? "yearly"
+                                : "monthly"
+                    },
 
-                            {
-
-                                price:
-                                    priceId,
-
-                                quantity: 1
-
-                            }
-
-                        ],
+                    subscription_data: {
 
                         metadata: {
-
-                            userId:
-                                String(
-                                    userId
-                                ),
-
-                            plan,
-
-                            billing:
-
-                                isYearly
-                                    ?
-                                    "yearly"
-                                    :
-                                    "monthly"
-
+                            userId: String(userId),
+                            plan
                         },
 
-                        subscription_data: {
+                        trial_period_days: 3
 
-                            metadata: {
+                    },
 
-                                userId:
-                                    String(
-                                        userId
-                                    ),
+                    success_url:
+                        `${FRONT_URL}/dashboard`,
 
-                                plan
+                    cancel_url:
+                        `${FRONT_URL}/pricing`
 
-                            },
+                });
 
-                            trial_period_days: 3
-
-                        },
-
-                        success_url:
-                            `${FRONT_URL}/dashboard`,
-
-                        cancel_url:
-                            `${FRONT_URL}/pricing`
-
-                    });
+            console.log(
+                "✅ STRIPE SESSION CREATED:",
+                session.id
+            );
 
             return res.json({
 
                 success: true,
 
-                url:
-                    session.url
+                url: session.url
 
             });
 
@@ -356,28 +333,41 @@ LIMIT 1
 
         catch (error) {
 
-            console.error("🔥 STRIPE FULL ERROR:");
+            console.error("🔥 STRIPE FULL ERROR");
             console.error(error);
-            console.error("🔥 MESSAGE:", error.message);
-            console.error("🔥 TYPE:", error.type);
-            console.error("🔥 CODE:", error.code);
-            console.error("🔥 RAW:", error.raw);
 
-            return res
-                .status(500)
-                .json({
+            console.error(
+                "🔥 MESSAGE:",
+                error.message
+            );
 
-                    success: false,
+            console.error(
+                "🔥 TYPE:",
+                error.type
+            );
 
-                    error:
-                        "Stripe checkout failed"
+            console.error(
+                "🔥 CODE:",
+                error.code
+            );
 
-                });
+            console.error(
+                "🔥 STACK:",
+                error.stack
+            );
+
+            return res.status(500).json({
+
+                success: false,
+
+                error:
+                    error.message ||
+                    "Stripe checkout failed"
+
+            });
 
         }
 
     }
-
 );
-
 export default router;

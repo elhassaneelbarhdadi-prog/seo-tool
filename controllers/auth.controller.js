@@ -368,38 +368,44 @@ export const login =
 /* GET USER */
 /* ========================= */
 
-export const getUser =
-    (req, res) => {
+export const getUser = async (req, res) => {
 
-        if (
-            !req.user
-        ) {
+    try {
 
-            return res
-                .status(401)
-                .json({
+        const user = await db.get(
+            `
+            SELECT
+                id,
+                email,
+                role,
+                plan,
+                subscription_status
+            FROM users
+            WHERE id = ?
+            `,
+            [req.user.id]
+        );
 
-                    error:
-                        "Unauthorized"
+        if (!user) {
 
-                });
+            return res.status(404).json({
+                error: "User not found"
+            });
 
         }
 
-        res.json({
+        return res.json(user);
 
-            id:
-                req.user.id,
+    }
 
-            email:
-                req.user.email,
+    catch (error) {
 
-            role:
-                req.user.role,
+        console.error(error);
 
-            plan:
-                req.user.plan
-
+        return res.status(500).json({
+            error: "Server error"
         });
 
-    };
+    }
+
+};

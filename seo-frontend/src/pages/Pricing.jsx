@@ -49,7 +49,7 @@ export default function Pricing() {
 
                 if (userRes) {
                     const userData = await userRes.json();
-
+                    console.log("USER DATA =", userData);
                     if (isMounted && userData?.plan) {
                         setUserPlan(userData.plan);
                         setHasSubscription(userData.plan !== "FREE");

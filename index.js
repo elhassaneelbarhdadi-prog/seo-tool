@@ -7,57 +7,45 @@ import rateLimit from "express-rate-limit";
 
 import googleAdsTest from "./routes/googleads.test.js";
 
-/* ========================= */
-/* 🚀 INIT */
-/* ========================= */
+import stripeRoutes from "./routes/stripe.routes.js";
+import authRoutes from "./routes/auth.routes.js";
+import keywordRoutes from "./routes/keyword.routes.js";
+import seoRoutes from "./routes/seo.routes.js";
+import seoPageRoutes from "./routes/seoPage.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
+import nicheRoutes from "./routes/niche.routes.js";
+import plansRoutes from "./routes/plans.routes.js";
+import devRoutes from "./routes/dev.routes.js";
+import businessRoutes from "./routes/businessProfile.routes.js";
 
 const app = express();
 
-const PORT =
-    process.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 
-/* ========================= */
-/* 🔍 DEBUG ENV */
-/* ========================= */
-
-if (
-    process.env.NODE_ENV === "development"
-) {
-
+if (process.env.NODE_ENV === "development") {
     console.log(
         "📁 .env exists:",
         fs.existsSync("./.env")
     );
-
 }
 
-/* ========================= */
-/* 🌍 CONFIG */
-/* ========================= */
-
 const FRONT_URL =
-    process.env.FRONT_URL
-    || "http://localhost:5173";
+    process.env.FRONT_URL ||
+    "http://localhost:5173";
 
 /* ========================= */
-/* 🛡 RATE LIMIT */
+/* RATE LIMIT */
 /* ========================= */
 
 app.use(
-
     rateLimit({
-
-        windowMs:
-            60 * 1000,
-
+        windowMs: 60 * 1000,
         max: 100
-
     })
-
 );
 
 /* ========================= */
-/* 🌍 CORS */
+/* CORS */
 /* ========================= */
 
 app.use(
@@ -66,50 +54,10 @@ app.use(
         credentials: true
     })
 );
-/* ========================= */
-/* 🔥 JSON PARSER */
-/* IMPORTANT */
-/* AVANT LES ROUTES */
-/* ========================= */
-
-app.use(express.json());
 
 /* ========================= */
-/* 📦 ROUTES IMPORT */
-/* ========================= */
-
-import stripeRoutes
-    from "./routes/stripe.routes.js";
-
-import authRoutes
-    from "./routes/auth.routes.js";
-
-import keywordRoutes
-    from "./routes/keyword.routes.js";
-
-import seoRoutes
-    from "./routes/seo.routes.js";
-
-import seoPageRoutes
-    from "./routes/seoPage.routes.js";
-
-import chatRoutes
-    from "./routes/chat.routes.js";
-
-import nicheRoutes
-    from "./routes/niche.routes.js";
-
-import plansRoutes
-    from "./routes/plans.routes.js";
-
-import devRoutes
-    from "./routes/dev.routes.js";
-
-import businessRoutes
-    from "./routes/businessProfile.routes.js";
-
-/* ========================= */
-/* 🌍 ROUTES */
+/* IMPORTANT STRIPE WEBHOOK */
+/* AVANT express.json() */
 /* ========================= */
 
 app.use(
@@ -117,97 +65,52 @@ app.use(
     stripeRoutes
 );
 
-app.use(
-    "/api/auth",
-    authRoutes
-);
-
-app.use(
-    "/api/keyword",
-    keywordRoutes
-);
-
-app.use(
-    "/api/seo",
-    seoRoutes
-);
-
-app.use(
-    "/api/seo-page",
-    seoPageRoutes
-);
-
-app.use(
-    "/api/chat",
-    chatRoutes
-);
-
-app.use(
-    "/api/niche",
-    nicheRoutes
-);
-
-app.use(
-    "/api/plans",
-    plansRoutes
-);
-
-app.use(
-    "/api/test",
-    googleAdsTest
-);
-
-app.use(
-    "/api/business-profile",
-    businessRoutes
-);
-
 /* ========================= */
-/* 🧪 DEV */
+/* JSON PARSER */
 /* ========================= */
 
-if (
-    process.env.NODE_ENV
-    === "development"
-) {
+app.use(express.json());
 
+/* ========================= */
+/* ROUTES */
+/* ========================= */
+
+app.use("/api/auth", authRoutes);
+app.use("/api/keyword", keywordRoutes);
+app.use("/api/seo", seoRoutes);
+app.use("/api/seo-page", seoPageRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api/niche", nicheRoutes);
+app.use("/api/plans", plansRoutes);
+app.use("/api/test", googleAdsTest);
+app.use("/api/business-profile", businessRoutes);
+
+if (process.env.NODE_ENV === "development") {
     app.use(
         "/api/dev",
         devRoutes
     );
-
 }
 
 /* ========================= */
-/* 🏠 ROOT */
+/* ROOT */
+/* ========================= */
+
+app.get("/", (req, res) => {
+    res.send(
+        "🚀 SEO SaaS API running"
+    );
+});
+
+/* ========================= */
+/* SITEMAP */
 /* ========================= */
 
 app.get(
-
-    "/",
-
-    (req, res) => {
-
-        res.send(
-            "🚀 SEO SaaS API running"
-        );
-
-    }
-
-);
-
-/* ========================= */
-/* 🗺️ SITEMAP */
-/* ========================= */
-
-app.get(
-
     "/sitemap.xml",
-
     async (req, res) => {
 
-        const BASE_URL =
-            FRONT_URL;
+        const BASE_URL = FRONT_URL;
 
         const cities = [
             "paris",
@@ -229,31 +132,18 @@ app.get(
         let urls = "";
 
         for (const lang of langs) {
-
             for (const city of cities) {
-
                 for (const job of jobs) {
 
                     urls += `
-                    <url>
-                        <loc>
-                        ${BASE_URL}/${lang}/annuaire/${job}-${city}
-                        </loc>
-
-                        <changefreq>
-                        weekly
-                        </changefreq>
-
-                        <priority>
-                        0.8
-                        </priority>
-
-                    </url>`;
+<url>
+    <loc>${BASE_URL}/${lang}/annuaire/${job}-${city}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+</url>`;
 
                 }
-
             }
-
         }
 
         res.set(
@@ -262,72 +152,52 @@ app.get(
         );
 
         res.send(`
-
-            <urlset
-            xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-
-                ${urls}
-
-            </urlset>
-
-        `);
-
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls}
+</urlset>
+`);
     }
-
 );
 
 /* ========================= */
-/* 🤖 ROBOTS */
+/* ROBOTS */
 /* ========================= */
 
 app.get(
-
     "/robots.txt",
-
     (req, res) => {
 
         res.type("text/plain");
 
         res.send(
-
             `User-agent: *
 Allow: /
 Sitemap: ${FRONT_URL}/sitemap.xml`
-
         );
 
     }
-
 );
 
 /* ========================= */
-/* ❌ 404 */
+/* 404 */
 /* ========================= */
 
 app.use(
-
     (req, res) => {
 
         res.status(404).json({
-
-            error:
-                "Route not found",
-
-            path:
-                req.originalUrl
-
+            error: "Route not found",
+            path: req.originalUrl
         });
 
     }
-
 );
 
 /* ========================= */
-/* 💥 ERROR HANDLER */
+/* ERROR HANDLER */
 /* ========================= */
 
 app.use(
-
     (err, req, res, next) => {
 
         console.error(
@@ -335,29 +205,23 @@ app.use(
             err.message
         );
 
-        const status =
-            err.status || 500;
-
-        res.status(status).json({
-
-            error:
-
-                err.message
-                ||
-                "Internal server error"
-
-        });
+        res
+            .status(err.status || 500)
+            .json({
+                error:
+                    err.message ||
+                    "Internal server error"
+            });
 
     }
-
 );
 
 /* ========================= */
-/* 🚀 START */
+/* START */
 /* ========================= */
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(
+        `🚀 Server running on port ${PORT}`
+    );
 });
-
-

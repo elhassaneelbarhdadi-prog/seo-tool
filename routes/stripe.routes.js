@@ -49,37 +49,25 @@ router.post(
     async (req, res) => {
 
         console.log("🚀 CHECKOUT ROUTE CALLED");
+        console.log("🚀 HEADERS:", req.headers);
+        console.log("🚀 BODY:", req.body);
 
         try {
 
-            const userId =
-                req.user.id;
-            console.log("🚀 USER:", userId);
-            let {
+            if (!req.body) {
 
-                plan,
-
-                isYearly = false
-
-            } = req.body;
-
-            if (
-                !plan
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        success: false,
-
-                        error:
-                            "Missing plan"
-
-                    });
+                return res.status(400).json({
+                    success: false,
+                    error: "Body missing",
+                    contentType: req.headers["content-type"]
+                });
 
             }
 
+            let {
+                plan,
+                isYearly = false
+            } = req.body;
             /* string -> bool safe */
 
             if (

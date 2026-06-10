@@ -291,21 +291,17 @@ router.post(
                     metadata: {
                         userId: String(userId),
                         plan,
-                        billing:
-                            isYearly
-                                ? "yearly"
-                                : "monthly"
+                        billing: isYearly
+                            ? "yearly"
+                            : "monthly"
                     },
 
                     subscription_data: {
-
                         metadata: {
                             userId: String(userId),
                             plan
                         },
-
                         trial_period_days: 3
-
                     },
 
                     success_url:
@@ -313,11 +309,15 @@ router.post(
 
                     cancel_url:
                         `${FRONT_URL}/pricing`
-
                 });
 
             console.log(
-                "✅ STRIPE SESSION CREATED:",
+                "✅ STRIPE SESSION URL:",
+                session.url
+            );
+
+            console.log(
+                "✅ STRIPE SESSION ID:",
                 session.id
             );
 
@@ -328,7 +328,6 @@ router.post(
                 url: session.url
 
             });
-
         }
 
         catch (error) {

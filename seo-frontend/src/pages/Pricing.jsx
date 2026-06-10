@@ -80,6 +80,7 @@ export default function Pricing() {
         setLoadingPlan(planKey);
 
         try {
+
             const token = localStorage.getItem("token");
 
             if (!token) {
@@ -87,19 +88,34 @@ export default function Pricing() {
                 return;
             }
 
-            const res = await fetch(`${API_URL}/api/stripe/checkout`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: "Bearer " + token
-                },
-                body: JSON.stringify({
-                    plan: planKey.toUpperCase(),
-                    isYearly
-                })
+            console.log("🚀 START CHECKOUT");
+            console.log("🚀 PLAN:", planKey);
+            console.log("🚀 YEARLY:", isYearly);
+            console.log("🚀 API:", `${API_URL}/api/stripe/checkout`);
+
+            const res = await fetch(
+                `${API_URL}/api/stripe/checkout`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: "Bearer " + token
+                    },
+                    body: JSON.stringify({
+                        plan: planKey.toUpperCase(),
+                        isYearly
+                    })
+                }
+            );
+
+            console.log("🚀 STATUS:", res.status);
+
+            const data = await res.json().catch((err) => {
+                console.error("❌ JSON ERROR:", err);
+                return null;
             });
 
-            const data = await res.json().catch(() => null);
+            console.log("🚀 RESPONSE DATA:", data);
 
             if (res.status === 401) {
                 navigate(`/${currentLang}/login`);
@@ -107,28 +123,63 @@ export default function Pricing() {
             }
 
             if (res.status === 403) {
+
+                console.log("⚠️ 403 RECEIVED");
+
                 if (data?.redirectToPortal) {
                     return openPortal();
                 }
+
                 setError("Abonnement déjà actif");
                 return;
             }
 
-            if (!data?.url) {
-                setError("Erreur paiement");
+            if (!res.ok) {
+
+                console.error("❌ REQUEST FAILED");
+                console.error(data);
+
+                setError(
+                    data?.error ||
+                    "Erreur paiement"
+                );
+
                 return;
             }
+
+            if (!data?.url) {
+
+                console.error("❌ NO URL RETURNED");
+                console.error(data);
+
+                setError("URL Stripe manquante");
+
+                return;
+            }
+
+            console.log("✅ STRIPE URL:", data.url);
+            console.log("🚀 REDIRECTING...");
 
             window.location.href = data.url;
 
         } catch (err) {
-            console.error("CHECKOUT ERROR:", err);
-            setError("Erreur paiement");
+
+            console.error(
+                "❌ CHECKOUT ERROR:",
+                err
+            );
+
+            setError(
+                err.message ||
+                "Erreur paiement"
+            );
+
         } finally {
+
             setLoadingPlan(null);
+
         }
     };
-
     /* ========================= */
     /* 💳 PORTAL */
     /* ========================= */

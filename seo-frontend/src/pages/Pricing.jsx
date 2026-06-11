@@ -158,10 +158,11 @@ export default function Pricing() {
             }
 
             console.log("✅ STRIPE URL:", data.url);
-            console.log("🚀 REDIRECTING...");
+            console.log("✅ REDIRECT URL:", data.url);
+
+            alert(data.url);
 
             window.location.href = data.url;
-
         } catch (err) {
 
             console.error(

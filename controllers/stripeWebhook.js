@@ -69,12 +69,8 @@ const getPlanFromPrice =
 
         if (
             [
-                process.env
-                    .STRIPE_PRICE_PRO_MONTHLY,
-
-                process.env
-                    .STRIPE_PRICE_PRO_YEARLY
-
+                process.env.STRIPE_PRICE_PRO_MONTHLY,
+                process.env.STRIPE_PRICE_PRO_YEARLY
             ].includes(priceId)
         ) {
             return "PRO";
@@ -82,12 +78,8 @@ const getPlanFromPrice =
 
         if (
             [
-                process.env
-                    .STRIPE_PRICE_BUSINESS_MONTHLY,
-
-                process.env
-                    .STRIPE_PRICE_BUSINESS_YEARLY
-
+                process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+                process.env.STRIPE_PRICE_BUSINESS_YEARLY
             ].includes(priceId)
         ) {
             return "BUSINESS";
@@ -103,14 +95,12 @@ const getPlanFromPrice =
 export const stripeWebhook =
     async (req, res) => {
 
-        console.log(
-            "🔥 WEBHOOK RECEIVED"
-        );
-
+        console.log("🔥 WEBHOOK RECEIVED");
+        console.log("🔥🔥🔥 WEBHOOK HIT");
+        console.log("🔥 URL:", req.originalUrl);
+        console.log("🔥 METHOD:", req.method);
         const sig =
-            req.headers[
-            "stripe-signature"
-            ];
+            req.headers["stripe-signature"];
 
         let event;
 
@@ -134,9 +124,7 @@ export const stripeWebhook =
                 event.id
             );
 
-        }
-
-        catch (err) {
+        } catch (err) {
 
             console.error(
                 "❌ SIGNATURE ERROR:",
@@ -151,10 +139,6 @@ export const stripeWebhook =
         }
 
         try {
-
-            /* ========================= */
-            /* IDEMPOTENT */
-            /* ========================= */
 
             if (
                 await isEventProcessed(
@@ -172,42 +156,71 @@ export const stripeWebhook =
                 });
             }
 
-            /* ========================= */
-            /* EVENTS */
-            /* ========================= */
-
             switch (event.type) {
 
                 case "checkout.session.completed": {
 
                     const session =
                         event.data.object;
-
                     console.log(
-                        "🔥 CHECKOUT COMPLETED:",
-                        session.id
+                        "🔥 FULL SESSION:",
+                        JSON.stringify(session, null, 2)
                     );
-
                     console.log(
-                        "🔥 METADATA:",
+                        "🔥 SESSION METADATA:",
                         session.metadata
                     );
 
                     console.log(
-                        "🔥 SUBSCRIPTION:",
+                        "🔥 USER ID:",
+                        session.metadata?.userId
+                    );
+                    console.log(
+                        "🔥 CHECKOUT COMPLETED"
+                    );
+
+                    console.log(
+                        "🔥 SESSION ID:",
+                        session.id
+                    );
+
+                    console.log(
+                        "🔥 SESSION METADATA:",
+                        JSON.stringify(
+                            session.metadata,
+                            null,
+                            2
+                        )
+                    );
+
+                    console.log(
+                        "🔥 SESSION SUBSCRIPTION:",
                         session.subscription
                     );
 
                     const userId =
                         session.metadata?.userId;
 
+                    console.log(
+                        "🔥 USER ID:",
+                        userId
+                    );
+
+                    if (!userId) {
+
+                        console.log(
+                            "❌ USER ID MISSING"
+                        );
+
+                        break;
+                    }
+
                     if (
-                        !userId ||
                         !session.subscription
                     ) {
 
                         console.log(
-                            "⚠️ Missing userId or subscription"
+                            "❌ SUBSCRIPTION MISSING"
                         );
 
                         break;
@@ -221,7 +234,7 @@ export const stripeWebhook =
                             );
 
                     console.log(
-                        "🔥 STRIPE SUB:",
+                        "🔥 SUBSCRIPTION:",
                         subscription.id
                     );
 
@@ -240,7 +253,7 @@ export const stripeWebhook =
                     if (!priceId) {
 
                         console.log(
-                            "⚠️ No price id"
+                            "❌ PRICE ID MISSING"
                         );
 
                         break;
@@ -252,7 +265,7 @@ export const stripeWebhook =
                         );
 
                     console.log(
-                        "🔥 PLAN:",
+                        "🔥 PLAN DETECTED:",
                         plan
                     );
 
@@ -274,8 +287,31 @@ WHERE id=?
                         );
 
                     console.log(
-                        "✅ USER UPDATED:",
+                        "🔥 UPDATE RESULT:",
                         result
+                    );
+
+                    const updatedUser =
+                        await db.get(
+                            `
+SELECT
+id,
+email,
+plan,
+subscription_status,
+subscription_id
+FROM users
+WHERE id=?
+`,
+                            [userId]
+                        );
+
+                    console.log(
+                        "🔥 UPDATED USER:"
+                    );
+
+                    console.log(
+                        updatedUser
                     );
 
                     break;
@@ -365,10 +401,6 @@ WHERE subscription_id=?
                     break;
             }
 
-            /* ========================= */
-            /* SAVE EVENT */
-            /* ========================= */
-
             await saveEvent(
                 event.id
             );
@@ -377,10 +409,6 @@ WHERE subscription_id=?
                 "✅ EVENT SAVED:",
                 event.id
             );
-
-            /* ========================= */
-            /* CLEAN OLD EVENTS */
-            /* ========================= */
 
             await db.run(
                 `
@@ -398,9 +426,7 @@ datetime(
                 received: true
             });
 
-        }
-
-        catch (error) {
+        } catch (error) {
 
             console.error(
                 "🔥 WEBHOOK ERROR:"

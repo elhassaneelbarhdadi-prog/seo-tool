@@ -45,10 +45,7 @@ router.post(
 /* DEV HEALTH */
 /* ========================= */
 
-if (
-    process.env.NODE_ENV
-    === "development"
-) {
+if (true) {
 
     router.get(
 

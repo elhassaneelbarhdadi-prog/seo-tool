@@ -463,7 +463,6 @@ export const stripeWebhook = async (req, res) => {
         return res.status(500).json({
             error: "Webhook secret missing"
         });
-
     }
 
     let event;
@@ -501,60 +500,144 @@ export const stripeWebhook = async (req, res) => {
             .send(
                 `Webhook Error: ${err.message}`
             );
-
     }
 
     try {
 
         switch (event.type) {
 
-            case "checkout.session.completed":
+            case "checkout.session.completed": {
+
+                const session =
+                    event.data.object;
+
+                const customerId =
+                    session.customer;
+
+                const subscriptionId =
+                    session.subscription;
+
+                const plan =
+                    session.metadata?.plan || "PRO";
+
+                await db.run(
+                    `
+                    UPDATE users
+                    SET
+                        plan=?,
+                        subscription_id=?,
+                        subscription_status='active'
+                    WHERE stripe_customer_id=?
+                    `,
+                    [
+                        plan,
+                        subscriptionId,
+                        customerId
+                    ]
+                );
+
+                const updatedUser =
+                    await db.get(
+                        `
+                        SELECT
+                            id,
+                            email,
+                            plan,
+                            subscription_status
+                        FROM users
+                        WHERE stripe_customer_id=?
+                        `,
+                        [customerId]
+                    );
 
                 console.log(
                     "✅ CHECKOUT COMPLETED"
                 );
 
                 console.log(
-                    event.data.object
+                    "✅ USER UPDATED:",
+                    updatedUser
                 );
 
                 break;
+            }
 
-            case "invoice.paid":
+            case "invoice.paid": {
+
+                const invoice =
+                    event.data.object;
+
+                const customerId =
+                    invoice.customer;
+
+                await db.run(
+                    `
+                    UPDATE users
+                    SET
+                        subscription_status='active'
+                    WHERE stripe_customer_id=?
+                    `,
+                    [customerId]
+                );
 
                 console.log(
                     "💰 INVOICE PAID"
                 );
 
-                console.log(
-                    event.data.object.id
-                );
-
                 break;
+            }
 
-            case "invoice.payment_failed":
+            case "invoice.payment_failed": {
+
+                const invoice =
+                    event.data.object;
+
+                const customerId =
+                    invoice.customer;
+
+                await db.run(
+                    `
+                    UPDATE users
+                    SET
+                        subscription_status='past_due'
+                    WHERE stripe_customer_id=?
+                    `,
+                    [customerId]
+                );
 
                 console.log(
                     "❌ PAYMENT FAILED"
                 );
 
-                console.log(
-                    event.data.object.id
-                );
-
                 break;
+            }
 
-            case "customer.subscription.deleted":
+            case "customer.subscription.deleted": {
+
+                const subscription =
+                    event.data.object;
+
+                const customerId =
+                    subscription.customer;
+
+                await db.run(
+                    `
+                    UPDATE users
+                    SET
+                        plan='FREE',
+                        subscription_status='cancelled',
+                        subscription_id=NULL
+                    WHERE stripe_customer_id=?
+                    `,
+                    [customerId]
+                );
 
                 console.log(
                     "🚫 SUBSCRIPTION DELETED"
                 );
 
-                console.log(
-                    event.data.object.id
-                );
-
                 break;
+            }
 
             default:
 
@@ -562,7 +645,6 @@ export const stripeWebhook = async (req, res) => {
                     "ℹ️ UNHANDLED EVENT:",
                     event.type
                 );
-
         }
 
         return res.json({
@@ -582,7 +664,5 @@ export const stripeWebhook = async (req, res) => {
             .json({
                 error: "Webhook failed"
             });
-
     }
-
 };

@@ -417,4 +417,18 @@ export const createCheckout =
 
         }
 
-    };
+    };/* ========================= */
+/* STRIPE WEBHOOK */
+/* ========================= */
+
+export const stripeWebhook = async (req, res) => {
+
+    console.log("🔥 WEBHOOK RECEIVED");
+    console.log("🔥 URL:", req.originalUrl);
+    console.log("🔥 METHOD:", req.method);
+
+    return res.json({
+        received: true
+    });
+
+};

@@ -8,6 +8,8 @@ import rateLimit from "express-rate-limit";
 import googleAdsTest from "./routes/googleads.test.js";
 
 import stripeRoutes from "./routes/stripe.routes.js";
+import billingWebhookRoutes from "./routes/billing.webhook.js";
+
 import authRoutes from "./routes/auth.routes.js";
 import keywordRoutes from "./routes/keyword.routes.js";
 import seoRoutes from "./routes/seo.routes.js";
@@ -60,12 +62,28 @@ app.use(
 );
 
 /* ========================= */
+/* STRIPE WEBHOOK */
+/* IMPORTANT */
+/* AVANT express.json() */
+/* ========================= */
+
+console.log(
+    "🔥 REGISTERING BILLING WEBHOOK ROUTES"
+);
+
+app.use(
+    "/api/stripe",
+    billingWebhookRoutes
+);
+
+/* ========================= */
 /* JSON PARSER */
 /* ========================= */
 
 app.use(express.json());
 
 app.use((req, res, next) => {
+
     console.log(
         "📦 JSON PARSER:",
         req.method,
@@ -74,6 +92,7 @@ app.use((req, res, next) => {
     );
 
     next();
+
 });
 
 /* ========================= */
@@ -134,7 +153,9 @@ app.use(
 /* DEV */
 /* ========================= */
 
-if (process.env.NODE_ENV === "development") {
+if (
+    process.env.NODE_ENV === "development"
+) {
 
     app.use(
         "/api/dev",
@@ -238,6 +259,12 @@ Sitemap: ${FRONT_URL}/sitemap.xml`
 
 app.use((req, res) => {
 
+    console.log(
+        "❌ 404:",
+        req.method,
+        req.originalUrl
+    );
+
     res.status(404).json({
 
         error: "Route not found",
@@ -256,9 +283,10 @@ app.use(
     (err, req, res, next) => {
 
         console.error(
-            "🔥 ERROR:",
-            err
+            "🔥 ERROR:"
         );
+
+        console.error(err);
 
         res
             .status(err.status || 500)

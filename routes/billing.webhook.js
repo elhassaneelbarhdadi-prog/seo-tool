@@ -9,6 +9,14 @@ const router =
     express.Router();
 
 /* ========================= */
+/* DEBUG */
+/* ========================= */
+
+console.log(
+    "🔥 BILLING WEBHOOK ROUTE LOADED"
+);
+
+/* ========================= */
 /* STRIPE WEBHOOK */
 /* ========================= */
 
@@ -42,34 +50,34 @@ router.post(
 );
 
 /* ========================= */
-/* DEV HEALTH */
+/* HEALTH */
 /* ========================= */
 
-if (true) {
+router.get(
 
-    router.get(
+    "/health",
 
-        "/health",
+    (req, res) => {
 
-        (req, res) => {
+        console.log(
+            "🔥 HEALTH ROUTE CALLED"
+        );
 
-            return res.json({
+        return res.json({
 
-                ok: true,
+            ok: true,
 
-                service:
-                    "stripe-webhook",
+            service:
+                "stripe-webhook",
 
-                timestamp:
-                    new Date()
-                        .toISOString()
+            timestamp:
+                new Date()
+                    .toISOString()
 
-            });
+        });
 
-        }
+    }
 
-    );
-
-}
+);
 
 export default router;

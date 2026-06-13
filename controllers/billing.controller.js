@@ -421,14 +421,168 @@ export const createCheckout =
 /* STRIPE WEBHOOK */
 /* ========================= */
 
+/* ========================= */
+/* STRIPE WEBHOOK */
+/* ========================= */
+
 export const stripeWebhook = async (req, res) => {
 
     console.log("🔥 WEBHOOK RECEIVED");
     console.log("🔥 URL:", req.originalUrl);
     console.log("🔥 METHOD:", req.method);
 
-    return res.json({
-        received: true
-    });
+    console.log(
+        "🔥 SIGNATURE:",
+        req.headers["stripe-signature"]
+    );
+
+    console.log(
+        "🔥 BODY IS BUFFER:",
+        Buffer.isBuffer(req.body)
+    );
+
+    console.log(
+        "🔥 BODY LENGTH:",
+        req.body?.length
+    );
+
+    console.log(
+        "🔥 WEBHOOK SECRET EXISTS:",
+        !!process.env.STRIPE_WEBHOOK_SECRET
+    );
+
+    const sig =
+        req.headers["stripe-signature"];
+
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+
+        console.error(
+            "❌ STRIPE_WEBHOOK_SECRET MISSING"
+        );
+
+        return res.status(500).json({
+            error: "Webhook secret missing"
+        });
+
+    }
+
+    let event;
+
+    try {
+
+        event =
+            stripe.webhooks.constructEvent(
+                req.body,
+                sig,
+                process.env.STRIPE_WEBHOOK_SECRET
+            );
+
+        console.log(
+            "🔥 EVENT:",
+            event.type
+        );
+
+        console.log(
+            "🔥 EVENT ID:",
+            event.id
+        );
+
+    } catch (err) {
+
+        console.error(
+            "❌ SIGNATURE ERROR:",
+            err.message
+        );
+
+        console.error(err);
+
+        return res
+            .status(400)
+            .send(
+                `Webhook Error: ${err.message}`
+            );
+
+    }
+
+    try {
+
+        switch (event.type) {
+
+            case "checkout.session.completed":
+
+                console.log(
+                    "✅ CHECKOUT COMPLETED"
+                );
+
+                console.log(
+                    event.data.object
+                );
+
+                break;
+
+            case "invoice.paid":
+
+                console.log(
+                    "💰 INVOICE PAID"
+                );
+
+                console.log(
+                    event.data.object.id
+                );
+
+                break;
+
+            case "invoice.payment_failed":
+
+                console.log(
+                    "❌ PAYMENT FAILED"
+                );
+
+                console.log(
+                    event.data.object.id
+                );
+
+                break;
+
+            case "customer.subscription.deleted":
+
+                console.log(
+                    "🚫 SUBSCRIPTION DELETED"
+                );
+
+                console.log(
+                    event.data.object.id
+                );
+
+                break;
+
+            default:
+
+                console.log(
+                    "ℹ️ UNHANDLED EVENT:",
+                    event.type
+                );
+
+        }
+
+        return res.json({
+            received: true
+        });
+
+    } catch (error) {
+
+        console.error(
+            "🔥 WEBHOOK ERROR:"
+        );
+
+        console.error(error);
+
+        return res
+            .status(500)
+            .json({
+                error: "Webhook failed"
+            });
+
+    }
 
 };

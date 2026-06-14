@@ -74,9 +74,7 @@ export default function Home() {
             {/* SOLUTION */}
             <section className="p-10 text-center">
 
-                <h2 className="text-2xl font-bold mb-6">
-                    Une seule plateforme pour réussir
-                </h2>
+
 
                 <div className="max-w-6xl mx-auto px-6 py-16">
 

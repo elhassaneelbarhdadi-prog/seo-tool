@@ -369,4 +369,69 @@ router.post(
 
     }
 );
+/* ========================= */
+/* CUSTOMER PORTAL */
+/* ========================= */
+
+router.post(
+    "/portal",
+    authMiddleware,
+    async (req, res) => {
+
+        try {
+
+            const user = await db.get(
+                `
+                SELECT
+                    stripe_customer_id
+                FROM users
+                WHERE id = ?
+                `,
+                [req.user.id]
+            );
+
+            if (!user?.stripe_customer_id) {
+
+                return res.status(400).json({
+                    error: "No active subscription"
+                });
+
+            }
+
+            const session =
+                await stripe.billingPortal.sessions.create({
+
+                    customer:
+                        user.stripe_customer_id,
+
+                    return_url:
+                        `${FRONT_URL}/pricing`
+
+                });
+
+            return res.json({
+                url: session.url
+            });
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "🔥 PORTAL ERROR:"
+            );
+
+            console.error(error);
+
+            return res.status(500).json({
+
+                error:
+                    "Portal error"
+
+            });
+
+        }
+
+    }
+);
 export default router;

@@ -346,6 +346,12 @@ router.post(
     limiter,
     analyzeSEO
 );
+router.get("/ping", (req, res) => {
+    res.json({
+        success: true,
+        route: "seo.routes.js"
+    });
+});
 /* ========================= */
 /* PAGE */
 /* ========================= */

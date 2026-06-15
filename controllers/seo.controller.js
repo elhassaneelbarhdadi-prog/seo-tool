@@ -20,20 +20,6 @@ export const analyzeSEO =
             /* AUTH */
             /* ========================= */
 
-            if (
-                !req.user?.id
-            ) {
-
-                return res
-                    .status(401)
-                    .json({
-
-                        error:
-                            "Unauthorized"
-
-                    });
-
-            }
 
             /* ========================= */
             /* INPUT */
@@ -555,15 +541,17 @@ export const analyzeSEO =
 
             };
 
-            /* ========================= */
+            /* /* ========================= */
             /* SAVE */
             /* ========================= */
 
-            try {
+            if (req.user?.id) {
 
-                await db.run(
+                try {
 
-                    `
+                    await db.run(
+
+                        `
 
 INSERT INTO keywords(
 
@@ -619,47 +607,53 @@ datetime('now')
 
 `,
 
-                    [
+                        [
 
-                        finalData.keyword,
+                            finalData.keyword,
 
-                        finalData.volume,
+                            finalData.volume,
 
-                        finalData.difficulty,
+                            finalData.difficulty,
 
-                        finalData.cpc,
+                            finalData.cpc,
 
-                        finalData.intent,
+                            finalData.intent,
 
-                        finalData.score,
+                            finalData.score,
 
-                        finalData.revenue,
+                            finalData.revenue,
 
-                        finalScore >= 70
-                            ? "high"
-                            : "medium",
+                            finalScore >= 70
+                                ? "high"
+                                : "medium",
 
-                        finalData.verdict,
+                            finalData.verdict,
 
-                        req.user.id
+                            req.user.id
 
-                    ]
+                        ]
 
-                );
+                    );
+
+                }
+
+                catch (err) {
+
+                    console.warn(
+
+                        "DB SAVE:",
+
+                        err.message
+
+                    );
+
+                }
 
             }
 
-            catch (err) {
-
-                console.warn(
-
-                    "DB SAVE:",
-
-                    err.message
-
-                );
-
-            }
+            /* ========================= */
+            /* RESPONSE */
+            /* ========================= */
 
             return res.json(
                 finalData

@@ -9,7 +9,7 @@ import {
 } from "react-router-dom";
 
 import { useEffect, useMemo } from "react";
-
+import FreeAnalyzer from "./pages/FreeAnalyzer";
 /* ========================= */
 /* LAYOUT */
 /* ========================= */
@@ -227,7 +227,10 @@ export default function App() {
             path="/:lang/register"
             element={<Register />}
           />
-
+          <Route
+            path="/:lang/free-analyzer"
+            element={<FreeAnalyzer />}
+          />
           {/* SEO */}
           <Route
             path="/:lang/landing/:keyword"

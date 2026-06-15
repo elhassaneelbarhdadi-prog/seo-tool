@@ -186,14 +186,11 @@ router.post(
 
     "/analyze",
 
-    authMiddleware,
-
     limiter,
 
     analyzeSEO
 
 );
-
 /* ========================= */
 /* CITY */
 /* ========================= */
@@ -344,7 +341,11 @@ Style naturel.
     );
 
 }
-
+router.post(
+    "/free-analyze",
+    limiter,
+    analyzeSEO
+);
 /* ========================= */
 /* PAGE */
 /* ========================= */

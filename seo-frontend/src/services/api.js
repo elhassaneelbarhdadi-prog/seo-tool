@@ -107,13 +107,30 @@ const request = async (
 /* ========================= */
 /* 🚀 SEO */
 /* ========================= */
+export const analyzeKeywordFree = (keyword) =>
+    request(
+        "/seo/free-analyze",
+        {
+            method: "POST",
+            body: JSON.stringify({ keyword })
+        },
+        {
+            isPublic: true
+        }
+    );
+
 
 export const analyzeKeyword = (keyword) =>
-    request(API.seoAnalyze, {
-        method: "POST",
-        body: JSON.stringify({ keyword })
-    });
-
+    request(
+        API.seoAnalyze,
+        {
+            method: "POST",
+            body: JSON.stringify({ keyword })
+        },
+        {
+            isPublic: true
+        }
+    );
 export const deleteKeyword = async (id) => {
     return request(`/keyword/${id}`, {
         method: "DELETE"

@@ -1,255 +1,122 @@
-import { useState, useEffect } from "react";
+import express from "express";
+import db from "../config/database.js";
 
-const API_URL =
-    import.meta.env.VITE_API_URL ||
-    "https://seo-tool-api-lo6k.onrender.com";
+const router = express.Router();
 
-export default function Annuaire() {
+/* ========================= */
+/* GET BUSINESS PROFILES */
+/* ========================= */
+router.get("/", async (req, res) => {
 
-    const [search, setSearch] = useState("");
-    const [businesses, setBusinesses] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    try {
 
-    const loadBusinesses = async () => {
+        const search = req.query.search || "";
 
-        try {
+        let businesses;
 
-            setLoading(true);
-            setError("");
+        if (search.trim()) {
 
-            const url = search.trim()
-                ? `${API_URL}/api/business-profile?search=${encodeURIComponent(search)}`
-                : `${API_URL}/api/business-profile`;
-
-            const response = await fetch(url);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            console.log("✅ BUSINESSES:", data);
-
-            setBusinesses(
-                data.businesses || []
+            businesses = await db.all(
+                `
+                SELECT *
+                FROM business_profiles
+                WHERE
+                    name LIKE ?
+                    OR keyword LIKE ?
+                    OR city LIKE ?
+                ORDER BY score DESC
+                `,
+                [
+                    `%${search}%`,
+                    `%${search}%`,
+                    `%${search}%`
+                ]
             );
 
-        } catch (err) {
+        } else {
 
-            console.error(
-                "❌ LOAD BUSINESSES ERROR:",
-                err
+            businesses = await db.all(
+                `
+                SELECT *
+                FROM business_profiles
+                ORDER BY score DESC
+                `
             );
-
-            setError(
-                "Impossible de charger les entreprises."
-            );
-
-            setBusinesses([]);
-
-        } finally {
-
-            setLoading(false);
 
         }
-    };
 
-    useEffect(() => {
-        loadBusinesses();
-    }, []);
+        return res.json({
+            businesses
+        });
 
-    return (
+    } catch (err) {
 
-        <div className="max-w-6xl mx-auto px-6 py-12">
+        console.error(
+            "GET BUSINESS PROFILES ERROR:",
+            err
+        );
 
-            {/* HEADER */}
+        return res.status(500).json({
+            error: "Server error"
+        });
 
-            <div className="text-center mb-12">
+    }
 
-                <h1 className="text-5xl font-black mb-4">
-                    📁 Annuaire SEO
-                </h1>
+});
 
-                <p className="text-gray-500 text-lg max-w-3xl mx-auto">
-                    Découvrez les meilleures entreprises
-                    référencées dans notre annuaire SEO.
-                </p>
+/* ========================= */
+/* CREATE BUSINESS PROFILE */
+/* ========================= */
+router.post("/", async (req, res) => {
 
-            </div>
+    try {
 
-            {/* SEARCH */}
+        const {
+            user_id,
+            name,
+            description,
+            keyword,
+            city
+        } = req.body;
 
-            <div className="flex flex-col md:flex-row gap-4 mb-10">
+        const result = await db.run(
+            `
+            INSERT INTO business_profiles (
+                user_id,
+                name,
+                description,
+                keyword,
+                city
+            )
+            VALUES (?, ?, ?, ?, ?)
+            `,
+            [
+                user_id || null,
+                name,
+                description,
+                keyword,
+                city
+            ]
+        );
 
-                <input
-                    id="business-search"
-                    name="business-search"
-                    type="text"
-                    value={search}
-                    placeholder="Ex : hijama, bien-être, médecine..."
-                    onChange={(e) =>
-                        setSearch(e.target.value)
-                    }
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                            loadBusinesses();
-                        }
-                    }}
-                    className="
-                        flex-1
-                        border-2
-                        border-gray-300
-                        rounded-full
-                        px-6
-                        py-4
-                        text-lg
-                        focus:outline-none
-                        focus:border-blue-500
-                    "
-                />
+        return res.json({
+            success: true,
+            id: result.lastID
+        });
 
-                <button
-                    onClick={loadBusinesses}
-                    disabled={loading}
-                    className="
-                        bg-blue-600
-                        hover:bg-blue-700
-                        text-white
-                        px-8
-                        py-4
-                        rounded-full
-                        font-bold
-                        disabled:opacity-50
-                    "
-                >
-                    {loading
-                        ? "Chargement..."
-                        : "🔍 Rechercher"}
-                </button>
+    } catch (err) {
 
-            </div>
+        console.error(
+            "CREATE BUSINESS PROFILE ERROR:",
+            err
+        );
 
-            {/* ERROR */}
+        return res.status(500).json({
+            error: "Server error"
+        });
 
-            {error && (
+    }
 
-                <div className="
-                    bg-red-50
-                    border
-                    border-red-200
-                    text-red-600
-                    p-4
-                    rounded-xl
-                    mb-6
-                ">
-                    {error}
-                </div>
+});
 
-            )}
-
-            {/* EMPTY */}
-
-            {!loading &&
-                businesses.length === 0 && (
-
-                    <div className="
-                        text-center
-                        text-gray-400
-                        py-16
-                    ">
-                        Aucun résultat
-                    </div>
-
-                )}
-
-            {/* RESULTS */}
-
-            <div className="grid md:grid-cols-2 gap-6">
-
-                {businesses.map((business) => (
-
-                    <div
-                        key={business.id}
-                        className="
-                            bg-white
-                            rounded-3xl
-                            shadow-md
-                            border
-                            p-6
-                            hover:shadow-xl
-                            transition
-                        "
-                    >
-
-                        <h2 className="text-2xl font-bold">
-
-                            {business.name}
-
-                        </h2>
-
-                        <p className="text-gray-500 mt-2">
-
-                            📍 {business.city}
-
-                        </p>
-
-                        {business.description && (
-
-                            <p className="mt-4 text-gray-700">
-
-                                {business.description}
-
-                            </p>
-
-                        )}
-
-                        <div className="flex flex-wrap gap-2 mt-4">
-
-                            {business.keyword && (
-
-                                <span
-                                    className="
-                                        bg-blue-100
-                                        text-blue-700
-                                        px-3
-                                        py-1
-                                        rounded-full
-                                        text-sm
-                                    "
-                                >
-                                    {business.keyword}
-                                </span>
-
-                            )}
-
-                            {business.score && (
-
-                                <span
-                                    className="
-                                        bg-green-100
-                                        text-green-700
-                                        px-3
-                                        py-1
-                                        rounded-full
-                                        text-sm
-                                    "
-                                >
-                                    SEO Score : {business.score}
-                                </span>
-
-                            )}
-
-                        </div>
-
-                    </div>
-
-                ))}
-
-            </div>
-
-        </div>
-
-    );
-}
+export default router;

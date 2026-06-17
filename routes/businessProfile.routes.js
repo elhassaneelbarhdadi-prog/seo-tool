@@ -1,721 +1,255 @@
-import express from "express";
-import db from "../config/database.js";
-import { authMiddleware } from "../middleware/auth.middleware.js";
-import { fetchRealSEO }
-    from "../services/seoReal.service.js";
-const router = express.Router();
+import { useState, useEffect } from "react";
 
-const MAX_LENGTH = 150;
+const API_URL =
+    import.meta.env.VITE_API_URL ||
+    "https://seo-tool-api-lo6k.onrender.com";
 
-/* ========================= */
-/* HELPERS */
-/* ========================= */
+export default function Annuaire() {
 
-const clean = (v = "") =>
+    const [search, setSearch] = useState("");
+    const [businesses, setBusinesses] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
 
-    String(v)
-        .trim()
-        .slice(0, MAX_LENGTH);
+    const loadBusinesses = async () => {
 
-const hash = (str) => {
+        try {
 
-    let h = 0;
+            setLoading(true);
+            setError("");
 
-    for (let i = 0; i < str.length; i++) {
+            const url = search.trim()
+                ? `${API_URL}/api/business-profile?search=${encodeURIComponent(search)}`
+                : `${API_URL}/api/business-profile`;
 
-        h =
-            str.charCodeAt(i)
-            +
-            ((h << 5) - h);
+            const response = await fetch(url);
 
-    }
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
 
-    return Math.abs(h);
+            const data = await response.json();
 
-};
+            console.log("✅ BUSINESSES:", data);
 
-const seededRandom = (seed) => {
-
-    const x =
-        Math.sin(seed % 10000)
-        * 10000;
-
-    return x -
-        Math.floor(x);
-
-};
-
-const isPremiumUser =
-    async (userId) => {
-
-        const user =
-
-            await db.get(
-
-                `
-
-SELECT
-
-plan,
-
-subscription_status
-
-FROM users
-
-WHERE id=?
-
-LIMIT 1
-
-`,
-
-                [userId]
-
+            setBusinesses(
+                data.businesses || []
             );
 
-        if (!user) {
+        } catch (err) {
 
-            return false;
+            console.error(
+                "❌ LOAD BUSINESSES ERROR:",
+                err
+            );
+
+            setError(
+                "Impossible de charger les entreprises."
+            );
+
+            setBusinesses([]);
+
+        } finally {
+
+            setLoading(false);
 
         }
-
-        return (
-
-            ["PRO", "BUSINESS"]
-                .includes(user.plan)
-
-            &&
-
-            user.subscription_status
-            === "active"
-
-        );
-
     };
 
-/* ========================= */
-/* CREATE */
-/* ========================= */
+    useEffect(() => {
+        loadBusinesses();
+    }, []);
 
-router.post(
-    "/",
-    authMiddleware,
-    async (req, res) => {
+    return (
 
-        try {
+        <div className="max-w-6xl mx-auto px-6 py-12">
 
-            const userId =
-                req.user.id;
+            {/* HEADER */}
 
-            const name =
-                clean(req.body.name);
+            <div className="text-center mb-12">
 
-            const description =
-                clean(
-                    req.body.description
-                );
+                <h1 className="text-5xl font-black mb-4">
+                    📁 Annuaire SEO
+                </h1>
 
-            const keyword =
-                clean(req.body.keyword);
+                <p className="text-gray-500 text-lg max-w-3xl mx-auto">
+                    Découvrez les meilleures entreprises
+                    référencées dans notre annuaire SEO.
+                </p>
 
-            const city =
-                clean(req.body.city);
+            </div>
 
-            if (
-                !name ||
-                !keyword ||
-                !city
-            ) {
+            {/* SEARCH */}
 
-                return res
-                    .status(400)
-                    .json({
+            <div className="flex flex-col md:flex-row gap-4 mb-10">
 
-                        error:
-                            "missingFields"
-
-                    });
-
-            }
-
-            const premium =
-
-                await isPremiumUser(
-                    userId
-                );
-
-            if (!premium) {
-
-                return res
-                    .status(403)
-                    .json({
-
-                        error:
-                            "upgradeRequired"
-
-                    });
-
-            }
-
-            const existing =
-
-                await db.get(
-
-                    `
-
-SELECT id
-
-FROM business_profiles
-
-WHERE user_id=?
-
-LIMIT 1
-
-`,
-
-                    [userId]
-
-                );
-
-            if (existing) {
-
-                return res.json({
-
-                    alreadyExists: true
-
-                });
-
-            }
-
-            /* deterministic score */
-
-            /* ========================= */
-            /* REAL SEO */
-            /* ========================= */
-
-            const seo =
-                await fetchRealSEO(
-                    keyword
-                );
-
-            const volume =
-                Number(
-                    seo?.volume || 0
-                );
-
-            const difficulty =
-                Number(
-                    seo?.difficulty || 50
-                );
-
-            const cpc =
-                Number(
-                    seo?.cpc || 0
-                );
-
-            /* ========================= */
-            /* SEO SCORE */
-            /* ========================= */
-
-            let score = 50;
-
-            /* volume */
-
-            score += Math.min(
-                volume / 1000,
-                25
-            );
-
-            /* CPC */
-
-            score += Math.min(
-                cpc * 5,
-                20
-            );
-
-            /* difficulté */
-
-            score += Math.max(
-                0,
-                (100 - difficulty) / 5
-            );
-
-            /* longue traîne */
-
-            score +=
-                keyword.split(" ").length >= 2
-                    ? 10
-                    : 0;
-
-            score = Math.min(
-                100,
-                Math.round(score)
-            );
-            await db.run(
-
-                `
-
-INSERT INTO
-business_profiles(
-
-user_id,
-
-name,
-
-description,
-
-keyword,
-
-city,
-
-score
-
-)
-
-VALUES(
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-?
-
-)
-
-`,
-
-                [
-
-                    userId,
-
-                    name,
-
-                    description,
-
-                    keyword,
-
-                    city,
-
-                    score
-
-                ]
-
-            );
-
-            return res.json({
-
-                success: true,
-
-                score
-
-            });
-
-        }
-
-        catch (err) {
-
-            console.error(
-
-                "PROFILE:",
-
-                err.message
-
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    error:
-                        "serverError"
-
-                });
-
-        }
-
-    }
-);
-
-/* ========================= */
-/* GET */
-/* ========================= */
-/* ========================= */
-/* GET */
-/* ========================= */
-
-router.get(
-    "/",
-    async (req, res) => {
-
-        try {
-
-            const search =
-
-                String(
-                    req.query.search || ""
-                )
-                    .trim();
-
-            let rows = [];
-
-            /* ========================= */
-            /* SEARCH MODE */
-            /* ========================= */
-
-            if (search) {
-
-                rows = await db.all(
-
-                    `
-
-SELECT
-
-id,
-
-name,
-
-description,
-
-keyword,
-
-city,
-
-score
-
-FROM
-business_profiles
-
-WHERE
-
-name LIKE ?
-
-OR keyword LIKE ?
-
-OR city LIKE ?
-
-ORDER BY score DESC
-
-LIMIT 20
-
-`,
-
-                    [
-
-                        `%${search}%`,
-
-                        `%${search}%`,
-
-                        `%${search}%`
-
-                    ]
-
-                );
-
-            }
-
-            /* ========================= */
-            /* DEFAULT MODE */
-            /* ========================= */
-
-            else {
-
-                rows = await db.all(
-
-                    `
-
-SELECT
-
-id,
-
-name,
-
-description,
-
-keyword,
-
-city,
-
-score
-
-FROM
-business_profiles
-
-ORDER BY score DESC
-
-LIMIT 20
-
-`
-
-                );
-
-            }
-
-            /* ========================= */
-            /* TOTAL */
-            /* ========================= */
-
-            const total =
-
-                await db.get(
-
-                    `
-
-SELECT
-COUNT(*) total
-
-FROM
-business_profiles
-
-`
-
-                );
-
-            return res.json({
-
-                success: true,
-
-                businesses: rows,
-
-                total:
-                    total.total,
-
-                hasMore:
-
-                    total.total >
-                    rows.length
-
-            });
-
-        }
-
-        catch (err) {
-
-            console.error(
-
-                "GET PROFILE:",
-
-                err.message
-
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    error:
-                        "serverError"
-
-                });
-
-        }
-
-    }
-);
-/* ========================= */
-/* DEV ONLY */
-/* ========================= */
-
-if (
-    process.env.NODE_ENV
-    === "development"
-) {
-
-    router.post(
-
-        "/seed",
-
-        authMiddleware,
-
-        async (req, res) => {
-
-            if (
-                !req.user?.isAdmin
-            ) {
-
-                return res
-                    .status(403)
-                    .json({
-
-                        error:
-                            "Forbidden"
-
-                    });
-
-            }
-
-            try {
-
-                const existing =
-
-                    await db.get(
-
-                        `
-
-SELECT
-COUNT(*) total
-
-FROM
-business_profiles
-
-`
-
-                    );
-
-                if (
-                    existing.total > 0
-                ) {
-
-                    return res.json({
-
-                        message:
-                            "Already seeded"
-
-                    });
-
-                }
-
-                const fakeData = [
-
-                    {
-
-                        name:
-                            "Agence SEO Paris",
-
-                        description:
-                            "Experts référencement local",
-
-                        keyword:
-                            "SEO Paris",
-
-                        city:
-                            "Paris",
-
-                        score: 92
-
-                    },
-
-                    {
-
-                        name:
-                            "Coach Sport Lyon",
-
-                        description:
-                            "Coaching personnalisé",
-
-                        keyword:
-                            "coach sportif Lyon",
-
-                        city:
-                            "Lyon",
-
-                        score: 88
-
+                <input
+                    id="business-search"
+                    name="business-search"
+                    type="text"
+                    value={search}
+                    placeholder="Ex : hijama, bien-être, médecine..."
+                    onChange={(e) =>
+                        setSearch(e.target.value)
                     }
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            loadBusinesses();
+                        }
+                    }}
+                    className="
+                        flex-1
+                        border-2
+                        border-gray-300
+                        rounded-full
+                        px-6
+                        py-4
+                        text-lg
+                        focus:outline-none
+                        focus:border-blue-500
+                    "
+                />
 
-                ];
+                <button
+                    onClick={loadBusinesses}
+                    disabled={loading}
+                    className="
+                        bg-blue-600
+                        hover:bg-blue-700
+                        text-white
+                        px-8
+                        py-4
+                        rounded-full
+                        font-bold
+                        disabled:opacity-50
+                    "
+                >
+                    {loading
+                        ? "Chargement..."
+                        : "🔍 Rechercher"}
+                </button>
 
-                for (
-                    const p
-                    of fakeData
-                ) {
+            </div>
 
-                    await db.run(
+            {/* ERROR */}
 
-                        `
+            {error && (
 
-INSERT INTO
-business_profiles(
+                <div className="
+                    bg-red-50
+                    border
+                    border-red-200
+                    text-red-600
+                    p-4
+                    rounded-xl
+                    mb-6
+                ">
+                    {error}
+                </div>
 
-user_id,
+            )}
 
-name,
+            {/* EMPTY */}
 
-description,
+            {!loading &&
+                businesses.length === 0 && (
 
-keyword,
+                    <div className="
+                        text-center
+                        text-gray-400
+                        py-16
+                    ">
+                        Aucun résultat
+                    </div>
 
-city,
+                )}
 
-score
+            {/* RESULTS */}
 
-)
+            <div className="grid md:grid-cols-2 gap-6">
 
-VALUES(
+                {businesses.map((business) => (
 
-?,
+                    <div
+                        key={business.id}
+                        className="
+                            bg-white
+                            rounded-3xl
+                            shadow-md
+                            border
+                            p-6
+                            hover:shadow-xl
+                            transition
+                        "
+                    >
 
-?,
+                        <h2 className="text-2xl font-bold">
 
-?,
+                            {business.name}
 
-?,
+                        </h2>
 
-?,
+                        <p className="text-gray-500 mt-2">
 
-?
+                            📍 {business.city}
 
-)
+                        </p>
 
-`,
+                        {business.description && (
 
-                        [
+                            <p className="mt-4 text-gray-700">
 
-                            req.user.id,
+                                {business.description}
 
-                            p.name,
+                            </p>
 
-                            p.description,
+                        )}
 
-                            p.keyword,
+                        <div className="flex flex-wrap gap-2 mt-4">
 
-                            p.city,
+                            {business.keyword && (
 
-                            p.score
+                                <span
+                                    className="
+                                        bg-blue-100
+                                        text-blue-700
+                                        px-3
+                                        py-1
+                                        rounded-full
+                                        text-sm
+                                    "
+                                >
+                                    {business.keyword}
+                                </span>
 
-                        ]
+                            )}
 
-                    );
+                            {business.score && (
 
-                }
+                                <span
+                                    className="
+                                        bg-green-100
+                                        text-green-700
+                                        px-3
+                                        py-1
+                                        rounded-full
+                                        text-sm
+                                    "
+                                >
+                                    SEO Score : {business.score}
+                                </span>
 
-                return res.json({
+                            )}
 
-                    success: true
+                        </div>
 
-                });
+                    </div>
 
-            }
+                ))}
 
-            catch (err) {
+            </div>
 
-                console.error(
-
-                    "SEED:",
-
-                    err.message
-
-                );
-
-                return res
-                    .status(500)
-                    .json({
-
-                        error:
-                            "serverError"
-
-                    });
-
-            }
-
-        }
+        </div>
 
     );
-
 }
-
-export default router;

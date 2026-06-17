@@ -27,6 +27,11 @@ import {
 
 import { formatNumber } from "../utils/format";
 
+
+const API_URL =
+    import.meta.env.VITE_API_URL ||
+    "https://seo-tool-api-lo6k.onrender.com/api";
+
 export default function KeywordAnalyzer() {
 
     const location = useLocation();
@@ -129,12 +134,9 @@ export default function KeywordAnalyzer() {
 
             try {
 
-                const organicResponse =
-                    await fetch(
-
-                        `http://localhost:3001/api/seo/search-google?keyword=${encodeURIComponent(cleanKeyword)}`
-
-                    );
+                const organicResponse = await fetch(
+                    `${API_URL}/seo/organic?keyword=${encodeURIComponent(cleanKeyword)}`
+                );
 
                 const organicData =
                     await organicResponse.json();
@@ -149,7 +151,6 @@ export default function KeywordAnalyzer() {
                 );
 
             }
-
             catch (err) {
 
                 console.error(

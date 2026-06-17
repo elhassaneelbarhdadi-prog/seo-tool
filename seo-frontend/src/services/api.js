@@ -1,6 +1,6 @@
 
 const RAW_BASE =
-    import.meta.env.VITE_API_URL || "http://localhost:3001";
+    import.meta.env.VITE_API_URL || "https://seo-tool-api-lo6k.onrender.com";
 
 const API_BASE = RAW_BASE.endsWith("/api")
     ? RAW_BASE

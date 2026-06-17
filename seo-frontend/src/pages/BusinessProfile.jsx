@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
-import { request, API } from "../services/api";
+import { request } from "../services/api";
 
 export default function BusinessProfile() {
-
     const navigate = useNavigate();
     const { lang: currentLang = "fr" } = useParams();
 
@@ -19,19 +17,13 @@ export default function BusinessProfile() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    /* ========================= */
-    /* INPUT */
-    /* ========================= */
     const handleChange = (e) => {
-        setForm(prev => ({
+        setForm((prev) => ({
             ...prev,
             [e.target.name]: e.target.value
         }));
     };
 
-    /* ========================= */
-    /* VALIDATION */
-    /* ========================= */
     const isValid = () => {
         return (
             form.name.trim() &&
@@ -40,29 +32,22 @@ export default function BusinessProfile() {
         );
     };
 
-    /* ========================= */
-    /* NAV */
-    /* ========================= */
-    const goAnnuaire = () =>
+    const goAnnuaire = () => {
         navigate(`/${currentLang}/dashboard/annuaire`);
+    };
 
-    /* ========================= */
-    /* SUBMIT */
-    /* ========================= */
     const handleSubmit = async () => {
-
         setError("");
         setSuccess("");
 
         if (!isValid()) {
-            setError("Veuillez remplir tous les champs");
+            setError("Veuillez remplir tous les champs obligatoires.");
             return;
         }
 
         setLoading(true);
 
         try {
-
             const data = await request("/business-profile", {
                 method: "POST",
                 body: JSON.stringify({
@@ -73,24 +58,24 @@ export default function BusinessProfile() {
                 })
             });
 
-            /* ========================= */
-            /* CAS EXIST */
-            /* ========================= */
             if (data?.alreadyExists) {
-                setError("⚠️ Vous avez déjà un profil");
+                setError("⚠️ Vous avez déjà une fiche entreprise.");
                 setTimeout(goAnnuaire, 1500);
                 return;
             }
 
-            /* ========================= */
-            /* SUCCESS */
-            /* ========================= */
-            setSuccess("✅ Profil créé avec succès");
+            setSuccess("✅ Votre fiche entreprise a été créée avec succès.");
+
+            setForm({
+                name: "",
+                keyword: "",
+                city: "",
+                description: ""
+            });
 
             setTimeout(goAnnuaire, 1200);
 
         } catch (err) {
-
             console.error("CREATE PROFILE ERROR:", err);
 
             if (
@@ -101,98 +86,208 @@ export default function BusinessProfile() {
                 return;
             }
 
-            setError(err.message || "❌ Erreur serveur");
+            setError(
+                err?.message || "❌ Une erreur est survenue."
+            );
 
         } finally {
             setLoading(false);
         }
     };
 
-    /* ========================= */
-    /* UI */
-    /* ========================= */
     return (
+        <div className="max-w-4xl mx-auto px-6 py-12">
 
-        <div className="max-w-3xl mx-auto p-6">
+            {/* HERO */}
 
-            <div className="text-center mb-10">
+            <div className="text-center mb-12">
 
-                <h1 className="
-        text-4xl
-        font-black
-        mb-3
-    ">
-                    🚀 Référencez votre entreprise
-                    dans l’annuaire SEO
+                <div className="text-6xl mb-4">
+                    🚀
+                </div>
+
+                <h1 className="text-5xl font-black mb-4">
+                    Référencez votre entreprise
                 </h1>
 
-                <p className="
-        text-gray-500
-        text-lg
-    ">
-                    Apparaissez dans notre annuaire SEO
-                    et gagnez en visibilité sur Google.
+                <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+                    Apparaissez dans notre annuaire SEO,
+                    améliorez votre visibilité sur Google
+                    et obtenez davantage de clients.
                 </p>
 
             </div>
 
-            {error && (
-                <div className="bg-red-100 text-red-600 p-3 rounded mb-4">
-                    {error}
+            {/* CARD */}
+
+            <div className="bg-white rounded-3xl shadow-xl border p-8">
+
+                {/* ALERTS */}
+
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-2xl mb-6">
+                        {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div className="bg-green-50 border border-green-200 text-green-600 p-4 rounded-2xl mb-6">
+                        {success}
+                    </div>
+                )}
+
+                {/* FORM */}
+
+                <div className="space-y-6">
+
+                    <div>
+                        <label className="block mb-2 font-semibold">
+                            Nom de l'entreprise *
+                        </label>
+
+                        <input
+                            id="name"
+                            name="name"
+                            value={form.name}
+                            onChange={handleChange}
+                            placeholder="Ex : Médecine Traditionnelle Hijama"
+                            className="
+                                w-full
+                                border-2
+                                border-gray-200
+                                rounded-2xl
+                                px-4
+                                py-3
+                                focus:outline-none
+                                focus:border-blue-500
+                            "
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-semibold">
+                            Mot-clé principal *
+                        </label>
+
+                        <input
+                            id="keyword"
+                            name="keyword"
+                            value={form.keyword}
+                            onChange={handleChange}
+                            placeholder="Ex : hijama"
+                            className="
+                                w-full
+                                border-2
+                                border-gray-200
+                                rounded-2xl
+                                px-4
+                                py-3
+                                focus:outline-none
+                                focus:border-blue-500
+                            "
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-semibold">
+                            Ville *
+                        </label>
+
+                        <input
+                            id="city"
+                            name="city"
+                            value={form.city}
+                            onChange={handleChange}
+                            placeholder="Ex : Guesnain"
+                            className="
+                                w-full
+                                border-2
+                                border-gray-200
+                                rounded-2xl
+                                px-4
+                                py-3
+                                focus:outline-none
+                                focus:border-blue-500
+                            "
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 font-semibold">
+                            Description
+                        </label>
+
+                        <textarea
+                            id="description"
+                            name="description"
+                            rows={5}
+                            value={form.description}
+                            onChange={handleChange}
+                            placeholder="Décrivez votre activité..."
+                            className="
+                                w-full
+                                border-2
+                                border-gray-200
+                                rounded-2xl
+                                px-4
+                                py-3
+                                resize-none
+                                focus:outline-none
+                                focus:border-blue-500
+                            "
+                        />
+
+                        <div className="text-right text-sm text-gray-400 mt-2">
+                            {form.description.length} caractères
+                        </div>
+                    </div>
+
+                    {/* INFO PRO */}
+
+                    <div className="
+                        bg-gradient-to-r
+                        from-yellow-50
+                        to-orange-50
+                        border
+                        border-yellow-200
+                        rounded-2xl
+                        p-5
+                    ">
+                        <p className="font-semibold mb-2">
+                            🔒 Réservé aux membres PRO
+                        </p>
+
+                        <p className="text-gray-600 text-sm">
+                            Votre entreprise apparaîtra dans
+                            l'annuaire SEO public et pourra
+                            être trouvée par vos futurs clients.
+                        </p>
+                    </div>
+
+                    {/* BUTTON */}
+
+                    <button
+                        onClick={handleSubmit}
+                        disabled={loading}
+                        className="
+                            w-full
+                            bg-blue-600
+                            hover:bg-blue-700
+                            text-white
+                            py-4
+                            rounded-2xl
+                            font-bold
+                            text-lg
+                            transition
+                            disabled:opacity-50
+                        "
+                    >
+                        {loading
+                            ? "⏳ Publication..."
+                            : "🚀 Publier ma fiche"}
+                    </button>
+
                 </div>
-            )}
-
-            {success && (
-                <div className="bg-green-100 text-green-600 p-3 rounded mb-4">
-                    {success}
-                </div>
-            )}
-
-            <div className="space-y-4">
-
-                <input
-                    name="name"
-                    placeholder="Nom de l'entreprise"
-                    value={form.name}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded"
-                />
-
-                <input
-                    name="keyword"
-                    placeholder="Mot-clé principal"
-                    value={form.keyword}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded"
-                />
-
-                <input
-                    name="city"
-                    placeholder="Ville"
-                    value={form.city}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded"
-                />
-
-                <textarea
-                    name="description"
-                    placeholder="Description"
-                    value={form.description}
-                    onChange={handleChange}
-                    className="w-full border p-3 rounded"
-                />
-
-                <div className="bg-yellow-100 p-3 rounded text-sm text-center">
-                    🔒 Réservé aux utilisateurs PRO pour apparaître dans l'annuaire
-                </div>
-
-                <button
-                    onClick={handleSubmit}
-                    disabled={loading}
-                    className="w-full bg-blue-600 text-white py-3 rounded disabled:opacity-50"
-                >
-                    {loading ? "⏳ Envoi..." : "🚀 Publier"}
-                </button>
 
             </div>
 

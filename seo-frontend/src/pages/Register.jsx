@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
+const API_URL =
+    import.meta.env.VITE_API_URL ||
+    "https://seo-tool-api-lo6k.onrender.com/api";
+
 export default function Register() {
 
     const { t } = useTranslation();
@@ -19,18 +23,22 @@ export default function Register() {
     const [loading, setLoading] = useState(false);
 
     /* ========================= */
-    /* 🔄 CHANGE */
+    /* CHANGE */
     /* ========================= */
+
     const handleChange = (e) => {
-        setForm(prev => ({
+
+        setForm((prev) => ({
             ...prev,
             [e.target.name]: e.target.value
         }));
+
     };
 
     /* ========================= */
-    /* 🔒 VALIDATION */
+    /* VALIDATION */
     /* ========================= */
+
     const validate = () => {
 
         const email = form.email.trim();
@@ -45,15 +53,17 @@ export default function Register() {
         }
 
         if (password.length < 6) {
-            return "Mot de passe trop court (6+)";
+            return "Mot de passe trop court (6 caractères minimum)";
         }
 
         return null;
+
     };
 
     /* ========================= */
-    /* 🚀 REGISTER */
+    /* REGISTER */
     /* ========================= */
+
     const handleRegister = async (e) => {
 
         e.preventDefault();
@@ -72,30 +82,27 @@ export default function Register() {
 
         try {
 
-            const res = await fetch("http://localhost:3001/api/auth/register", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    email: form.email.trim(),
-                    password: form.password.trim()
-                })
-            });
+            const res = await fetch(
+                `${API_URL}/auth/register`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        email: form.email.trim(),
+                        password: form.password.trim()
+                    })
+                }
+            );
 
-            let data = null;
-
-            try {
-                data = await res.json();
-            } catch {
-                throw new Error("Réponse serveur invalide");
-            }
+            const data = await res.json();
 
             if (!res.ok) {
                 throw new Error(
-                    data?.error
-                        ? t(data.error)
-                        : t("registerError")
+                    data?.error ||
+                    t("registerError") ||
+                    "Erreur d'inscription"
                 );
             }
 
@@ -103,46 +110,56 @@ export default function Register() {
                 throw new Error("Token manquant");
             }
 
-            /* ========================= */
-            /* 🔐 SAVE */
-            /* ========================= */
-            localStorage.setItem("token", data.token);
+            localStorage.setItem(
+                "token",
+                data.token
+            );
 
-            /* ========================= */
-            /* 🎯 REDIRECT */
-            /* ========================= */
-            navigate(`/${currentLang}/dashboard`);
+            navigate(
+                `/${currentLang}/dashboard`
+            );
 
         } catch (err) {
 
-            console.error("REGISTER ERROR:", err);
-            setError(err.message || t("serverError"));
+            console.error(
+                "REGISTER ERROR:",
+                err
+            );
+
+            setError(
+                err.message ||
+                t("serverError") ||
+                "Erreur serveur"
+            );
 
         } finally {
+
             setLoading(false);
+
         }
+
     };
 
-    /* ========================= */
-    /* UI */
-    /* ========================= */
     return (
 
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
 
-            <div className="bg-white p-8 rounded-lg shadow-md w-96">
+            <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
 
                 <h2 className="text-2xl font-bold mb-6 text-center">
                     {t("register")}
                 </h2>
 
                 {error && (
-                    <div className="bg-red-100 text-red-600 p-2 mb-4 rounded text-sm">
+                    <div className="bg-red-100 text-red-600 p-3 mb-4 rounded text-sm">
                         {error}
                     </div>
                 )}
 
-                <form onSubmit={handleRegister} className="flex flex-col gap-4">
+                <form
+                    onSubmit={handleRegister}
+                    className="flex flex-col gap-4"
+                >
 
                     <input
                         type="email"
@@ -169,26 +186,48 @@ export default function Register() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="bg-blue-600 text-white p-3 rounded hover:bg-blue-700 transition disabled:opacity-50"
+                        className="
+                            bg-blue-600
+                            text-white
+                            p-3
+                            rounded
+                            hover:bg-blue-700
+                            transition
+                            disabled:opacity-50
+                        "
                     >
-                        {loading ? "⏳ Création..." : t("register")}
+                        {loading
+                            ? "⏳ Création..."
+                            : t("register")}
                     </button>
 
                 </form>
 
-                {/* LOGIN */}
                 <p className="text-sm text-gray-500 mt-4 text-center">
+
                     {t("alreadyAccount")}{" "}
+
                     <span
-                        onClick={() => navigate(`/${currentLang}/login`)}
-                        className="text-blue-600 cursor-pointer"
+                        onClick={() =>
+                            navigate(
+                                `/${currentLang}/login`
+                            )
+                        }
+                        className="
+                            text-blue-600
+                            cursor-pointer
+                            hover:underline
+                        "
                     >
                         {t("login")}
                     </span>
+
                 </p>
 
             </div>
 
         </div>
+
     );
+
 }

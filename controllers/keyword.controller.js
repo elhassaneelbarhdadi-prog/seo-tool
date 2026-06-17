@@ -186,7 +186,20 @@ created_at DESC
                     [req.user.id]
 
                 );
+            const debug = await db.all(`
+SELECT
+id,
+user_id,
+keyword,
+deleted
+FROM keywords
+ORDER BY id DESC
+LIMIT 20
+`);
 
+            console.log("DEBUG KEYWORDS:", debug);
+            console.log("🔥 USER:", req.user.id);
+            console.log("🔥 HISTORY:", rows.length);
             return res
                 .json(rows);
 

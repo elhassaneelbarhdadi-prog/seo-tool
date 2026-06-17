@@ -8,7 +8,13 @@ export default function AdminDashboard() {
 
         const loadStats = async () => {
 
-            const res = await fetch("http://localhost:3001/api/admin/stats");
+            const API_URL =
+                import.meta.env.VITE_API_URL ||
+                "https://seo-tool-api-lo6k.onrender.com/api";
+
+            const res = await fetch(
+                `${API_URL}/...`
+            );
             const data = await res.json();
 
             setStats(data);

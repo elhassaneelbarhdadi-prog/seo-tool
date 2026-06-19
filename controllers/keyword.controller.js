@@ -173,10 +173,7 @@ SELECT *
 FROM keywords
 
 WHERE user_id=?
-AND (
-    deleted=0
-    OR deleted IS NULL
-)
+
 
 ORDER BY
 created_at DESC

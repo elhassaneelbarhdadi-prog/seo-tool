@@ -209,6 +209,59 @@ WHERE user_id=?
     }
 
 );
+/* ========================= */
+/* RESTORE KEYWORDS */
+/* ========================= */
+
+router.post(
+
+    "/restore-keywords",
+
+    authMiddleware,
+
+    devGuard,
+
+    async (req, res) => {
+
+        try {
+
+            await db.run(
+
+                `
+UPDATE keywords
+SET deleted = 0
+WHERE user_id = ?
+                `,
+
+                [req.user.id]
+
+            );
+
+            return res.json({
+
+                success: true,
+                message: "Keywords restored"
+
+            });
+
+        } catch (error) {
+
+            console.error(
+                "RESTORE KEYWORDS:",
+                error.message
+            );
+
+            return res.status(500).json({
+
+                error: "Restore keywords error"
+
+            });
+
+        }
+
+    }
+
+);
 
 /* ========================= */
 /* HEALTH */

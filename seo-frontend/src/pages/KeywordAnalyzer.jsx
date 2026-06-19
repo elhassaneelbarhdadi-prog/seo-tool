@@ -65,6 +65,7 @@ export default function KeywordAnalyzer() {
         staleTime: 1000 * 60,
         refetchOnWindowFocus: false
     });
+    console.log("HISTORY DATA:", history);
 
     const { data: user } = useQuery({
         queryKey: ["user"],

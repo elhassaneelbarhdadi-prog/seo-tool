@@ -375,11 +375,21 @@ WHERE subscription_id=?
                         subscription.id
                     );
 
+                    /*
+                    IMPORTANT :
+                
+                    On conserve le plan PRO/BUSINESS
+                    afin que le client garde l'accès
+                    jusqu'à la fin de sa période payée.
+                
+                    On marque uniquement l'abonnement
+                    comme annulé.
+                    */
+
                     await db.run(
                         `
 UPDATE users
 SET
-plan='FREE',
 subscription_status='cancelled'
 WHERE subscription_id=?
 `,
@@ -388,9 +398,12 @@ WHERE subscription_id=?
                         ]
                     );
 
+                    console.log(
+                        "✅ Subscription cancelled but plan preserved"
+                    );
+
                     break;
                 }
-
                 default:
 
                     console.log(

@@ -162,27 +162,19 @@ export const getKeywordHistory =
 
         try {
 
-            const rows =
-
-                await db.all(
-
-                    `
-
+            const rows = await db.all(
+                `
 SELECT *
-
 FROM keywords
-
 WHERE user_id=?
-
-
-ORDER BY
-created_at DESC
-
+AND (
+    deleted=0
+    OR deleted IS NULL
+)
+ORDER BY created_at DESC
 `,
-
-                    [req.user.id]
-
-                );
+                [req.user.id]
+            );
             const debug = await db.all(`
 SELECT
 id,

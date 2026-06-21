@@ -808,76 +808,45 @@ WHERE id=?
 
             } else {
 
-                await db.run(
-
+                const result = await db.run(
                     `
-
 INSERT INTO keywords(
-
 keyword,
-
 volume,
-
 difficulty,
-
 cpc,
-
 score,
-
 revenue,
-
 trend,
-
 user_id
-
 )
-
 VALUES(
-
 ?,
-
 ?,
-
 ?,
-
 ?,
-
 ?,
-
 ?,
-
 ?,
-
 ?
-
 )
-
 `,
-
                     [
-
                         keyword,
-
                         volume,
-
                         difficulty,
-
                         cpc,
-
                         score,
-
                         estimatedROI,
-
-                        JSON.stringify(
-                            trend
-                        ),
-
+                        JSON.stringify(trend),
                         userId
-
                     ]
-
                 );
 
+                console.log(
+                    "AFTER INSERT",
+                    result
+                );
             }
 
             await incrementUsage(

@@ -285,7 +285,6 @@ WHERE id=?
                                 userId
                             ]
                         );
-
                     console.log(
                         "🔥 UPDATE RESULT:",
                         result
@@ -337,7 +336,6 @@ WHERE subscription_id=?
                             invoice.subscription
                         ]
                     );
-
                     break;
                 }
 
@@ -361,7 +359,6 @@ WHERE subscription_id=?
                             invoice.subscription
                         ]
                     );
-
                     break;
                 }
 
@@ -397,7 +394,6 @@ WHERE subscription_id=?
                             subscription.id
                         ]
                     );
-
                     console.log(
                         "✅ Subscription cancelled but plan preserved"
                     );

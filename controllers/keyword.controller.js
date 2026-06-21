@@ -69,7 +69,9 @@ export const getUsage = async (req, res) => {
     try {
 
         const userId = req.user.id;
-
+        console.log("🔥 ANALYZE START");
+        console.log("🔥 USER:", userId);
+        console.log("🔥 KEYWORD:", keyword);
         /* USER */
 
         const user = await db.get(
@@ -807,7 +809,7 @@ WHERE id=?
                 );
 
             } else {
-
+                console.log("🔥 BEFORE INSERT");
                 const result = await db.run(
                     `
 INSERT INTO keywords(
@@ -1007,7 +1009,7 @@ export const getKeywordSuggestions =
             if (
                 !keyword
             ) {
-
+                console.log("🔥 ANALYZE SUCCESS");
                 return res
                     .status(400)
                     .json({

@@ -10,286 +10,498 @@ const MAX_KEYWORD_LENGTH = 100;
 /* ========================= */
 /* ANALYZE SEO */
 /* ========================= */
+export const analyzeSEO = async (req, res) => {
 
-export const analyzeSEO =
-    async (req, res) => {
+    console.log("🚨 SEO CONTROLLER EXECUTED");
+
+    try {         /* ========================= */
+        /* AUTH */
+        /* ========================= */
+
+
+        /* ========================= */
+        /* INPUT */
+        /* ========================= */
+
+        let keyword =
+
+            String(
+                req.body.keyword
+                || ""
+            )
+
+                .trim()
+
+                .slice(
+                    0,
+                    MAX_KEYWORD_LENGTH
+                );
+
+        if (
+            !keyword
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    error:
+                        "Keyword required"
+
+                });
+
+        }
+
+        if (
+            keyword.length < 2
+        ) {
+
+            return res
+                .status(400)
+                .json({
+
+                    error:
+                        "Keyword too short"
+
+                });
+
+        }
+
+        const city =
+
+            req.user?.city
+            ||
+            null;
+
+        const finalKeyword =
+
+            city
+
+                ?
+
+                `${keyword} à ${city}`
+
+                :
+
+                keyword;
+
+        /* ========================= */
+        /* ENGINE */
+        /* ========================= */
+
+        let data = {};
 
         try {
 
-            /* ========================= */
-            /* AUTH */
-            /* ========================= */
+            data =
 
-
-            /* ========================= */
-            /* INPUT */
-            /* ========================= */
-
-            let keyword =
-
-                String(
-                    req.body.keyword
-                    || ""
-                )
-
-                    .trim()
-
-                    .slice(
-                        0,
-                        MAX_KEYWORD_LENGTH
-                    );
-
-            if (
-                !keyword
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        error:
-                            "Keyword required"
-
-                    });
-
-            }
-
-            if (
-                keyword.length < 2
-            ) {
-
-                return res
-                    .status(400)
-                    .json({
-
-                        error:
-                            "Keyword too short"
-
-                    });
-
-            }
-
-            const city =
-
-                req.user?.city
-                ||
-                null;
-
-            const finalKeyword =
-
-                city
-
-                    ?
-
-                    `${keyword} à ${city}`
-
-                    :
-
-                    keyword;
-
-            /* ========================= */
-            /* ENGINE */
-            /* ========================= */
-
-            let data = {};
-
-            try {
-
-                data =
-
-                    await analyzeKeyword(
-                        finalKeyword
-                    );
-
-            }
-
-            catch (err) {
-
-                console.error(
-
-                    "ENGINE ERROR:",
-
-                    err.message
-
+                await analyzeKeyword(
+                    finalKeyword
                 );
 
-                data = {};
+        }
 
-            }
+        catch (err) {
 
-            /* ========================= */
-            /* SAFE */
-            /* ========================= */
+            console.error(
 
-            const volume =
+                "ENGINE ERROR:",
 
-                Number(
-                    data?.volume
-                ) || 0;
+                err.message
 
-            const cpc =
+            );
 
-                Number(
-                    data?.cpc
-                ) || 0.2;
+            data = {};
 
-            const difficulty =
+        }
 
-                Number(
-                    data?.difficulty
-                ) || 50;
+        /* ========================= */
+        /* SAFE */
+        /* ========================= */
 
-            const trend =
+        const volume =
 
-                Array.isArray(
-                    data?.trend
+            Number(
+                data?.volume
+            ) || 0;
+
+        const cpc =
+
+            Number(
+                data?.cpc
+            ) || 0.2;
+
+        const difficulty =
+
+            Number(
+                data?.difficulty
+            ) || 50;
+
+        const trend =
+
+            Array.isArray(
+                data?.trend
+            )
+
+                ?
+
+                data.trend
+
+                :
+
+                [];
+
+        const serp =
+
+            Array.isArray(
+                data?.serp
+            )
+
+                ?
+
+                data.serp
+                    .slice(0, 10)
+
+                :
+
+                [];
+
+        /* ========================= */
+        /* INTENTS */
+        /* ========================= */
+
+        const intents =
+
+            data?.intents
+
+            ||
+
+            {
+
+                commercial: 40,
+
+                informational: 30,
+
+                transactional: 20,
+
+                navigational: 10
+
+            };
+
+        const dominantIntent =
+
+            Object.entries(
+                intents
+            )
+
+                .sort(
+                    (a, b) =>
+                        b[1] - a[1]
                 )
 
-                    ?
+            [0]?.[0]
 
-                    data.trend
+            ||
+
+            "commercial";
+
+        /* ========================= */
+        /* ROI */
+        /* ========================= */
+
+        const ctr = 0.28;
+
+        const traffic =
+            Math.floor(
+                volume * ctr
+            );
+
+        const conversionRate =
+
+            dominantIntent === "transactional"
+
+                ? 0.04
+
+                :
+
+                dominantIntent === "commercial"
+
+                    ? 0.025
 
                     :
 
-                    [];
+                    0.01;
 
-            const serp =
+        const avgOrderValue =
 
-                Array.isArray(
-                    data?.serp
-                )
+            cpc > 3
 
-                    ?
+                ? 150
 
-                    data.serp
-                        .slice(0, 10)
+                :
+
+                cpc > 1.5
+
+                    ? 80
 
                     :
 
-                    [];
+                    40;
 
-            /* ========================= */
-            /* INTENTS */
-            /* ========================= */
+        const monthlyRevenue =
 
-            const intents =
+            traffic *
+            conversionRate *
+            avgOrderValue;
 
-                data?.intents
+        const seoCost =
 
-                ||
+            difficulty < 30
 
-                {
+                ? 500
 
-                    commercial: 40,
+                :
 
-                    informational: 30,
+                difficulty < 60
 
-                    transactional: 20,
+                    ? 1500
 
-                    navigational: 10
+                    :
 
-                };
+                    3000;
 
-            const dominantIntent =
+        const roiScore =
 
-                Object.entries(
-                    intents
+            Math.max(
+
+                0,
+
+                Math.floor(
+
+                    monthlyRevenue -
+                    seoCost
+
                 )
 
-                    .sort(
-                        (a, b) =>
-                            b[1] - a[1]
+            );
+
+        const roiRatio =
+
+            seoCost > 0
+
+                ?
+
+                Number(
+
+                    (
+
+                        monthlyRevenue /
+                        seoCost
+
                     )
 
-                [0]?.[0]
+                        .toFixed(2)
 
-                ||
+                )
 
-                "commercial";
+                :
 
-            /* ========================= */
-            /* ROI */
-            /* ========================= */
+                0;
 
-            const ctr = 0.28;
+        let roiLabel = "Faible";
 
-            const traffic =
+        if (roiRatio > 3)
+            roiLabel = "🔥 Opportunité énorme";
+
+        else if (roiRatio > 2)
+            roiLabel = "🚀 Très rentable";
+
+        else if (roiRatio > 1.2)
+            roiLabel = "👍 Rentable";
+
+        else if (roiRatio > 0.8)
+            roiLabel = "⚖️ Limite";
+
+        else
+            roiLabel = "❌ Mauvais";
+
+        /* ========================= */
+        /* SCORE */
+        /* ========================= */
+
+        const demandScore =
+
+            volume > 50000 ? 100 :
+
+                volume > 10000 ? 80 :
+
+                    volume > 2000 ? 60 :
+
+                        volume > 500 ? 40 : 20;
+
+        const competitionScore =
+
+            difficulty < 20 ? 100 :
+
+                difficulty < 40 ? 80 :
+
+                    difficulty < 60 ? 60 :
+
+                        difficulty < 80 ? 40 : 20;
+
+        const valueScore =
+
+            cpc > 3 ? 100 :
+
+                cpc > 2 ? 80 :
+
+                    cpc > 1 ? 60 :
+
+                        cpc > 0.5 ? 40 : 20;
+
+        const intentScore =
+
+            dominantIntent === "transactional"
+
+                ? 100
+
+                :
+
+                dominantIntent === "commercial"
+
+                    ? 80
+
+                    :
+
+                    dominantIntent === "informational"
+
+                        ? 50
+
+                        :
+
+                        30;
+
+        const finalScore =
+
+            Math.round(
+
+                demandScore * 0.35 +
+
+                competitionScore * 0.25 +
+
+                valueScore * 0.25 +
+
+                intentScore * 0.15
+
+            );
+
+        /* ========================= */
+        /* VERDICT */
+        /* ========================= */
+
+        let verdict = "NO_GO";
+
+        if (
+            roiScore > 2000 &&
+            difficulty < 70
+        ) {
+
+            verdict = "GO";
+
+        }
+
+        else if (
+            roiScore > 500
+        ) {
+
+            verdict = "WAIT";
+
+        }
+
+        /* ========================= */
+        /* FINAL */
+        /* ========================= */
+
+        const finalData = {
+
+            keyword:
+                finalKeyword,
+
+            city,
+
+            volume,
+
+            cpc,
+
+            difficulty,
+
+            competition:
+                difficulty,
+
+            score:
+                finalScore,
+
+            scoreFinal:
+                finalScore,
+
+            verdict,
+
+            revenue:
                 Math.floor(
-                    volume * ctr
-                );
+                    monthlyRevenue
+                ),
 
-            const conversionRate =
+            roiScore,
 
-                dominantIntent === "transactional"
+            roiRatio,
 
-                    ? 0.04
+            roiLabel,
 
-                    :
+            trafficPosition1:
+                traffic,
 
-                    dominantIntent === "commercial"
-
-                        ? 0.025
-
-                        :
-
-                        0.01;
-
-            const avgOrderValue =
-
-                cpc > 3
-
-                    ? 150
-
-                    :
-
-                    cpc > 1.5
-
-                        ? 80
-
-                        :
-
-                        40;
-
-            const monthlyRevenue =
-
-                traffic *
-                conversionRate *
-                avgOrderValue;
-
-            const seoCost =
-
-                difficulty < 30
-
-                    ? 500
-
-                    :
-
-                    difficulty < 60
-
-                        ? 1500
-
-                        :
-
-                        3000;
-
-            const roiScore =
+            quickWinScore:
 
                 Math.max(
 
                     0,
 
-                    Math.floor(
+                    Math.round(
 
-                        monthlyRevenue -
-                        seoCost
+                        (100 - difficulty)
+                        * 0.6 +
+
+                        Math.min(
+                            volume / 100,
+                            40
+                        )
 
                     )
 
-                );
+                ),
 
-            const roiRatio =
+            timeToRank:
 
-                seoCost > 0
+                difficulty < 30
+                    ? "1-2 mois"
+
+                    :
+
+                    difficulty < 50
+                        ? "2-4 mois"
+
+                        :
+
+                        difficulty < 70
+                            ? "4-8 mois"
+
+                            :
+
+                            "8-12 mois",
+
+            kgr:
+
+                volume > 0
 
                     ?
 
@@ -297,8 +509,8 @@ export const analyzeSEO =
 
                         (
 
-                            monthlyRevenue /
-                            seoCost
+                            serp.length /
+                            volume
 
                         )
 
@@ -308,253 +520,39 @@ export const analyzeSEO =
 
                     :
 
-                    0;
+                    0,
 
-            let roiLabel = "Faible";
+            intents,
 
-            if (roiRatio > 3)
-                roiLabel = "🔥 Opportunité énorme";
+            intent:
+                dominantIntent,
 
-            else if (roiRatio > 2)
-                roiLabel = "🚀 Très rentable";
+            trend,
 
-            else if (roiRatio > 1.2)
-                roiLabel = "👍 Rentable";
+            serp,
 
-            else if (roiRatio > 0.8)
-                roiLabel = "⚖️ Limite";
+            ideas:
+                data?.ideas || [],
 
-            else
-                roiLabel = "❌ Mauvais";
+            suggestions:
+                data?.suggestions || []
 
-            /* ========================= */
-            /* SCORE */
-            /* ========================= */
+        };
 
-            const demandScore =
+        /* ========================= */
+        /* SAVE */
+        /* ========================= */
 
-                volume > 50000 ? 100 :
+        if (req.user?.id) {
 
-                    volume > 10000 ? 80 :
+            try {
 
-                        volume > 2000 ? 60 :
+                console.log("🔥 SAVE START");
+                console.log("🔥 USER ID:", req.user.id);
 
-                            volume > 500 ? 40 : 20;
+                const result = await db.run(
 
-            const competitionScore =
-
-                difficulty < 20 ? 100 :
-
-                    difficulty < 40 ? 80 :
-
-                        difficulty < 60 ? 60 :
-
-                            difficulty < 80 ? 40 : 20;
-
-            const valueScore =
-
-                cpc > 3 ? 100 :
-
-                    cpc > 2 ? 80 :
-
-                        cpc > 1 ? 60 :
-
-                            cpc > 0.5 ? 40 : 20;
-
-            const intentScore =
-
-                dominantIntent === "transactional"
-
-                    ? 100
-
-                    :
-
-                    dominantIntent === "commercial"
-
-                        ? 80
-
-                        :
-
-                        dominantIntent === "informational"
-
-                            ? 50
-
-                            :
-
-                            30;
-
-            const finalScore =
-
-                Math.round(
-
-                    demandScore * 0.35 +
-
-                    competitionScore * 0.25 +
-
-                    valueScore * 0.25 +
-
-                    intentScore * 0.15
-
-                );
-
-            /* ========================= */
-            /* VERDICT */
-            /* ========================= */
-
-            let verdict = "NO_GO";
-
-            if (
-                roiScore > 2000 &&
-                difficulty < 70
-            ) {
-
-                verdict = "GO";
-
-            }
-
-            else if (
-                roiScore > 500
-            ) {
-
-                verdict = "WAIT";
-
-            }
-
-            /* ========================= */
-            /* FINAL */
-            /* ========================= */
-
-            const finalData = {
-
-                keyword:
-                    finalKeyword,
-
-                city,
-
-                volume,
-
-                cpc,
-
-                difficulty,
-
-                competition:
-                    difficulty,
-
-                score:
-                    finalScore,
-
-                scoreFinal:
-                    finalScore,
-
-                verdict,
-
-                revenue:
-                    Math.floor(
-                        monthlyRevenue
-                    ),
-
-                roiScore,
-
-                roiRatio,
-
-                roiLabel,
-
-                trafficPosition1:
-                    traffic,
-
-                quickWinScore:
-
-                    Math.max(
-
-                        0,
-
-                        Math.round(
-
-                            (100 - difficulty)
-                            * 0.6 +
-
-                            Math.min(
-                                volume / 100,
-                                40
-                            )
-
-                        )
-
-                    ),
-
-                timeToRank:
-
-                    difficulty < 30
-                        ? "1-2 mois"
-
-                        :
-
-                        difficulty < 50
-                            ? "2-4 mois"
-
-                            :
-
-                            difficulty < 70
-                                ? "4-8 mois"
-
-                                :
-
-                                "8-12 mois",
-
-                kgr:
-
-                    volume > 0
-
-                        ?
-
-                        Number(
-
-                            (
-
-                                serp.length /
-                                volume
-
-                            )
-
-                                .toFixed(2)
-
-                        )
-
-                        :
-
-                        0,
-
-                intents,
-
-                intent:
-                    dominantIntent,
-
-                trend,
-
-                serp,
-
-                ideas:
-                    data?.ideas || [],
-
-                suggestions:
-                    data?.suggestions || []
-
-            };
-
-            /* ========================= */
-            /* SAVE */
-            /* ========================= */
-
-            if (req.user?.id) {
-
-                try {
-
-                    console.log("🔥 SAVE START");
-                    console.log("🔥 USER ID:", req.user.id);
-
-                    const result = await db.run(
-
-                        `
+                    `
             INSERT INTO keywords(
 
                 keyword,
@@ -588,71 +586,71 @@ export const analyzeSEO =
             )
             `,
 
-                        [
+                    [
 
-                            finalData.keyword,
-                            finalData.volume,
-                            finalData.difficulty,
-                            finalData.cpc,
-                            finalData.intent,
-                            finalData.score,
-                            finalData.revenue,
+                        finalData.keyword,
+                        finalData.volume,
+                        finalData.difficulty,
+                        finalData.cpc,
+                        finalData.intent,
+                        finalData.score,
+                        finalData.revenue,
 
-                            finalScore >= 70
-                                ? "high"
-                                : "medium",
+                        finalScore >= 70
+                            ? "high"
+                            : "medium",
 
-                            finalData.verdict,
+                        finalData.verdict,
 
-                            req.user.id
+                        req.user.id
 
-                        ]
+                    ]
 
-                    );
+                );
 
-                    console.log("🔥 SAVE OK:", result);
-
-                }
-
-                catch (err) {
-
-                    console.error(
-                        "🔥 SAVE ERROR:",
-                        err
-                    );
-
-                }
+                console.log("🔥 SAVE OK:", result);
 
             }
-            /* ========================= */
-            /* RESPONSE */
-            /* ========================= */
 
-            return res.json(
-                finalData
-            );
+            catch (err) {
 
-        }
+                console.error(
+                    "🔥 SAVE ERROR:",
+                    err
+                );
 
-        catch (error) {
-
-            console.error(
-
-                "CONTROLLER:",
-
-                error.message
-
-            );
-
-            return res
-                .status(500)
-                .json({
-
-                    error:
-                        "Analyze error"
-
-                });
+            }
 
         }
+        /* ========================= */
+        /* RESPONSE */
+        /* ========================= */
 
-    };
+        return res.json(
+            finalData
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+
+            "CONTROLLER:",
+
+            error.message
+
+        );
+
+        return res
+            .status(500)
+            .json({
+
+                error:
+                    "Analyze error"
+
+            });
+
+    }
+
+};

@@ -5,6 +5,9 @@ import geoip from "geoip-lite";
 import axios from "axios";
 import { analyzeSEO } from "../controllers/seo.controller.js";
 import { authMiddleware } from "../middleware/auth.middleware.js";
+import {
+    usageMiddleware
+} from "../middleware/usage.middleware.js";
 import db from "../config/database.js";
 console.log("✅ SEO ROUTES LOADED");
 const router = express.Router();

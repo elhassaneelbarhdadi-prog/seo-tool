@@ -186,12 +186,16 @@ router.post(
 
     "/analyze",
 
+    authMiddleware,
+
+    usageMiddleware("keywords"),
+
     limiter,
 
     analyzeSEO
 
 );
-/* ========================= */
+
 /* CITY */
 /* ========================= */
 

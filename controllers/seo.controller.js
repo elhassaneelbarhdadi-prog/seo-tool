@@ -541,7 +541,7 @@ export const analyzeSEO =
 
             };
 
-            /* /* ========================= */
+            /* ========================= */
             /* SAVE */
             /* ========================= */
 
@@ -549,78 +549,53 @@ export const analyzeSEO =
 
                 try {
 
-                    await db.run(
+                    console.log("🔥 SAVE START");
+                    console.log("🔥 USER ID:", req.user.id);
+
+                    const result = await db.run(
 
                         `
+            INSERT INTO keywords(
 
-INSERT INTO keywords(
+                keyword,
+                volume,
+                difficulty,
+                cpc,
+                intent,
+                score,
+                revenue,
+                potential,
+                decision,
+                user_id,
+                created_at
 
-keyword,
+            )
 
-volume,
+            VALUES(
 
-difficulty,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                ?,
+                datetime('now')
 
-cpc,
-
-intent,
-
-score,
-
-revenue,
-
-potential,
-
-decision,
-
-user_id,
-
-created_at
-
-)
-
-VALUES(
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-?,
-
-datetime('now')
-
-)
-
-`,
+            )
+            `,
 
                         [
 
                             finalData.keyword,
-
                             finalData.volume,
-
                             finalData.difficulty,
-
                             finalData.cpc,
-
                             finalData.intent,
-
                             finalData.score,
-
                             finalData.revenue,
 
                             finalScore >= 70
@@ -635,22 +610,20 @@ datetime('now')
 
                     );
 
+                    console.log("🔥 SAVE OK:", result);
+
                 }
 
                 catch (err) {
 
-                    console.warn(
-
-                        "DB SAVE:",
-
-                        err.message
-
+                    console.error(
+                        "🔥 SAVE ERROR:",
+                        err
                     );
 
                 }
 
             }
-
             /* ========================= */
             /* RESPONSE */
             /* ========================= */

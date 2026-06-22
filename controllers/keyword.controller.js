@@ -69,9 +69,9 @@ export const getUsage = async (req, res) => {
     try {
 
         const userId = req.user.id;
-        console.log("🔥 ANALYZE START");
+        console.log("🔥 USAGE CHECK");
         console.log("🔥 USER:", userId);
-        console.log("🔥 KEYWORD:", keyword);
+
         /* USER */
 
         const user = await db.get(

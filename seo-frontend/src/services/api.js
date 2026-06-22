@@ -128,7 +128,7 @@ export const analyzeKeyword = (keyword) =>
             body: JSON.stringify({ keyword })
         },
         {
-            isPublic: true
+            isPublic: false
         }
     );
 export const deleteKeyword = async (id) => {

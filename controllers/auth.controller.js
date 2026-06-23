@@ -112,49 +112,50 @@ export const register =
 
             const result =
                 await db.run(
-
                     `
         INSERT INTO users(
-
             email,
             password,
             plan,
             role
-
         )
-
         VALUES(
-
             ?,
             ?,
             'FREE',
             'user'
-
         )
         `,
-
                     [
-
                         email,
-
                         hashed
-
                     ]
-
                 );
 
+            const userId = result.lastID;
+
+            const token = jwt.sign(
+                {
+                    id: userId,
+                    email,
+                    role: "user",
+                    plan: "FREE"
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn: "7d"
+                }
+            );
+
             return res.json({
-
-                success: true,
-
-                message:
-                    "Utilisateur enregistré",
-
-                userId:
-                    result.lastID
-
+                token,
+                user: {
+                    id: userId,
+                    email,
+                    role: "user",
+                    plan: "FREE"
+                }
             });
-
         }
 
         catch (error) {

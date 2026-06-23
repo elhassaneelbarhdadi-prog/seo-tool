@@ -83,7 +83,8 @@ export default function Register() {
         try {
 
             console.log("REGISTER API URL =", API_URL);
-
+            console.log("API_URL =", API_URL);
+            console.log("REGISTER URL =", `${API_URL}/auth/register`);
             const res = await fetch(
                 `${API_URL}/auth/register`,
                 {

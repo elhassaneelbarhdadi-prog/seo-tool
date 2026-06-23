@@ -12,9 +12,13 @@ const MAX_KEYWORD_LENGTH = 100;
 /* ========================= */
 export const analyzeSEO = async (req, res) => {
 
-    console.log("🚨 SEO CONTROLLER EXECUTED");
 
-    try {         /* ========================= */
+
+    try {
+        console.log("SEO analyze:", {
+            userId: req.user?.id,
+            keyword: req.body?.keyword
+        });      /* ========================= */
         /* AUTH */
         /* ========================= */
 

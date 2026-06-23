@@ -22,15 +22,7 @@ const JWT_SECRET =
 
 export const authMiddleware =
     async (req, res, next) => {
-        console.log(
-            "🔥 AUTH HEADER:",
-            req.headers.authorization
-        );
 
-        console.log(
-            "🔥 TOKEN:",
-            req.headers.authorization?.split(" ")[1]
-        );
 
         try {
 

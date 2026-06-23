@@ -186,17 +186,14 @@ const limiter =
 /* ========================= */
 
 router.post(
-
     "/analyze",
-
+    async (req, res, next) => {
+        console.log("🔥 ROUTE ANALYZE HIT");
+        next();
+    },
     authMiddleware,
-
     usageMiddleware("keywords"),
-
-    limiter,
-
     analyzeSEO
-
 );
 
 /* CITY */

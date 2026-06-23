@@ -120,14 +120,25 @@ export const analyzeKeywordFree = (keyword) =>
     );
 
 
-export const analyzeKeyword = (keyword) =>
-    request(
+export const analyzeKeyword = (keyword) => {
+
+    console.log(
+        "🔥 ANALYZE FUNCTION CALLED"
+    );
+
+    console.log(
+        "🔥 TOKEN:",
+        localStorage.getItem("token")
+    );
+
+    return request(
         API.seoAnalyze,
         {
             method: "POST",
             body: JSON.stringify({ keyword })
         }
     );
+};
 export const deleteKeyword = async (id) => {
     return request(`/keyword/${id}`, {
         method: "DELETE"

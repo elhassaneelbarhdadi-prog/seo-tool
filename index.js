@@ -22,6 +22,14 @@ import businessRoutes from "./routes/businessProfile.routes.js";
 
 const app = express();
 
+/* ========================= */
+/* TRUST PROXY */
+/* IMPORTANT FOR */
+/* RENDER + CLOUDFLARE */
+/* ========================= */
+
+app.set("trust proxy", 1);
+
 const PORT = process.env.PORT || 3001;
 
 /* ========================= */
@@ -29,10 +37,12 @@ const PORT = process.env.PORT || 3001;
 /* ========================= */
 
 if (process.env.NODE_ENV === "development") {
+
     console.log(
         "📁 .env exists:",
         fs.existsSync("./.env")
     );
+
 }
 
 const FRONT_URL =
@@ -45,8 +55,15 @@ const FRONT_URL =
 
 app.use(
     rateLimit({
+
         windowMs: 60 * 1000,
-        max: 100
+
+        max: 100,
+
+        standardHeaders: true,
+
+        legacyHeaders: false
+
     })
 );
 

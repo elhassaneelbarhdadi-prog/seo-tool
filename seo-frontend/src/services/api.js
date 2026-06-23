@@ -44,7 +44,7 @@ const request = async (
 
     const signal = options.signal || controller.signal;
     const timer = setTimeout(() => controller.abort(), timeout);
-
+    console.log("REGISTER API URL =", API_URL);
     try {
         const res = await fetch(API_BASE + url, {
             ...options,

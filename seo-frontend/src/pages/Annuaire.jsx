@@ -1,8 +1,5 @@
 import { useState } from "react";
-
-const API_URL =
-    import.meta.env.VITE_API_URL ||
-    "https://seo-tool-api-lo6k.onrender.com";
+import { API_BASE } from "../config";
 
 export default function Annuaire() {
     const [search, setSearch] = useState("");
@@ -24,34 +21,29 @@ export default function Annuaire() {
             setHasSearched(true);
 
             const response = await fetch(
-                `${API_URL}/api/business-profile?search=${encodeURIComponent(
+                `${API_BASE}/business-profile?search=${encodeURIComponent(
                     search
                 )}`
             );
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            let data = null;
+            try {
+                data = await response.json();
+            } catch {
+                throw new Error("Réponse JSON invalide");
             }
 
-            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data?.error || `HTTP ${response.status}`);
+            }
 
             console.log("✅ BUSINESSES:", data);
 
-            setBusinesses(
-                data.businesses ||
-                data.profiles ||
-                []
-            );
+            setBusinesses(data.businesses || data.profiles || []);
         } catch (err) {
-            console.error(
-                "❌ LOAD BUSINESSES ERROR:",
-                err
-            );
+            console.error("❌ LOAD BUSINESSES ERROR:", err);
 
-            setError(
-                "Impossible de charger les entreprises."
-            );
-
+            setError("Impossible de charger les entreprises.");
             setBusinesses([]);
         } finally {
             setLoading(false);
@@ -60,11 +52,8 @@ export default function Annuaire() {
 
     return (
         <div className="max-w-7xl mx-auto px-6 py-12">
-
             {/* HERO */}
-
             <div className="text-center mb-14">
-
                 <h1 className="text-5xl lg:text-6xl font-black mb-6">
                     📁 Annuaire SEO
                 </h1>
@@ -73,24 +62,18 @@ export default function Annuaire() {
                     Découvrez les meilleures entreprises
                     référencées dans notre annuaire SEO.
                 </p>
-
             </div>
 
             {/* SEARCH */}
-
             <div className="bg-white rounded-3xl shadow-lg p-6 mb-12">
-
                 <div className="flex flex-col md:flex-row gap-4">
-
                     <input
                         id="business-search"
                         name="business-search"
                         type="text"
                         value={search}
                         placeholder="Ex : hijama, bien-être, plombier..."
-                        onChange={(e) =>
-                            setSearch(e.target.value)
-                        }
+                        onChange={(e) => setSearch(e.target.value)}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {
                                 loadBusinesses();
@@ -124,17 +107,12 @@ export default function Annuaire() {
                             disabled:opacity-50
                         "
                     >
-                        {loading
-                            ? "⏳ Chargement..."
-                            : "🔍 Rechercher"}
+                        {loading ? "⏳ Chargement..." : "🔍 Rechercher"}
                     </button>
-
                 </div>
-
             </div>
 
             {/* STATS */}
-
             {businesses.length > 0 && (
                 <div className="mb-8">
                     <p className="text-gray-500">
@@ -144,9 +122,9 @@ export default function Annuaire() {
             )}
 
             {/* ERROR */}
-
             {error && (
-                <div className="
+                <div
+                    className="
                     bg-red-50
                     border
                     border-red-200
@@ -154,34 +132,31 @@ export default function Annuaire() {
                     p-4
                     rounded-2xl
                     mb-8
-                ">
+                "
+                >
                     {error}
                 </div>
             )}
 
             {/* EMPTY */}
-
-            {hasSearched &&
-                !loading &&
-                businesses.length === 0 && (
-                    <div className="
+            {hasSearched && !loading && businesses.length === 0 && (
+                <div
+                    className="
                         bg-gray-50
                         rounded-3xl
                         text-center
                         py-16
                         text-gray-400
                         border
-                    ">
-                        Aucun résultat trouvé
-                    </div>
-                )}
+                    "
+                >
+                    Aucun résultat trouvé
+                </div>
+            )}
 
             {/* RESULTS */}
-
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
-
                 {businesses.map((business, index) => (
-
                     <div
                         key={business.id || index}
                         className="
@@ -194,7 +169,6 @@ export default function Annuaire() {
                             p-6
                         "
                     >
-
                         <h2 className="text-2xl font-bold mb-2">
                             {business.name}
                         </h2>
@@ -210,7 +184,6 @@ export default function Annuaire() {
                         )}
 
                         <div className="flex flex-wrap gap-2">
-
                             {business.keyword && (
                                 <span
                                     className="
@@ -242,18 +215,14 @@ export default function Annuaire() {
                                     SEO Score : {business.score}
                                 </span>
                             )}
-
                         </div>
-
                     </div>
-
                 ))}
-
             </div>
 
             {/* CTA */}
-
-            <div className="
+            <div
+                className="
                 mt-16
                 bg-gradient-to-r
                 from-blue-600
@@ -262,8 +231,8 @@ export default function Annuaire() {
                 rounded-3xl
                 p-10
                 text-center
-            ">
-
+            "
+            >
                 <h2 className="text-3xl font-bold mb-4">
                     🚀 Référencez votre entreprise
                 </h2>
@@ -274,10 +243,10 @@ export default function Annuaire() {
                 </p>
 
                 <button
-                    onClick={() =>
+                    onClick={() => {
                         window.location.href =
-                        "/fr/dashboard/business-profile"
-                    }
+                            "/fr/dashboard/business-profile";
+                    }}
                     className="
                         bg-white
                         text-blue-600
@@ -289,9 +258,7 @@ export default function Annuaire() {
                 >
                     Ajouter mon entreprise
                 </button>
-
             </div>
-
         </div>
     );
 }

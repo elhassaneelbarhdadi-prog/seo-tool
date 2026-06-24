@@ -1,13 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-
-const API_URL =
-    import.meta.env.VITE_API_URL ||
-    "https://seo-tool-api-lo6k.onrender.com/api";
+import { API_BASE } from "../config";
 
 export default function Register() {
-
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { lang } = useParams();
@@ -25,22 +21,17 @@ export default function Register() {
     /* ========================= */
     /* CHANGE */
     /* ========================= */
-
     const handleChange = (e) => {
-
         setForm((prev) => ({
             ...prev,
             [e.target.name]: e.target.value
         }));
-
     };
 
     /* ========================= */
     /* VALIDATION */
     /* ========================= */
-
     const validate = () => {
-
         const email = form.email.trim();
         const password = form.password.trim();
 
@@ -57,15 +48,12 @@ export default function Register() {
         }
 
         return null;
-
     };
 
     /* ========================= */
     /* REGISTER */
     /* ========================= */
-
     const handleRegister = async (e) => {
-
         e.preventDefault();
 
         if (loading) return;
@@ -81,25 +69,26 @@ export default function Register() {
         setLoading(true);
 
         try {
+            console.log("REGISTER API BASE =", API_BASE);
+            console.log("REGISTER URL =", `${API_BASE}/auth/register`);
 
-            console.log("REGISTER API URL =", API_URL);
-            console.log("API_URL =", API_URL);
-            console.log("REGISTER URL =", `${API_URL}/auth/register`);
-            const res = await fetch(
-                `${API_URL}/auth/register`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        email: form.email.trim(),
-                        password: form.password.trim()
-                    })
-                }
-            );
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    email: form.email.trim(),
+                    password: form.password.trim()
+                })
+            });
 
-            const data = await res.json();
+            let data = null;
+            try {
+                data = await res.json();
+            } catch {
+                throw new Error("Réponse JSON invalide");
+            }
 
             if (!res.ok) {
                 throw new Error(
@@ -109,46 +98,28 @@ export default function Register() {
                 );
             }
 
-            if (!data?.token) {
-                throw new Error("Token manquant");
+            if (data?.success) {
+                navigate(`/${currentLang}/login`);
+                return;
             }
 
-            localStorage.setItem(
-                "token",
-                data.token
-            );
-
-            navigate(
-                `/${currentLang}/dashboard`
-            );
-
+            throw new Error("Inscription incomplète");
         } catch (err) {
-
-            console.error(
-                "REGISTER ERROR:",
-                err
-            );
+            console.error("REGISTER ERROR:", err);
 
             setError(
                 err.message ||
                 t("serverError") ||
                 "Erreur serveur"
             );
-
         } finally {
-
             setLoading(false);
-
         }
-
     };
 
     return (
-
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
-
             <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-
                 <h2 className="text-2xl font-bold mb-6 text-center">
                     {t("register")}
                 </h2>
@@ -163,7 +134,6 @@ export default function Register() {
                     onSubmit={handleRegister}
                     className="flex flex-col gap-4"
                 >
-
                     <input
                         type="email"
                         name="email"
@@ -199,23 +169,14 @@ export default function Register() {
                             disabled:opacity-50
                         "
                     >
-                        {loading
-                            ? "⏳ Création..."
-                            : t("register")}
+                        {loading ? "⏳ Création..." : t("register")}
                     </button>
-
                 </form>
 
                 <p className="text-sm text-gray-500 mt-4 text-center">
-
                     {t("alreadyAccount")}{" "}
-
                     <span
-                        onClick={() =>
-                            navigate(
-                                `/${currentLang}/login`
-                            )
-                        }
+                        onClick={() => navigate(`/${currentLang}/login`)}
                         className="
                             text-blue-600
                             cursor-pointer
@@ -224,13 +185,8 @@ export default function Register() {
                     >
                         {t("login")}
                     </span>
-
                 </p>
-
             </div>
-
         </div>
-
     );
-
 }

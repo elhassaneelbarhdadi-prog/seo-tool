@@ -1,11 +1,4 @@
-
-const RAW_BASE =
-    import.meta.env.VITE_API_URL || "https://seo-tool-api-lo6k.onrender.com";
-
-const API_BASE = RAW_BASE.endsWith("/api")
-    ? RAW_BASE
-    : RAW_BASE + "/api";
-
+import { API_BASE } from "../config";
 /* ========================= */
 /* 🌐 ROUTES */
 /* ========================= */
@@ -44,7 +37,7 @@ const request = async (
 
     const signal = options.signal || controller.signal;
     const timer = setTimeout(() => controller.abort(), timeout);
-    console.log("REGISTER API URL =", API_URL);
+
     try {
         const res = await fetch(API_BASE + url, {
             ...options,

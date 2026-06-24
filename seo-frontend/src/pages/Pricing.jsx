@@ -1,15 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
+import { API_BASE } from "../config";
 
 export default function Pricing() {
-
     const { t } = useTranslation();
     const navigate = useNavigate();
     const { lang } = useParams();
 
     const currentLang = lang || "fr";
-    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
     const [plans, setPlans] = useState({});
     const [isYearly, setIsYearly] = useState(false);
@@ -25,7 +24,6 @@ export default function Pricing() {
     /* 📡 LOAD */
     /* ========================= */
     useEffect(() => {
-
         let isMounted = true;
 
         const load = async () => {
@@ -33,9 +31,9 @@ export default function Pricing() {
                 const token = localStorage.getItem("token");
 
                 const [plansRes, userRes] = await Promise.all([
-                    fetch(`${API_URL}/api/plans`),
+                    fetch(`${API_BASE}/plans`),
                     token
-                        ? fetch(`${API_URL}/api/auth/me`, {
+                        ? fetch(`${API_BASE}/auth/me`, {
                             headers: { Authorization: "Bearer " + token }
                         })
                         : null
@@ -50,12 +48,12 @@ export default function Pricing() {
                 if (userRes) {
                     const userData = await userRes.json();
                     console.log("USER DATA =", userData);
+
                     if (isMounted && userData?.plan) {
                         setUserPlan(userData.plan);
                         setHasSubscription(userData.plan !== "FREE");
                     }
                 }
-
             } catch (err) {
                 console.error("LOAD ERROR:", err);
                 if (isMounted) setError("Erreur chargement");
@@ -66,21 +64,20 @@ export default function Pricing() {
 
         load();
 
-        return () => { isMounted = false };
-
-    }, [API_URL]);
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     /* ========================= */
     /* 💳 CHECKOUT */
     /* ========================= */
     const handleCheckout = async (planKey) => {
-
         if (loadingPlan) return;
 
         setLoadingPlan(planKey);
 
         try {
-
             const token = localStorage.getItem("token");
 
             if (!token) {
@@ -91,22 +88,19 @@ export default function Pricing() {
             console.log("🚀 START CHECKOUT");
             console.log("🚀 PLAN:", planKey);
             console.log("🚀 YEARLY:", isYearly);
-            console.log("🚀 API:", `${API_URL}/api/stripe/checkout`);
+            console.log("🚀 API:", `${API_BASE}/stripe/checkout`);
 
-            const res = await fetch(
-                `${API_URL}/api/stripe/checkout`,
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: "Bearer " + token
-                    },
-                    body: JSON.stringify({
-                        plan: planKey.toUpperCase(),
-                        isYearly
-                    })
-                }
-            );
+            const res = await fetch(`${API_BASE}/stripe/checkout`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: "Bearer " + token
+                },
+                body: JSON.stringify({
+                    plan: planKey.toUpperCase(),
+                    isYearly
+                })
+            });
 
             console.log("🚀 STATUS:", res.status);
 
@@ -123,7 +117,6 @@ export default function Pricing() {
             }
 
             if (res.status === 403) {
-
                 console.log("⚠️ 403 RECEIVED");
 
                 if (data?.redirectToPortal) {
@@ -135,52 +128,33 @@ export default function Pricing() {
             }
 
             if (!res.ok) {
-
                 console.error("❌ REQUEST FAILED");
                 console.error(data);
 
-                setError(
-                    data?.error ||
-                    "Erreur paiement"
-                );
-
+                setError(data?.error || "Erreur paiement");
                 return;
             }
 
             if (!data?.url) {
-
                 console.error("❌ NO URL RETURNED");
                 console.error(data);
 
                 setError("URL Stripe manquante");
-
                 return;
             }
 
             console.log("✅ STRIPE URL:", data.url);
             console.log("✅ REDIRECT URL:", data.url);
 
-            alert(data.url);
-
             window.location.href = data.url;
         } catch (err) {
-
-            console.error(
-                "❌ CHECKOUT ERROR:",
-                err
-            );
-
-            setError(
-                err.message ||
-                "Erreur paiement"
-            );
-
+            console.error("❌ CHECKOUT ERROR:", err);
+            setError(err.message || "Erreur paiement");
         } finally {
-
             setLoadingPlan(null);
-
         }
     };
+
     /* ========================= */
     /* 💳 PORTAL */
     /* ========================= */
@@ -193,7 +167,7 @@ export default function Pricing() {
                 return;
             }
 
-            const res = await fetch(`${API_URL}/api/stripe/portal`, {
+            const res = await fetch(`${API_BASE}/stripe/portal`, {
                 method: "POST",
                 headers: {
                     Authorization: "Bearer " + token
@@ -208,7 +182,6 @@ export default function Pricing() {
             }
 
             window.location.href = data.url;
-
         } catch (err) {
             console.error(err);
             setError("Erreur portail");
@@ -220,9 +193,7 @@ export default function Pricing() {
     /* ========================= */
     const getPrice = (plan) => {
         const base = Number(plan?.price) || 0;
-        return isYearly
-            ? Math.round(base * 12 * 0.8)
-            : base;
+        return isYearly ? Math.round(base * 12 * 0.8) : base;
     };
 
     const getSavings = (plan) => {
@@ -246,7 +217,6 @@ export default function Pricing() {
     /* ========================= */
     return (
         <div className="max-w-7xl mx-auto px-10 py-16">
-
             <h1 className="text-3xl font-bold mb-2 text-center">
                 🚀 {t("pricingTitle")}
             </h1>
@@ -261,17 +231,17 @@ export default function Pricing() {
 
             {/* TOGGLE */}
             <div className="flex justify-center items-center gap-4 mb-12">
-
                 <span className={!isYearly ? "font-semibold" : "text-gray-400"}>
                     {t("monthly")}
                 </span>
 
                 <button
-                    onClick={() => setIsYearly(v => !v)}
+                    onClick={() => setIsYearly((v) => !v)}
                     className="w-14 h-7 bg-gray-200 rounded-full relative"
                 >
                     <div
-                        className={`w-6 h-6 bg-purple-600 rounded-full absolute top-0.5 transition ${isYearly ? "left-7" : "left-0.5"}`}
+                        className={`w-6 h-6 bg-purple-600 rounded-full absolute top-0.5 transition ${isYearly ? "left-7" : "left-0.5"
+                            }`}
                     />
                 </button>
 
@@ -288,9 +258,7 @@ export default function Pricing() {
 
             {/* CARDS */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-
                 {Object.entries(plans).map(([key, plan]) => {
-
                     const price = getPrice(plan);
                     const isPopular = key === "BUSINESS";
                     const isCurrent = userPlan === key;
@@ -300,9 +268,11 @@ export default function Pricing() {
                         <div
                             key={key}
                             className={`relative rounded-2xl p-8 transition hover:scale-105 bg-white
-                            ${isPopular ? "border-2 border-purple-500 shadow-xl" : "border"}`}
+                            ${isPopular
+                                    ? "border-2 border-purple-500 shadow-xl"
+                                    : "border"
+                                }`}
                         >
-
                             {isPopular && (
                                 <div className="absolute -top-3 left-6 bg-purple-600 text-white text-xs px-4 py-1 rounded-full">
                                     🔥 Meilleur choix
@@ -336,7 +306,9 @@ export default function Pricing() {
 
                             <ul className="space-y-2 text-gray-600 mb-6 text-sm">
                                 <li>
-                                    {isUnlimited ? "✓ Illimité" : `✓ ${plan.limit} / mois`}
+                                    {isUnlimited
+                                        ? "✓ Illimité"
+                                        : `✓ ${plan.limit} / mois`}
                                 </li>
 
                                 {plan.features?.map((f, i) => (
@@ -346,7 +318,11 @@ export default function Pricing() {
 
                             <button
                                 onClick={() => handleCheckout(key)}
-                                disabled={isCurrent || key === "FREE" || loadingPlan === key}
+                                disabled={
+                                    isCurrent ||
+                                    key === "FREE" ||
+                                    loadingPlan === key
+                                }
                                 className="w-full py-3 rounded-xl bg-indigo-600 text-white disabled:opacity-50"
                             >
                                 {isCurrent
@@ -357,16 +333,13 @@ export default function Pricing() {
                                             ? "Gratuit"
                                             : "Choisir"}
                             </button>
-
                         </div>
                     );
                 })}
-
             </div>
 
             {/* PORTAL */}
             <div className="mt-12 text-center">
-
                 {hasSubscription ? (
                     <button
                         onClick={openPortal}
@@ -375,13 +348,9 @@ export default function Pricing() {
                         💳 Gérer mon abonnement
                     </button>
                 ) : (
-                    <p className="text-gray-400">
-                        Aucun abonnement actif
-                    </p>
+                    <p className="text-gray-400">Aucun abonnement actif</p>
                 )}
-
             </div>
-
         </div>
     );
 }

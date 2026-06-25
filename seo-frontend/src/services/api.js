@@ -6,7 +6,7 @@ import { API_BASE } from "../config";
 
 export const API = {
     seoAnalyze: "/seo/analyze",
-    seoAnalyzeFree: "/seo/free-analyze",
+    seoFreeAnalyze: "/seo/free-analyze",
 
     nicheGenerate: "/niche/generate",
     chatSEO: "/chat/seo",
@@ -34,8 +34,8 @@ const request = async (
     {
         isPublic = false,
         timeout = 10000,
-        disableAuthRedirect = false,
-        disablePlanRedirect = false
+        redirectOn401 = true,
+        redirectOn403 = true
     } = {}
 ) => {
     console.log("👉 API CALL:", API_BASE + url);
@@ -52,11 +52,9 @@ const request = async (
             signal,
             headers: {
                 "Content-Type": "application/json",
-                ...(token && !isPublic
-                    ? {
-                        Authorization: "Bearer " + token
-                    }
-                    : {}),
+                ...(token && !isPublic && {
+                    Authorization: "Bearer " + token
+                }),
                 ...(options.headers || {})
             }
         });
@@ -75,30 +73,34 @@ const request = async (
         /* AUTH HANDLING */
         /* ========================= */
 
-        if (
-            !isPublic &&
-            !disableAuthRedirect &&
-            res.status === 401
-        ) {
-            localStorage.removeItem("token");
-            window.location.href = "/fr/login";
-            return;
+        if (!isPublic && res.status === 401) {
+            if (redirectOn401) {
+                localStorage.removeItem("token");
+                window.location.href = "/fr/login";
+                return;
+            }
+
+            const error = new Error(data?.error || "Unauthorized");
+            error.status = 401;
+            error.data = data;
+            throw error;
         }
 
-        if (
-            !isPublic &&
-            !disablePlanRedirect &&
-            res.status === 403
-        ) {
-            window.location.href = "/fr/dashboard/pricing";
-            return;
+        if (!isPublic && res.status === 403) {
+            if (redirectOn403) {
+                window.location.href = "/fr/dashboard/pricing";
+                return;
+            }
+
+            const error = new Error(data?.error || "Forbidden");
+            error.status = 403;
+            error.data = data;
+            throw error;
         }
 
         if (!res.ok) {
             const error = new Error(
-                data?.message ||
-                data?.error ||
-                `HTTP ${res.status}`
+                data?.error || `HTTP ${res.status}`
             );
 
             error.status = res.status;
@@ -124,29 +126,32 @@ const request = async (
 /* 🚀 SEO */
 /* ========================= */
 
-export const analyzeKeywordFree = (keyword) =>
+export const analyzeKeywordFree = (keyword, guestId) =>
     request(
-        API.seoAnalyzeFree,
+        API.seoFreeAnalyze,
+        {
+            method: "POST",
+            headers: {
+                "x-guest-id": guestId
+            },
+            body: JSON.stringify({ keyword })
+        },
+        {
+            isPublic: true
+        }
+    );
+export const analyzeKeyword = (keyword) =>
+    request(
+        API.seoAnalyze,
         {
             method: "POST",
             body: JSON.stringify({ keyword })
         },
         {
-            isPublic: true,
-            disableAuthRedirect: true,
-            disablePlanRedirect: true
+            redirectOn401: false,
+            redirectOn403: false
         }
     );
-
-export const analyzeKeyword = (keyword) => {
-    return request(
-        API.seoAnalyze,
-        {
-            method: "POST",
-            body: JSON.stringify({ keyword })
-        }
-    );
-};
 
 export const deleteKeyword = async (id) => {
     return request(`/keyword/${id}`, {
@@ -209,11 +214,7 @@ export const login = (body) =>
             method: "POST",
             body: JSON.stringify(body)
         },
-        {
-            isPublic: true,
-            disableAuthRedirect: true,
-            disablePlanRedirect: true
-        }
+        { isPublic: true }
     );
 
 export const register = (body) =>
@@ -223,11 +224,7 @@ export const register = (body) =>
             method: "POST",
             body: JSON.stringify(body)
         },
-        {
-            isPublic: true,
-            disableAuthRedirect: true,
-            disablePlanRedirect: true
-        }
+        { isPublic: true }
     );
 
 export const getMe = () =>

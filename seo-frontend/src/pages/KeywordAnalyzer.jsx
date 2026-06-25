@@ -18,6 +18,7 @@ import UpgradeModal from "../components/UpgradeModal";
 
 import {
     analyzeKeyword,
+    analyzeKeywordFree,
     getKeywordHistory,
     getKeywordUsage,
     getMe,
@@ -28,8 +29,83 @@ import {
 import { API_BASE } from "../config";
 import { formatNumber } from "../utils/format";
 
-console.log("🔥 KEYWORD ANALYZER BUILD V3");
-console.log("🔥 API BASE =", API_BASE);
+console.log("🔥 KEYWORD ANALYZER BUILD V5 GUEST PERSIST");
+
+/* ========================= */
+/* GUEST MODE */
+/* ========================= */
+
+const GUEST_LIMIT = 5;
+const GUEST_ID_KEY = "guest_id";
+const GUEST_USAGE_KEY = "guest_free_usage";
+
+/* ========================= */
+/* GUEST HELPERS */
+/* ========================= */
+
+function generateGuestId() {
+    return (
+        "guest_" +
+        Date.now() +
+        "_" +
+        Math.random().toString(36).slice(2, 10)
+    );
+}
+
+function getGuestId() {
+    try {
+        let guestId = localStorage.getItem(GUEST_ID_KEY);
+
+        if (!guestId) {
+            guestId = generateGuestId();
+            localStorage.setItem(GUEST_ID_KEY, guestId);
+        }
+
+        return guestId;
+    } catch {
+        return generateGuestId();
+    }
+}
+
+function getGuestUsageLocal() {
+    try {
+        const raw = localStorage.getItem(GUEST_USAGE_KEY);
+        const value = JSON.parse(raw || "{}");
+
+        return {
+            used: Number(value.used || 0),
+            remaining: Number(
+                value.remaining ?? GUEST_LIMIT
+            ),
+            limit: Number(value.limit || GUEST_LIMIT)
+        };
+    } catch {
+        return {
+            used: 0,
+            remaining: GUEST_LIMIT,
+            limit: GUEST_LIMIT
+        };
+    }
+}
+
+function setGuestUsageLocal(payload) {
+    try {
+        localStorage.setItem(
+            GUEST_USAGE_KEY,
+            JSON.stringify({
+                used: Number(payload?.used || 0),
+                remaining: Number(
+                    payload?.remaining ?? 0
+                ),
+                limit: Number(
+                    payload?.limit || GUEST_LIMIT
+                )
+            })
+        );
+    } catch {
+        // ignore
+    }
+}
 
 export default function KeywordAnalyzer() {
     const location = useLocation();
@@ -40,6 +116,9 @@ export default function KeywordAnalyzer() {
 
     const queryClient = useQueryClient();
 
+    const token = localStorage.getItem("token");
+    const isLoggedIn = !!token;
+
     const [showUpgrade, setShowUpgrade] = useState(false);
     const [keyword, setKeyword] = useState("");
     const [result, setResult] = useState(null);
@@ -47,34 +126,59 @@ export default function KeywordAnalyzer() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
+    const [guestId] = useState(() =>
+        isLoggedIn ? null : getGuestId()
+    );
+
+    const [guestUsage, setGuestUsage] = useState(() =>
+        isLoggedIn
+            ? {
+                used: 0,
+                remaining: GUEST_LIMIT,
+                limit: GUEST_LIMIT
+            }
+            : getGuestUsageLocal()
+    );
+
+    /* ========================= */
+    /* QUERIES (ONLY LOGGED IN) */
+    /* ========================= */
+
     const { data: usage } = useQuery({
         queryKey: ["usage"],
         queryFn: getKeywordUsage,
         staleTime: 1000 * 60,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        enabled: isLoggedIn
     });
 
     const { data: history = [] } = useQuery({
         queryKey: ["history"],
         queryFn: getKeywordHistory,
         staleTime: 1000 * 60,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        enabled: isLoggedIn
     });
-
-    console.log("HISTORY DATA:", history);
 
     const { data: user } = useQuery({
         queryKey: ["user"],
         queryFn: getMe,
         staleTime: 1000 * 60,
-        refetchOnWindowFocus: false
+        refetchOnWindowFocus: false,
+        enabled: isLoggedIn
     });
 
     const isUnlimited = usage?.limit === null;
 
     const hasHistory =
+        isLoggedIn &&
         Array.isArray(history) &&
         history.length > 0;
+
+    const guestUsed = Number(guestUsage?.used || 0);
+    const guestRemaining = Number(
+        guestUsage?.remaining ?? GUEST_LIMIT
+    );
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -83,6 +187,12 @@ export default function KeywordAnalyzer() {
 
         return () => clearTimeout(timer);
     }, []);
+
+    useEffect(() => {
+        if (!isLoggedIn) {
+            setGuestUsage(getGuestUsageLocal());
+        }
+    }, [isLoggedIn]);
 
     const handleAnalyze = useCallback(
         async (input) => {
@@ -95,7 +205,26 @@ export default function KeywordAnalyzer() {
                 return;
             }
 
+            const cleanKeyword = finalKeyword.trim();
+
+            /* ========================= */
+            /* GUEST LIMIT (UI PRECHECK) */
+            /* ========================= */
+
+            if (!isLoggedIn && guestRemaining <= 0) {
+                setError(
+                    "Vous avez utilisé vos 5 analyses gratuites. Créez un compte pour continuer."
+                );
+                setShowUpgrade(true);
+                return;
+            }
+
+            /* ========================= */
+            /* LOGGED USER LIMIT */
+            /* ========================= */
+
             if (
+                isLoggedIn &&
                 usage &&
                 usage.limit !== null &&
                 usage.used >= usage.limit
@@ -108,23 +237,44 @@ export default function KeywordAnalyzer() {
             setError("");
 
             try {
-                const cleanKeyword = finalKeyword.trim();
+                let data = null;
 
-                const data = await analyzeKeyword(cleanKeyword);
+                /* ========================= */
+                /* ANALYZE */
+                /* ========================= */
+
+                if (isLoggedIn) {
+                    data = await analyzeKeyword(cleanKeyword);
+                } else {
+                    data = await analyzeKeywordFree(
+                        cleanKeyword,
+                        guestId
+                    );
+
+                    if (data?.guest) {
+                        setGuestUsage(data.guest);
+                        setGuestUsageLocal(data.guest);
+                    }
+                }
 
                 /* ========================= */
                 /* GOOGLE ORGANIC */
                 /* ========================= */
+
                 try {
                     const organicResponse = await fetch(
                         `${API_BASE}/seo/organic?keyword=${encodeURIComponent(cleanKeyword)}`
                     );
 
                     let organicData = null;
+
                     try {
-                        organicData = await organicResponse.json();
+                        organicData =
+                            await organicResponse.json();
                     } catch {
-                        throw new Error("Réponse organic invalide");
+                        throw new Error(
+                            "Réponse organic invalide"
+                        );
                     }
 
                     if (!organicResponse.ok) {
@@ -134,27 +284,70 @@ export default function KeywordAnalyzer() {
                         );
                     }
 
-                    console.log("ORGANIC:", organicData);
-
-                    setOrganicResults(organicData.organic || []);
+                    setOrganicResults(
+                        organicData.organic || []
+                    );
                 } catch (err) {
-                    console.error("ORGANIC ERROR:", err);
+                    console.error(
+                        "ORGANIC ERROR:",
+                        err
+                    );
                     setOrganicResults([]);
                 }
 
                 setResult(data);
                 setKeyword("");
 
-                await Promise.all([
-                    queryClient.invalidateQueries({
-                        queryKey: ["usage"]
-                    }),
-                    queryClient.invalidateQueries({
-                        queryKey: ["history"]
-                    })
-                ]);
+                /* ========================= */
+                /* REFRESH LOGGED USER ONLY */
+                /* ========================= */
+
+                if (isLoggedIn) {
+                    await Promise.all([
+                        queryClient.invalidateQueries({
+                            queryKey: ["usage"]
+                        }),
+                        queryClient.invalidateQueries({
+                            queryKey: ["history"]
+                        })
+                    ]);
+                }
             } catch (err) {
                 console.error("ANALYZE ERROR:", err);
+
+                if (!isLoggedIn) {
+                    if (err?.data?.used !== undefined) {
+                        const payload = {
+                            used: Number(err.data.used || GUEST_LIMIT),
+                            remaining: Number(err.data.remaining || 0),
+                            limit: Number(err.data.limit || GUEST_LIMIT)
+                        };
+
+                        setGuestUsage(payload);
+                        setGuestUsageLocal(payload);
+                    }
+
+                    if (
+                        err?.data?.error === "FREE_LIMIT_REACHED" ||
+                        err?.status === 403
+                    ) {
+                        setShowUpgrade(true);
+                        setError(
+                            "Vous avez utilisé vos 5 analyses gratuites. Créez un compte pour continuer."
+                        );
+                        return;
+                    }
+                }
+
+                if (
+                    !isLoggedIn &&
+                    err?.data?.error === "GUEST_ID_REQUIRED"
+                ) {
+                    setError(
+                        "Erreur de session invité. Rechargez la page."
+                    );
+                    return;
+                }
 
                 setError(
                     err?.message ||
@@ -164,7 +357,15 @@ export default function KeywordAnalyzer() {
                 setLoading(false);
             }
         },
-        [keyword, loading, usage, queryClient]
+        [
+            keyword,
+            loading,
+            usage,
+            queryClient,
+            isLoggedIn,
+            guestRemaining,
+            guestId
+        ]
     );
 
     useEffect(() => {
@@ -194,6 +395,8 @@ export default function KeywordAnalyzer() {
     }, [result]);
 
     const handleDeleteKeyword = async (id) => {
+        if (!isLoggedIn) return;
+
         try {
             await apiDeleteKeyword(id);
 
@@ -210,6 +413,8 @@ export default function KeywordAnalyzer() {
     };
 
     const handleDeleteAll = async () => {
+        if (!isLoggedIn) return;
+
         const confirmed = window.confirm(
             "Supprimer tout l'historique ?"
         );
@@ -240,12 +445,7 @@ export default function KeywordAnalyzer() {
 
                 <meta
                     name="description"
-                    content="
-                    Analysez vos mots-clés SEO
-                    avec IA, trafic, CPC,
-                    concurrence et intentions
-                    de recherche.
-                    "
+                    content="Analysez vos mots-clés SEO avec IA, trafic, CPC, concurrence et intentions de recherche."
                 />
             </Helmet>
 
@@ -299,6 +499,30 @@ export default function KeywordAnalyzer() {
                         la concurrence SEO et les
                         meilleures opportunités.
                     </p>
+
+                    {/* GUEST BANNER */}
+                    {!isLoggedIn && (
+                        <div
+                            className="
+                            mb-5
+                            rounded-2xl
+                            bg-white/15
+                            border
+                            border-white/20
+                            px-4
+                            py-3
+                            text-sm
+                            backdrop-blur
+                        "
+                        >
+                            🎁 Mode découverte :{" "}
+                            <strong>
+                                {guestRemaining} analyse(s)
+                                gratuite(s)
+                            </strong>{" "}
+                            restante(s) sans compte.
+                        </div>
+                    )}
 
                     <div
                         className="
@@ -361,7 +585,29 @@ export default function KeywordAnalyzer() {
                         </button>
                     </div>
 
-                    {usage && user?.plan === "FREE" && (
+                    {/* LOGGED PLAN COUNTER */}
+                    {isLoggedIn &&
+                        usage &&
+                        user?.plan === "FREE" && (
+                            <p
+                                className="
+                                text-center
+                                text-xs
+                                mt-4
+                                opacity-90
+                            "
+                            >
+                                {formatNumber(usage.used)} /{" "}
+                                {isUnlimited
+                                    ? "∞"
+                                    : formatNumber(
+                                        usage.limit
+                                    )}
+                            </p>
+                        )}
+
+                    {/* GUEST COUNTER */}
+                    {!isLoggedIn && (
                         <p
                             className="
                             text-center
@@ -370,12 +616,7 @@ export default function KeywordAnalyzer() {
                             opacity-90
                         "
                         >
-                            {formatNumber(usage.used)} /{" "}
-                            {isUnlimited
-                                ? "∞"
-                                : formatNumber(
-                                    usage.limit
-                                )}
+                            {guestUsed} / {GUEST_LIMIT} essais gratuits utilisés
                         </p>
                     )}
                 </div>
@@ -406,7 +647,6 @@ export default function KeywordAnalyzer() {
                             w-full
                         "
                     >
-                        {/* VERDICT */}
                         <div
                             className={`
                                 rounded-3xl
@@ -457,12 +697,9 @@ export default function KeywordAnalyzer() {
                                     whitespace-nowrap
                                 "
                                 >
-                                    {result.verdict === "GO" &&
-                                        "🚀 GO"}
-                                    {result.verdict === "WAIT" &&
-                                        "⚠️ WAIT"}
-                                    {result.verdict === "NO_GO" &&
-                                        "❌ NO GO"}
+                                    {result.verdict === "GO" && "🚀 GO"}
+                                    {result.verdict === "WAIT" && "⚠️ WAIT"}
+                                    {result.verdict === "NO_GO" && "❌ NO GO"}
                                 </p>
                             </div>
                         </div>
@@ -470,7 +707,6 @@ export default function KeywordAnalyzer() {
                         <KpiCards result={result} />
                         <SeoOverview result={result} />
 
-                        {/* CHARTS */}
                         <div
                             className="
                             grid
@@ -479,46 +715,15 @@ export default function KeywordAnalyzer() {
                             gap-6
                         "
                         >
-                            <div
-                                className="
-                                min-w-0
-                                overflow-hidden
-                                bg-white
-                                rounded-3xl
-                                border
-                                border-gray-100
-                                shadow-sm
-                                p-4
-                                transition-all
-                                duration-300
-                                hover:shadow-xl
-                            "
-                            >
+                            <div className="min-w-0 overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
                                 <KeywordChart result={result} />
                             </div>
 
-                            <div
-                                className="
-                                min-w-0
-                                overflow-hidden
-                                bg-white
-                                rounded-3xl
-                                border
-                                border-gray-100
-                                shadow-sm
-                                p-4
-                                transition-all
-                                duration-300
-                                hover:shadow-xl
-                            "
-                            >
-                                <SeoGauge
-                                    value={result.competition}
-                                />
+                            <div className="min-w-0 overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
+                                <SeoGauge value={result.competition} />
                             </div>
                         </div>
 
-                        {/* SERP + INTENT */}
                         <div
                             className="
                             grid
@@ -527,25 +732,10 @@ export default function KeywordAnalyzer() {
                             gap-6
                         "
                         >
-                            <div
-                                className="
-                                min-w-0
-                                overflow-hidden
-                                bg-white
-                                rounded-3xl
-                                border
-                                border-gray-100
-                                shadow-sm
-                                p-4
-                                transition-all
-                                duration-300
-                                hover:shadow-xl
-                            "
-                            >
+                            <div className="min-w-0 overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
                                 <div className="space-y-4">
                                     <SerpResults serp={result.serp} />
 
-                                    {/* REAL GOOGLE RESULTS */}
                                     {organicResults.length > 0 && (
                                         <div className="mt-6 space-y-4">
                                             <h3 className="text-lg font-bold">
@@ -555,15 +745,7 @@ export default function KeywordAnalyzer() {
                                             {organicResults.map((item) => (
                                                 <div
                                                     key={item.position}
-                                                    className="
-                        border
-                        border-gray-200
-                        rounded-2xl
-                        p-4
-                        hover:shadow-lg
-                        transition-all
-                        duration-300
-                    "
+                                                    className="border border-gray-200 rounded-2xl p-4 hover:shadow-lg transition-all duration-300"
                                                 >
                                                     <p className="text-xs text-gray-400 mb-1">
                                                         Position #{item.position}
@@ -573,12 +755,7 @@ export default function KeywordAnalyzer() {
                                                         href={item.link}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="
-                            text-blue-600
-                            font-semibold
-                            hover:underline
-                            break-all
-                        "
+                                                        className="text-blue-600 font-semibold hover:underline break-all"
                                                     >
                                                         {item.title}
                                                     </a>
@@ -608,91 +785,33 @@ export default function KeywordAnalyzer() {
                                 </div>
                             </div>
 
-                            <div
-                                className="
-                                min-w-0
-                                overflow-hidden
-                                bg-white
-                                rounded-3xl
-                                border
-                                border-gray-100
-                                shadow-sm
-                                p-4
-                                transition-all
-                                duration-300
-                                hover:shadow-xl
-                            "
-                            >
+                            <div className="min-w-0 overflow-hidden bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
                                 <IntentChart intents={result.intents} />
                             </div>
                         </div>
 
-                        <div
-                            className="
-                            bg-white
-                            rounded-3xl
-                            border
-                            border-gray-100
-                            shadow-sm
-                            p-4
-                            transition-all
-                            duration-300
-                            hover:shadow-xl
-                        "
-                        >
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
                             <SeoIdeas ideas={result.ideas || []} />
                         </div>
 
-                        <div
-                            className="
-                            bg-white
-                            rounded-3xl
-                            border
-                            border-gray-100
-                            shadow-sm
-                            p-4
-                            transition-all
-                            duration-300
-                            hover:shadow-xl
-                        "
-                        >
-                            <SEOChat result={result} />
-                        </div>
+                        {/* SEO CHAT = uniquement connecté */}
+                        {isLoggedIn && (
+                            <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
+                                <SEOChat result={result} />
+                            </div>
+                        )}
 
-                        <div
-                            className="
-                            overflow-hidden
-                            w-full
-                            bg-white
-                            rounded-3xl
-                            border
-                            border-gray-100
-                            shadow-sm
-                            p-4
-                            transition-all
-                            duration-300
-                            hover:shadow-xl
-                        "
-                        >
-                            <EasyNiches
-                                result={result}
-                                onSelect={handleAnalyze}
-                            />
-                        </div>
+                        {/* NICHES = uniquement connecté */}
+                        {isLoggedIn && (
+                            <div className="overflow-hidden w-full bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
+                                <EasyNiches
+                                    result={result}
+                                    onSelect={handleAnalyze}
+                                />
+                            </div>
+                        )}
 
-                        <div
-                            className="
-                            bg-white
-                            rounded-3xl
-                            border
-                            border-gray-100
-                            shadow-sm
-                            p-4
-                            transition-all
-                            duration-300
-                            hover:shadow-xl
-                        "
-                        >
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4 transition-all duration-300 hover:shadow-xl">
                             <KeywordSuggestions
                                 suggestions={result.suggestions}
                                 onSelect={handleAnalyze}
@@ -701,39 +820,19 @@ export default function KeywordAnalyzer() {
                     </div>
                 )}
 
-                {/* HISTORY */}
+                {/* HISTORY = connecté seulement */}
                 {hasHistory && (
                     <div className="space-y-4">
                         <div className="flex justify-end">
                             <button
                                 onClick={handleDeleteAll}
-                                className="
-                                    bg-red-500
-                                    hover:bg-red-600
-                                    transition-all
-                                    duration-300
-                                    text-white
-                                    px-4
-                                    py-2
-                                    rounded-2xl
-                                    text-sm
-                                    shadow-lg
-                                "
+                                className="bg-red-500 hover:bg-red-600 transition-all duration-300 text-white px-4 py-2 rounded-2xl text-sm shadow-lg"
                             >
                                 🗑 Reset historique
                             </button>
                         </div>
 
-                        <div
-                            className="
-                            bg-white
-                            rounded-3xl
-                            border
-                            border-gray-100
-                            shadow-sm
-                            p-4
-                        "
-                        >
+                        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-4">
                             <KeywordHistory
                                 history={history}
                                 deleteKeyword={handleDeleteKeyword}
@@ -743,7 +842,36 @@ export default function KeywordAnalyzer() {
                     </div>
                 )}
 
-                {/* UPGRADE */}
+                {/* CTA guest */}
+                {!isLoggedIn && result && guestRemaining <= 2 && (
+                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-3xl p-6 shadow-xl">
+                        <h3 className="text-xl font-bold mb-2">
+                            Sauvegardez vos analyses et débloquez toutes les fonctionnalités
+                        </h3>
+
+                        <p className="text-indigo-100 mb-4">
+                            Il vous reste {guestRemaining} essai(s) gratuit(s). Créez un compte
+                            pour accéder à l’historique, au dashboard complet et aux outils premium.
+                        </p>
+
+                        <div className="flex flex-wrap gap-3">
+                            <a
+                                href="/fr/register"
+                                className="bg-white text-indigo-700 px-5 py-3 rounded-2xl font-semibold"
+                            >
+                                Créer un compte
+                            </a>
+
+                            <a
+                                href="/fr/login"
+                                className="border border-white/30 px-5 py-3 rounded-2xl font-semibold"
+                            >
+                                Se connecter
+                            </a>
+                        </div>
+                    </div>
+                )}
+
                 <UpgradeModal
                     isOpen={showUpgrade}
                     onClose={() => setShowUpgrade(false)}

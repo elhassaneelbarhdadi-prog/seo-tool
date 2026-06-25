@@ -10,7 +10,7 @@ console.log("✅ SEO ROUTES LOADED");
 const router = express.Router();
 
 /* ========================= */
-/* LIMITER GLOBAL SEO */
+/* LIMITER GLOBAL */
 /* ========================= */
 
 const limiter = rateLimit({
@@ -21,21 +21,20 @@ const limiter = rateLimit({
 });
 
 /* ========================= */
-/* FREE ANALYZE LIMITER */
-/* Anti-abus uniquement      */
-/* Le vrai quota invité      */
-/* (5 essais découverte)     */
-/* est géré côté frontend    */
+/* FREE LIMITER */
+/* 5 essais gratuits max / IP */
 /* ========================= */
 
 const freeAnalyzeLimiter = rateLimit({
-    windowMs: 60 * 1000,
-    max: 20,
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 5,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
-        error: "TOO_MANY_REQUESTS",
-        message: "Trop de requêtes, réessayez dans 1 minute."
+        error: "FREE_LIMIT_REACHED",
+        message: "Vous avez utilisé vos 5 analyses gratuites",
+        limit: 5,
+        upgrade: true
     }
 });
 
@@ -72,15 +71,10 @@ async function searchGoogle(keyword) {
 }
 
 /* ========================= */
-/* ANALYZE */
+/* ANALYZE PRIVÉ */
+/* login requis + quota user */
 /* ========================= */
 
-/*
-🔒 Route privée :
-- nécessite login
-- applique quota user selon le plan
-- sauvegarde l'analyse dans l'historique user
-*/
 router.post(
     "/analyze",
     async (req, res, next) => {
@@ -92,17 +86,19 @@ router.post(
     analyzeSEO
 );
 
-/*
-🌍 Route publique :
-- pas de login
-- accessible aux visiteurs
-- quota découverte géré côté frontend
-- anti-spam backend seulement
-- pas d'historique user si non connecté
-*/
+/* ========================= */
+/* ANALYZE PUBLIC */
+/* invité sans login */
+/* 5 essais gratuits max */
+/* ========================= */
+
 router.post(
     "/free-analyze",
     freeAnalyzeLimiter,
+    async (req, res, next) => {
+        console.log("🔥 ROUTE FREE ANALYZE HIT");
+        next();
+    },
     analyzeSEO
 );
 

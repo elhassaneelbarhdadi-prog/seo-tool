@@ -194,6 +194,28 @@ CREATE TABLE IF NOT EXISTS seo_pages (
 `);
 
 /* ========================= */
+/* GUEST USAGE */
+/* Mode invité persistant */
+/* ========================= */
+
+await db.exec(`
+
+CREATE TABLE IF NOT EXISTS guest_usage (
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    guest_id TEXT NOT NULL UNIQUE,
+
+    used INTEGER NOT NULL DEFAULT 0,
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+`);
+
+/* ========================= */
 /* SAFE MIGRATIONS */
 /* ========================= */
 
@@ -202,7 +224,8 @@ const ALLOWED_TABLES = [
   "users",
   "keywords",
   "business_profiles",
-  "seo_pages"
+  "seo_pages",
+  "guest_usage"
 
 ];
 
@@ -213,7 +236,6 @@ const safeAddColumn = async (
 ) => {
 
   if (!ALLOWED_TABLES.includes(table)) {
-
     throw new Error(
       `Unauthorized migration on ${table}`
     );
@@ -227,32 +249,26 @@ const safeAddColumn = async (
   if (!columns.some(
     c => c.name === column
   )) {
-
     try {
-
       await db.run(
         `ALTER TABLE ${table}
-                 ADD COLUMN ${column}
-                 ${definition}`
+         ADD COLUMN ${column}
+         ${definition}`
       );
 
       if (
         process.env.NODE_ENV ===
         "development"
       ) {
-
         console.log(
           `➕ ${table}.${column} ajouté`
         );
       }
-
     } catch (e) {
-
       if (
         process.env.NODE_ENV ===
         "development"
       ) {
-
         console.log(
           `⚠️ ${table}.${column} déjà existant`
         );
@@ -268,7 +284,6 @@ const safeAddColumn = async (
 const migrate = async () => {
 
   /* USERS */
-
   await safeAddColumn(
     "users",
     "role",
@@ -288,7 +303,6 @@ const migrate = async () => {
   );
 
   /* KEYWORDS */
-
   await safeAddColumn(
     "keywords",
     "deleted",
@@ -308,7 +322,6 @@ const migrate = async () => {
   );
 
   /* BUSINESS */
-
   await safeAddColumn(
     "business_profiles",
     "score",
@@ -322,7 +335,6 @@ const migrate = async () => {
   );
 
   /* SEO */
-
   await safeAddColumn(
     "seo_pages",
     "keyword",
@@ -376,6 +388,19 @@ const migrate = async () => {
     "trend",
     "TEXT"
   );
+
+  /* GUEST USAGE */
+  await safeAddColumn(
+    "guest_usage",
+    "used",
+    "INTEGER NOT NULL DEFAULT 0"
+  );
+
+  await safeAddColumn(
+    "guest_usage",
+    "updated_at",
+    "DATETIME DEFAULT CURRENT_TIMESTAMP"
+  );
 };
 
 await migrate();
@@ -410,6 +435,9 @@ ON ai_usage(user_id);
 CREATE INDEX IF NOT EXISTS idx_ai_user_date
 ON ai_usage(user_id, created_at);
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_guest_usage_guest_id
+ON guest_usage(guest_id);
+
 `);
 
 /* ========================= */
@@ -436,25 +464,12 @@ export const countAIUsage =
     return db.get(`
 
     SELECT COUNT(*) as total
-
     FROM ai_usage
-
     WHERE user_id=?
-
-    AND strftime(
-      '%Y-%m',
-      created_at
-    ) = strftime(
-      '%Y-%m',
-      'now'
-    )
+    AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')
 
     `, [userId]);
 
   };
-
-/* ========================= */
-/* EXPORT */
-/* ========================= */
 
 export default db;

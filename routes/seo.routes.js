@@ -10,7 +10,7 @@ console.log("✅ SEO ROUTES LOADED");
 const router = express.Router();
 
 /* ========================= */
-/* LIMITER */
+/* LIMITER GLOBAL SEO */
 /* ========================= */
 
 const limiter = rateLimit({
@@ -21,20 +21,21 @@ const limiter = rateLimit({
 });
 
 /* ========================= */
-/* FREE LIMITER */
-/* 5 essais / IP / jour */
+/* FREE ANALYZE LIMITER */
+/* Anti-abus uniquement      */
+/* Le vrai quota invité      */
+/* (5 essais découverte)     */
+/* est géré côté frontend    */
 /* ========================= */
 
 const freeAnalyzeLimiter = rateLimit({
-    windowMs: 24 * 60 * 60 * 1000,
-    max: 5,
+    windowMs: 60 * 1000,
+    max: 20,
     standardHeaders: true,
     legacyHeaders: false,
     message: {
-        error: "FREE_LIMIT_REACHED",
-        message: "Limite gratuite atteinte",
-        limit: 5,
-        upgrade: true
+        error: "TOO_MANY_REQUESTS",
+        message: "Trop de requêtes, réessayez dans 1 minute."
     }
 });
 
@@ -78,6 +79,7 @@ async function searchGoogle(keyword) {
 🔒 Route privée :
 - nécessite login
 - applique quota user selon le plan
+- sauvegarde l'analyse dans l'historique user
 */
 router.post(
     "/analyze",
@@ -93,7 +95,9 @@ router.post(
 /*
 🌍 Route publique :
 - pas de login
-- 5 essais gratuits max / jour / IP
+- accessible aux visiteurs
+- quota découverte géré côté frontend
+- anti-spam backend seulement
 - pas d'historique user si non connecté
 */
 router.post(

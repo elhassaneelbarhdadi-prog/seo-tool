@@ -21,6 +21,24 @@ const limiter = rateLimit({
 });
 
 /* ========================= */
+/* FREE LIMITER */
+/* 5 essais / IP / jour */
+/* ========================= */
+
+const freeAnalyzeLimiter = rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        error: "FREE_LIMIT_REACHED",
+        message: "Limite gratuite atteinte",
+        limit: 5,
+        upgrade: true
+    }
+});
+
+/* ========================= */
 /* SERPER API */
 /* ========================= */
 
@@ -56,6 +74,11 @@ async function searchGoogle(keyword) {
 /* ANALYZE */
 /* ========================= */
 
+/*
+🔒 Route privée :
+- nécessite login
+- applique quota user selon le plan
+*/
 router.post(
     "/analyze",
     async (req, res, next) => {
@@ -67,9 +90,15 @@ router.post(
     analyzeSEO
 );
 
+/*
+🌍 Route publique :
+- pas de login
+- 5 essais gratuits max / jour / IP
+- pas d'historique user si non connecté
+*/
 router.post(
     "/free-analyze",
-    limiter,
+    freeAnalyzeLimiter,
     analyzeSEO
 );
 

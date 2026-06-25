@@ -1,10 +1,13 @@
 import { API_BASE } from "../config";
+
 /* ========================= */
 /* 🌐 ROUTES */
 /* ========================= */
 
 export const API = {
     seoAnalyze: "/seo/analyze",
+    seoAnalyzeFree: "/seo/free-analyze",
+
     nicheGenerate: "/niche/generate",
     chatSEO: "/chat/seo",
 
@@ -28,7 +31,12 @@ export const API = {
 const request = async (
     url,
     options = {},
-    { isPublic = false, timeout = 10000 } = {}
+    {
+        isPublic = false,
+        timeout = 10000,
+        disableAuthRedirect = false,
+        disablePlanRedirect = false
+    } = {}
 ) => {
     console.log("👉 API CALL:", API_BASE + url);
 
@@ -44,9 +52,11 @@ const request = async (
             signal,
             headers: {
                 "Content-Type": "application/json",
-                ...(token && !isPublic && {
-                    Authorization: "Bearer " + token
-                }),
+                ...(token && !isPublic
+                    ? {
+                        Authorization: "Bearer " + token
+                    }
+                    : {}),
                 ...(options.headers || {})
             }
         });
@@ -61,31 +71,44 @@ const request = async (
             throw new Error("Invalid JSON response");
         }
 
-        /* 🔒 AUTH HANDLING */
-        if (!isPublic && res.status === 401) {
+        /* ========================= */
+        /* AUTH HANDLING */
+        /* ========================= */
+
+        if (
+            !isPublic &&
+            !disableAuthRedirect &&
+            res.status === 401
+        ) {
             localStorage.removeItem("token");
             window.location.href = "/fr/login";
             return;
         }
 
-        if (!isPublic && res.status === 403) {
+        if (
+            !isPublic &&
+            !disablePlanRedirect &&
+            res.status === 403
+        ) {
             window.location.href = "/fr/dashboard/pricing";
             return;
         }
 
         if (!res.ok) {
             const error = new Error(
-                data?.error || `HTTP ${res.status}`
+                data?.message ||
+                data?.error ||
+                `HTTP ${res.status}`
             );
 
             error.status = res.status;
+            error.data = data;
             throw error;
         }
 
         return data;
 
     } catch (err) {
-
         clearTimeout(timer);
 
         if (err.name === "AbortError") {
@@ -100,22 +123,22 @@ const request = async (
 /* ========================= */
 /* 🚀 SEO */
 /* ========================= */
+
 export const analyzeKeywordFree = (keyword) =>
     request(
-        "/seo/free-analyze",
+        API.seoAnalyzeFree,
         {
             method: "POST",
             body: JSON.stringify({ keyword })
         },
         {
-            isPublic: true
+            isPublic: true,
+            disableAuthRedirect: true,
+            disablePlanRedirect: true
         }
     );
 
-
 export const analyzeKeyword = (keyword) => {
-
-
     return request(
         API.seoAnalyze,
         {
@@ -124,6 +147,7 @@ export const analyzeKeyword = (keyword) => {
         }
     );
 };
+
 export const deleteKeyword = async (id) => {
     return request(`/keyword/${id}`, {
         method: "DELETE"
@@ -134,18 +158,21 @@ export const deleteKeyword = async (id) => {
 /* 🧠 NICHES */
 /* ========================= */
 
-// 🔥 FIX TIMEOUT
 export const getNichesAI = (
     keyword,
     options = {}
 ) =>
-    request(API.nicheGenerate, {
-        method: "POST",
-        body: JSON.stringify({ keyword }),
-        signal: options.signal
-    }, {
-        timeout: 30000
-    });
+    request(
+        API.nicheGenerate,
+        {
+            method: "POST",
+            body: JSON.stringify({ keyword }),
+            signal: options.signal
+        },
+        {
+            timeout: 30000
+        }
+    );
 
 /* ========================= */
 /* 🤖 CHAT */
@@ -176,16 +203,32 @@ export const getKeywordUsage = () =>
 /* ========================= */
 
 export const login = (body) =>
-    request(API.login, {
-        method: "POST",
-        body: JSON.stringify(body)
-    }, { isPublic: true });
+    request(
+        API.login,
+        {
+            method: "POST",
+            body: JSON.stringify(body)
+        },
+        {
+            isPublic: true,
+            disableAuthRedirect: true,
+            disablePlanRedirect: true
+        }
+    );
 
 export const register = (body) =>
-    request(API.register, {
-        method: "POST",
-        body: JSON.stringify(body)
-    }, { isPublic: true });
+    request(
+        API.register,
+        {
+            method: "POST",
+            body: JSON.stringify(body)
+        },
+        {
+            isPublic: true,
+            disableAuthRedirect: true,
+            disablePlanRedirect: true
+        }
+    );
 
 export const getMe = () =>
     request(API.me);

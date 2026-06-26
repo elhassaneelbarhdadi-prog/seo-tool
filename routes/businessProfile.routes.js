@@ -1,11 +1,13 @@
 import express from "express";
 import db from "../config/database.js";
+import { authMiddleware } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
 /* ========================= */
 /* GET BUSINESS PROFILES */
 /* ========================= */
+
 router.get("/", async (req, res) => {
 
     try {
@@ -67,56 +69,175 @@ router.get("/", async (req, res) => {
 /* ========================= */
 /* CREATE BUSINESS PROFILE */
 /* ========================= */
-router.post("/", async (req, res) => {
 
-    try {
+router.post(
+    "/",
+    authMiddleware,
+    async (req, res) => {
 
-        const {
-            user_id,
-            name,
-            description,
-            keyword,
-            city
-        } = req.body;
+        try {
 
-        const result = await db.run(
-            `
-            INSERT INTO business_profiles (
-                user_id,
+            /* ========================= */
+            /* USER */
+            /* ========================= */
+
+            const user = await db.get(
+                `
+                SELECT
+                    id,
+                    plan,
+                    subscription_status
+                FROM users
+                WHERE id = ?
+                `,
+                [req.user.id]
+            );
+
+            if (!user) {
+
+                return res.status(404).json({
+                    error: "Utilisateur introuvable"
+                });
+
+            }
+
+            /* ========================= */
+            /* PLAN CHECK */
+            /* ========================= */
+
+            const paidPlans = ["PRO", "BUSINESS"];
+
+            if (
+
+                !paidPlans.includes(
+                    String(user.plan || "").toUpperCase()
+                )
+
+                ||
+
+                user.subscription_status !== "active"
+
+            ) {
+
+                return res.status(403).json({
+
+                    error: "PLAN_REQUIRED",
+
+                    message:
+                        "La publication dans l'annuaire est réservée aux abonnements PRO.",
+
+                    upgrade: true
+
+                });
+
+            }
+
+            /* ========================= */
+            /* BODY */
+            /* ========================= */
+
+            const {
+
                 name,
+
                 description,
+
                 keyword,
+
                 city
-            )
-            VALUES (?, ?, ?, ?, ?)
-            `,
-            [
-                user_id || null,
-                name,
-                description,
-                keyword,
-                city
-            ]
-        );
 
-        return res.json({
-            success: true,
-            id: result.lastID
-        });
+            } = req.body;
 
-    } catch (err) {
+            if (
 
-        console.error(
-            "CREATE BUSINESS PROFILE ERROR:",
-            err
-        );
+                !name ||
 
-        return res.status(500).json({
-            error: "Server error"
-        });
+                !description ||
+
+                !keyword ||
+
+                !city
+
+            ) {
+
+                return res.status(400).json({
+
+                    error: "Tous les champs sont obligatoires"
+
+                });
+
+            }
+
+            /* ========================= */
+            /* INSERT */
+            /* ========================= */
+
+            const result = await db.run(
+
+                `
+                INSERT INTO business_profiles (
+
+                    user_id,
+
+                    name,
+
+                    description,
+
+                    keyword,
+
+                    city
+
+                )
+
+                VALUES (?, ?, ?, ?, ?)
+                `,
+
+                [
+
+                    req.user.id,
+
+                    name.trim(),
+
+                    description.trim(),
+
+                    keyword.trim(),
+
+                    city.trim()
+
+                ]
+
+            );
+
+            return res.json({
+
+                success: true,
+
+                id: result.lastID
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(
+
+                "CREATE BUSINESS PROFILE ERROR:",
+
+                err
+
+            );
+
+            return res.status(500).json({
+
+                error: "Server error"
+
+            });
+
+        }
 
     }
 
-});
+);
 
 export default router;

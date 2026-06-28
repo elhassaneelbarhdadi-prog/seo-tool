@@ -1,5 +1,5 @@
 import "./config/env.js";
-
+import adminRoutes from "./routes/admin.routes.js";
 import fs from "fs";
 import express from "express";
 import cors from "cors";
@@ -125,6 +125,7 @@ app.use(
     "/api/auth",
     authRoutes
 );
+app.use("/api/admin", adminRoutes);
 
 app.use(
     "/api/keyword",

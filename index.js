@@ -125,7 +125,13 @@ app.use(
     "/api/auth",
     authRoutes
 );
-app.use("/api/admin", adminRoutes);
+
+console.log("✅ ADMIN ROUTES REGISTERED");
+
+app.use(
+    "/api/admin",
+    adminRoutes
+);
 
 app.use(
     "/api/keyword",

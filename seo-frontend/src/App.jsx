@@ -10,6 +10,7 @@ import {
 
 import { useEffect, useMemo } from "react";
 import FreeAnalyzer from "./pages/FreeAnalyzer";
+
 /* ========================= */
 /* LAYOUT */
 /* ========================= */
@@ -47,9 +48,7 @@ import "./i18n";
 const SUPPORTED_LANGS = ["fr", "en", "es", "de"];
 
 function getBrowserLang() {
-
-  const saved =
-    localStorage.getItem("lang");
+  const saved = localStorage.getItem("lang");
 
   if (
     saved &&
@@ -70,24 +69,19 @@ function getBrowserLang() {
 /* 🔒 TOKEN */
 /* ========================= */
 function isTokenValid(token) {
-
   if (!token) {
     return false;
   }
 
   try {
-
     const payload =
       JSON.parse(
         atob(token.split(".")[1])
       );
 
     return payload.exp * 1000 > Date.now();
-
   } catch {
-
     return false;
-
   }
 }
 
@@ -95,7 +89,6 @@ function isTokenValid(token) {
 /* 🔒 PROTECTED ROUTE */
 /* ========================= */
 function ProtectedRoute({ children }) {
-
   const { lang } = useParams();
 
   const token =
@@ -107,7 +100,6 @@ function ProtectedRoute({ children }) {
   );
 
   if (!isValid) {
-
     localStorage.removeItem("token");
 
     return (
@@ -125,11 +117,12 @@ function ProtectedRoute({ children }) {
 /* 🔁 ANNUAIRE WRAPPER */
 /* ========================= */
 function AnnuaireWrapper() {
-
   const location = useLocation();
 
   return (
-    <AnnuairePage key={location.pathname} />
+    <AnnuairePage
+      key={location.pathname}
+    />
   );
 }
 
@@ -137,11 +130,9 @@ function AnnuaireWrapper() {
 /* ❌ NOT FOUND */
 /* ========================= */
 function NotFound() {
-
   const { lang } = useParams();
 
   return (
-
     <div className="flex flex-col items-center justify-center h-screen text-center bg-gray-50">
 
       <h1 className="text-6xl font-black mb-4">
@@ -169,7 +160,6 @@ function NotFound() {
       </Link>
 
     </div>
-
   );
 }
 
@@ -177,14 +167,12 @@ function NotFound() {
 /* 🚀 APP */
 /* ========================= */
 export default function App() {
-
   const defaultLang = useMemo(
     () => getBrowserLang(),
     []
   );
 
   return (
-
     <ErrorBoundary>
 
       <Router>
@@ -196,7 +184,9 @@ export default function App() {
 
         <Routes>
 
+          {/* ========================= */}
           {/* ROOT */}
+          {/* ========================= */}
           <Route
             path="/"
             element={
@@ -227,10 +217,13 @@ export default function App() {
             path="/:lang/register"
             element={<Register />}
           />
+
+          {/* FREE ANALYZER */}
           <Route
             path="/:lang/free-analyzer"
             element={<FreeAnalyzer />}
           />
+
           {/* SEO */}
           <Route
             path="/:lang/landing/:keyword"
@@ -242,9 +235,28 @@ export default function App() {
             element={<ProjectPage />}
           />
 
+          {/* ========================= */}
+          {/* ANNUAIRE PUBLIC */}
+          {/* ========================= */}
+
+          <Route
+            path="/:lang/annuaire"
+            element={<AnnuairePage />}
+          />
+
+          {/* FICHE ANNUAIRE */}
           <Route
             path="/:lang/annuaire/:slug"
             element={<AnnuaireWrapper />}
+          />
+
+          {/* ========================= */}
+          {/* 💰 TARIFS PUBLICS */}
+          {/* ========================= */}
+
+          <Route
+            path="/:lang/pricing"
+            element={<Pricing />}
           />
 
           {/* ========================= */}
@@ -272,7 +284,7 @@ export default function App() {
               element={<KeywordAnalyzer />}
             />
 
-            {/* PRICING */}
+            {/* PRICING DASHBOARD */}
             <Route
               path="pricing"
               element={<Pricing />}
@@ -284,12 +296,12 @@ export default function App() {
               element={<NichesPage />}
             />
 
-            {/* ANNUAIRE */}
-            {/* ANNUAIRE */}
+            {/* ANNUAIRE DASHBOARD */}
             <Route
               path="annuaire"
               element={<Annuaire />}
             />
+
             {/* BUSINESS */}
             <Route
               path="business-profile"
@@ -312,7 +324,6 @@ export default function App() {
       </Router>
 
     </ErrorBoundary>
-
   );
 }
 
@@ -320,16 +331,13 @@ export default function App() {
 /* 🔍 DEBUG ROUTER */
 /* ========================= */
 function DebugRouter() {
-
   const location = useLocation();
 
   useEffect(() => {
-
     console.log(
       "📍 ROUTE:",
       location.pathname
     );
-
   }, [location]);
 
   return null;

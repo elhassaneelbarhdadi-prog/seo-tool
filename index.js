@@ -20,6 +20,8 @@ import plansRoutes from "./routes/plans.routes.js";
 import devRoutes from "./routes/dev.routes.js";
 import businessRoutes from "./routes/businessProfile.routes.js";
 
+import db from "./config/database.js";
+
 const app = express();
 
 /* ========================= */
@@ -202,58 +204,112 @@ app.get("/", (req, res) => {
 
 /* ========================= */
 /* SITEMAP */
+/* DYNAMIC SEO PAGES */
 /* ========================= */
 
 app.get(
     "/sitemap.xml",
     async (req, res) => {
 
-        const BASE_URL = FRONT_URL;
+        try {
 
-        const cities = [
-            "paris",
-            "lyon",
-            "marseille"
-        ];
+            const BASE_URL = (
+                FRONT_URL ||
+                "https://referenciaseo.com"
+            ).replace(/\/$/, "");
 
-        const jobs = [
-            "plombier",
-            "coiffeur",
-            "coach-sportif"
-        ];
+            /* ========================= */
+            /* PAGES PUBLIQUES STATIQUES */
+            /* ========================= */
 
-        const langs = [
-            "fr",
-            "en"
-        ];
+            const staticUrls = [
 
-        let urls = "";
+                `${BASE_URL}/fr/`,
 
-        for (const lang of langs) {
-            for (const city of cities) {
-                for (const job of jobs) {
+                `${BASE_URL}/fr/annuaire`,
 
-                    urls += `
+                `${BASE_URL}/fr/pricing`
+
+            ];
+
+            /* ========================= */
+            /* PAGES SEO DYNAMIQUES */
+            /* ========================= */
+
+            const seoPages = await db.all(`
+                SELECT slug
+                FROM seo_pages
+                WHERE slug IS NOT NULL
+                AND TRIM(slug) != ''
+                ORDER BY created_at DESC
+            `);
+
+            const urls = [];
+
+            /* ========================= */
+            /* AJOUT PAGES STATIQUES */
+            /* ========================= */
+
+            for (const url of staticUrls) {
+
+                urls.push(`
 <url>
-    <loc>${BASE_URL}/${lang}/annuaire/${job}-${city}</loc>
+    <loc>${url}</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+</url>`);
+
+            }
+
+            /* ========================= */
+            /* AJOUT PAGES SEO */
+            /* ========================= */
+
+            for (const page of seoPages) {
+
+                const slug =
+                    String(page.slug || "").trim();
+
+                if (!slug) continue;
+
+                urls.push(`
+<url>
+    <loc>${BASE_URL}/fr/annuaire/${encodeURIComponent(slug)}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
-</url>`;
+</url>`);
 
-                }
             }
-        }
 
-        res.set(
-            "Content-Type",
-            "application/xml"
-        );
+            /* ========================= */
+            /* XML FINAL */
+            /* ========================= */
 
-        res.send(`
+            const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
-</urlset>
-`);
+${urls.join("\n")}
+</urlset>`;
+
+            res
+                .status(200)
+                .type("application/xml")
+                .send(xml);
+
+        } catch (error) {
+
+            console.error(
+                "❌ SITEMAP ERROR:",
+                error
+            );
+
+            res
+                .status(500)
+                .type("text/plain")
+                .send(
+                    "Erreur lors de la génération du sitemap"
+                );
+
+        }
 
     }
 );

@@ -143,24 +143,6 @@ function capitalize(value = "") {
 /* 📍 DYNAMIC CITY PARSER */
 /* ========================= */
 
-/*
- * Les villes sont récupérées directement
- * depuis business_profiles.
- *
- * Exemple :
- *
- * keyword : hijama
- * city    : Guesnain
- *
- * slug :
- * hijama-guesnain
- *
- * devient :
- *
- * keyword : hijama
- * city    : guesnain
- */
-
 async function parseSlug(slug) {
     const cleanSlug = slugify(slug);
 
@@ -189,14 +171,6 @@ async function parseSlug(slug) {
         );
     }
 
-    /*
-     * Transformation des villes en slugs.
-     *
-     * Exemple :
-     * "Saint-Étienne"
-     * devient :
-     * "saint-etienne"
-     */
     const cities = businesses
         .map((row) => {
             const original =
@@ -212,30 +186,14 @@ async function parseSlug(slug) {
         .filter(
             (city) => city.slug
         )
-        /*
-         * Les villes les plus longues
-         * sont testées en premier.
-         *
-         * Important pour :
-         * saint-etienne
-         * villeneuve-d-ascq
-         * etc.
-         */
         .sort(
             (a, b) =>
                 b.slug.length -
                 a.slug.length
         );
 
-    /*
-     * Recherche d'une ville à la fin du slug.
-     */
     for (const city of cities) {
 
-        /*
-         * Cas où le slug est uniquement
-         * constitué du nom de la ville.
-         */
         if (
             cleanSlug === city.slug
         ) {
@@ -245,14 +203,6 @@ async function parseSlug(slug) {
             };
         }
 
-        /*
-         * Cas normal :
-         *
-         * hijama-guesnain
-         *
-         * → hijama
-         * → guesnain
-         */
         if (
             cleanSlug.endsWith(
                 `-${city.slug}`
@@ -282,13 +232,6 @@ async function parseSlug(slug) {
         }
     }
 
-    /*
-     * FALLBACK
-     *
-     * Si la ville n'existe pas encore
-     * dans business_profiles, on considère
-     * le dernier segment comme la ville.
-     */
     const parts =
         cleanSlug
             .split("-")
@@ -320,6 +263,274 @@ async function parseSlug(slug) {
 }
 
 /* ========================= */
+/* 🏢 DIRECTORY CONTEXT */
+/* ========================= */
+
+async function getDirectoryContext(
+    keyword,
+    city
+) {
+    try {
+        const profiles = await db.all(
+            `
+            SELECT
+                name,
+                description,
+                keyword,
+                city
+            FROM business_profiles
+            WHERE city IS NOT NULL
+            AND TRIM(city) != ""
+            `
+        );
+
+        const normalizedKeyword =
+            normalizeText(keyword);
+
+        const normalizedCity =
+            normalizeText(city);
+
+        const matchingProfiles =
+            profiles.filter((profile) => {
+
+                const profileKeyword =
+                    normalizeText(
+                        profile?.keyword || ""
+                    );
+
+                const profileCity =
+                    normalizeText(
+                        profile?.city || ""
+                    );
+
+                return (
+                    (
+                        profileKeyword.includes(
+                            normalizedKeyword
+                        ) ||
+                        normalizedKeyword.includes(
+                            profileKeyword
+                        )
+                    ) &&
+                    profileCity ===
+                    normalizedCity
+                );
+            });
+
+        return matchingProfiles;
+    } catch (error) {
+        console.warn(
+            "DIRECTORY CONTEXT:",
+            error.message
+        );
+
+        return [];
+    }
+}
+
+/* ========================= */
+/* 🧹 CLEAN GENERATED CONTENT */
+/* ========================= */
+
+function cleanGeneratedContent(
+    content = "",
+    keyword = "",
+    city = "",
+    hasProfiles = false
+) {
+    let cleaned =
+        String(content || "").trim();
+
+    if (!cleaned) {
+        return "";
+    }
+
+    const keywordLabel =
+        capitalize(keyword);
+
+    const cityLabel =
+        capitalize(city);
+
+    /*
+     * Supprime les faux titres
+     * d'introduction.
+     *
+     * Exemple :
+     * ### Introduction
+     *
+     * L'introduction doit rester
+     * un simple paragraphe.
+     */
+    cleaned = cleaned.replace(
+        /^\s*#{1,3}\s*Introduction\s*$/gim,
+        ""
+    );
+
+    /*
+     * Corrige quelques formulations
+     * artificielles fréquentes.
+     */
+    const replacements = [
+        [
+            new RegExp(
+                `professionnel de ${escapeRegExp(keyword)}`,
+                "gi"
+            ),
+            keyword
+        ],
+        [
+            /professionnel de coiffeur/gi,
+            "coiffeur"
+        ],
+        [
+            /professionnel de plombier/gi,
+            "plombier"
+        ],
+        [
+            /professionnel de garage/gi,
+            "garage"
+        ],
+        [
+            /professionnel de boulanger/gi,
+            "boulanger"
+        ],
+        [
+            /professionnel de pâtissier/gi,
+            "pâtissier"
+        ],
+        [
+            /professionnel de mécanicien/gi,
+            "mécanicien"
+        ]
+    ];
+
+    for (const [pattern, replacement] of replacements) {
+        cleaned =
+            cleaned.replace(
+                pattern,
+                replacement
+            );
+    }
+
+    /*
+     * Corrige les formulations FAQ
+     * encore générées par l'IA.
+     */
+    cleaned = cleaned.replace(
+        /Où trouver un professionnel de\s+/gi,
+        "Où trouver un "
+    );
+
+    /*
+     * Lorsque nous n'avons aucun profil
+     * confirmé, on supprime certaines
+     * affirmations trop fortes.
+     */
+    if (!hasProfiles) {
+
+        cleaned =
+            cleaned.replace(
+                /notre annuaire vous permet de découvrir une sélection[^.]*\./gi,
+                "notre annuaire permet de rechercher des professionnels selon leur activité et leur ville."
+            );
+
+        cleaned =
+            cleaned.replace(
+                /vous y trouverez des informations détaillées[^.]*\./gi,
+                "vous pouvez consulter les informations disponibles sur les professionnels lorsqu'elles sont renseignées."
+            );
+
+        cleaned =
+            cleaned.replace(
+                /vous y trouverez[^.]*coordonnées[^.]*\./gi,
+                "vous pouvez consulter les informations disponibles lorsqu'elles sont renseignées."
+            );
+
+        cleaned =
+            cleaned.replace(
+                /qui liste plusieurs[^.]*\./gi,
+                "qui permet de rechercher des professionnels selon leur activité et leur ville."
+            );
+
+        cleaned =
+            cleaned.replace(
+                /découvrir les professionnels disponibles dans votre région/gi,
+                "rechercher des professionnels correspondant à votre activité et à votre ville"
+            );
+    }
+
+    /*
+     * Évite les doubles espaces.
+     */
+    cleaned =
+        cleaned.replace(
+            /[ \t]+/g,
+            " "
+        );
+
+    /*
+     * Nettoyage des lignes vides excessives.
+     */
+    cleaned =
+        cleaned.replace(
+            /\n{3,}/g,
+            "\n\n"
+        );
+
+    /*
+     * Évite un H1 généré par erreur.
+     *
+     * Exemple :
+     * # Garage à Lille
+     *
+     * Le H1 principal est déjà présent
+     * côté frontend.
+     */
+    cleaned =
+        cleaned.replace(
+            /^\s*#\s+.+$/gim,
+            ""
+        );
+
+    /*
+     * Si l'IA génère encore un titre
+     * "Introduction" sans #, on le retire.
+     */
+    cleaned =
+        cleaned.replace(
+            /^\s*Introduction\s*$/gim,
+            ""
+        );
+
+    /*
+     * Petit nettoyage final.
+     */
+    cleaned =
+        cleaned.trim();
+
+    /*
+     * Variables conservées volontairement
+     * pour rendre explicite le contexte
+     * utilisé par la fonction.
+     */
+    void keywordLabel;
+    void cityLabel;
+
+    return cleaned;
+}
+
+/* ========================= */
+/* 🔐 REGEX ESCAPE */
+/* ========================= */
+
+function escapeRegExp(value = "") {
+    return String(value).replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&"
+    );
+}
+
+/* ========================= */
 /* 🤖 CONTENT GENERATION */
 /* ========================= */
 
@@ -331,41 +542,229 @@ async function generateContent(slug) {
     } =
         await parseSlug(slug);
 
-    const prompt = `
-Rédige une page SEO française utile,
-naturelle et originale.
+    const profiles =
+        await getDirectoryContext(
+            keyword,
+            city
+        );
 
-Mot-clé :
+    const hasProfiles =
+        profiles.length > 0;
+
+    const directoryContext =
+        hasProfiles
+            ? `
+Des professionnels correspondant
+à cette activité et à cette ville
+existent actuellement dans la base
+de l'annuaire.
+
+Nombre de profils correspondants :
+${profiles.length}
+
+Tu peux donc expliquer que des
+professionnels sont disponibles dans
+l'annuaire.
+
+IMPORTANT :
+Ne donne pas leurs noms, adresses,
+téléphones ou autres informations
+personnelles dans le texte.
+La liste réelle des professionnels
+est affichée séparément par le site.
+`
+            : `
+Aucun professionnel correspondant
+à cette activité et à cette ville
+n'est actuellement confirmé dans
+la base de l'annuaire.
+
+Tu dois donc NE PAS prétendre qu'une
+liste de professionnels existe.
+
+Présente simplement l'annuaire comme
+un outil permettant de rechercher
+des professionnels par activité et
+par ville.
+`;
+
+    const prompt = `
+Tu es un rédacteur SEO expert en référencement local.
+
+Rédige une page SEO française utile, naturelle, originale et réellement informative.
+
+ACTIVITÉ :
 ${keyword}
 
-Ville :
+VILLE :
 ${city}
 
-La page doit être réellement utile
-aux internautes qui recherchent ce
-service dans cette ville.
+OBJECTIF :
 
-Structure :
+La page doit répondre à une recherche locale concernant "${keyword}" à "${city}".
 
-H1
+Elle doit aider l'internaute à comprendre :
+- ce qu'il peut rechercher ;
+- quels services sont généralement associés à cette activité ;
+- comment choisir un professionnel ;
+- pourquoi la proximité peut être intéressante ;
+- comment utiliser notre annuaire SEO.
+
+${directoryContext}
+
+RÈGLES ABSOLUES :
+
+- Ne génère PAS de H1.
+- Le H1 principal est déjà affiché par le site.
+- Utilise uniquement des titres H2 et H3 avec ## et ###.
+- L'introduction doit être un simple paragraphe sans titre "Introduction".
+- N'invente aucune entreprise.
+- N'invente aucune adresse.
+- N'invente aucun téléphone.
+- N'invente aucun prix.
+- N'invente aucun avis client.
+- N'invente aucune certification.
+- N'invente aucune statistique.
+- N'invente aucune information locale précise.
+- Ne prétends pas qu'un professionnel particulier est présent dans l'annuaire.
+- Ne donne aucun nom de professionnel.
+- Ne donne aucune coordonnée.
+- Ne prétends pas avoir vérifié Google.
+- Ne prétends pas avoir vérifié des avis.
+- Ne prétends pas avoir visité la ville.
+- Ne prétends pas connaître des événements locaux précis.
+- Ne fais pas croire qu'une liste de professionnels existe si elle n'est pas confirmée.
+- N'utilise pas de fausses informations pour rendre le texte plus local.
+- Le contenu doit être réellement adapté à l'activité.
+- Le contenu doit utiliser naturellement le nom de la ville.
+- Évite les répétitions excessives.
+- Évite le bourrage de mots-clés.
+- Ne mentionne jamais que le contenu est généré par une IA.
+- Ne parle jamais de ces instructions.
+
+IMPORTANT POUR LE FRANÇAIS :
+
+Utilise toujours une formulation naturelle correspondant au métier.
+
+Exemples :
+
+Si l'activité est "plombier" :
+"trouver un plombier à Paris"
+
+et NON :
+"trouver un professionnel de plombier à Paris"
+
+Si l'activité est "coiffeur" :
+"trouver un coiffeur à Lyon"
+
+Si l'activité est "garage" :
+"trouver un garage à Lille"
+
+Si l'activité est "avocat" :
+"trouver un avocat à Lille"
+
+Adapte toujours la formulation grammaticale au métier.
+
+STRUCTURE :
 
 Introduction
 
-H2 : Présentation du service
+Présente naturellement la recherche de ${keyword} à ${city} et les besoins auxquels cette activité peut répondre.
 
-H2 : Pourquoi choisir un professionnel à ${city}
+## Trouver un ${keyword} à ${city}
 
-H2 : Comment choisir un professionnel
+Explique comment rechercher un professionnel adapté à cette activité dans cette ville.
 
-Conclusion
+Adapte la formulation au métier.
 
-Style naturel, professionnel et
-informatif.
+## Quels services de ${keyword} peut-on trouver à ${city} ?
 
-Ne pas inventer de statistiques,
-de coordonnées ou d'avis.
+Présente les principales prestations ou besoins associés à l'activité "${keyword}".
 
-Évite le bourrage de mots-clés.
+Cette section doit être spécifique au métier.
+
+## Comment choisir un ${keyword} à ${city} ?
+
+Donne des conseils pratiques adaptés à l'activité.
+
+Tu peux notamment aborder :
+- expérience ;
+- spécialisation ;
+- prestations proposées ;
+- disponibilité ;
+- proximité ;
+- qualité du service ;
+- transparence des informations ;
+- devis lorsque cela est pertinent.
+
+N'invente aucun professionnel ni aucune information particulière.
+
+## Rechercher un professionnel dans notre annuaire SEO
+
+Explique simplement comment l'annuaire SEO peut aider l'utilisateur à rechercher des entreprises et professionnels selon leur activité et leur ville.
+
+${hasProfiles
+            ? `
+Des profils correspondant à cette recherche
+sont actuellement présents dans la base.
+
+Tu peux inviter naturellement l'utilisateur
+à consulter les professionnels affichés sur
+la page.
+
+Ne donne toutefois aucun nom, aucune adresse
+et aucun téléphone dans le contenu.
+`
+            : `
+Aucun professionnel correspondant à cette
+recherche n'est actuellement confirmé dans
+la base.
+
+Ne prétends donc pas qu'une liste de
+professionnels est disponible.
+
+Invite simplement l'utilisateur à consulter
+l'annuaire pour rechercher cette activité
+ou une autre activité dans cette ville.
+`
+        }
+
+## Questions fréquentes
+
+### Où trouver un ${keyword} à ${city} ?
+
+Réponds directement et naturellement.
+
+### Comment choisir un ${keyword} ?
+
+Donne des conseils pratiques adaptés à l'activité.
+
+### Pourquoi choisir un professionnel local ?
+
+Explique les avantages possibles de la proximité sans faire de promesse excessive.
+
+## Conclusion
+
+Résume les principaux conseils.
+
+Rappelle naturellement que l'annuaire SEO permet de rechercher des professionnels selon leur activité et leur ville.
+
+La conclusion doit rester factuelle et ne doit pas inventer de professionnels.
+
+STYLE :
+
+- français naturel ;
+- professionnel ;
+- informatif ;
+- facile à lire ;
+- phrases claires ;
+- paragraphes courts ;
+- environ 700 à 1000 mots ;
+- contenu réellement spécifique au métier ;
+- contenu réellement spécifique à la recherche locale ;
+- aucune répétition excessive ;
+- aucune information inventée ;
+- aucune promesse non vérifiable.
 `;
 
     const result =
@@ -391,16 +790,21 @@ de coordonnées ou d'avis.
                     0.6,
 
                 max_tokens:
-                    900
-
+                    1200
             });
 
-    return (
+    const rawContent =
         result
             .choices?.[0]
             ?.message
             ?.content ||
-        ""
+        "";
+
+    return cleanGeneratedContent(
+        rawContent,
+        keyword,
+        city,
+        hasProfiles
     );
 }
 
@@ -481,11 +885,6 @@ router.get(
 
             if (!page) {
 
-                /*
-                 * Empêche plusieurs requêtes
-                 * simultanées de générer
-                 * la même page.
-                 */
                 if (
                     generating.has(
                         slug
@@ -551,6 +950,7 @@ router.get(
                      * estimation interne,
                      * pas une donnée Google.
                      */
+
                     const volume =
                         trend.reduce(
                             (a, b) =>
@@ -558,9 +958,10 @@ router.get(
                             0
                         );
 
-                    /*
-                     * Score interne.
-                     */
+                    /* ========================= */
+                    /* SCORE */
+                    /* ========================= */
+
                     const score =
                         Math.min(
                             100,
@@ -571,12 +972,8 @@ router.get(
 
                     /*
                      * Valeurs par défaut.
-                     *
-                     * Elles pourront être
-                     * remplacées par les
-                     * vraies données SEO
-                     * lorsque disponibles.
                      */
+
                     const difficulty = 0;
                     const cpc = 0;
                     const revenue = 0;
@@ -721,11 +1118,9 @@ router.get(
                  * AnnuairePage.jsx utilise
                  * "competition".
                  *
-                 * Ta base n'a pas de colonne
-                 * competition, donc on utilise
-                 * difficulty comme valeur
-                 * compatible.
+                 * La base utilise "difficulty".
                  */
+
                 competition:
                     Number(
                         page.difficulty

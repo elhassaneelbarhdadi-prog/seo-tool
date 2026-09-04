@@ -6,17 +6,10 @@ import crypto from "crypto";
 import db from "../config/database.js";
 
 const router = express.Router();
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
-
-const FRONT_URL = (
-    process.env.FRONT_URL || "https://referenciaseo.com"
-).replace(/\/$/, "");
-
-/* =========================================================
-   RATE LIMIT
-========================================================= */
 
 const seoPageLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -26,7 +19,7 @@ const seoPageLimiter = rateLimit({
 });
 
 /* =========================================================
-   HELPERS GENERIQUES
+   HELPERS
 ========================================================= */
 
 function hash(value = "") {
@@ -42,8 +35,7 @@ function random(min, max) {
 }
 
 function generateTrend() {
-    const trends = ["stable", "hausse", "baisse"];
-    return trends[random(0, trends.length - 1)];
+    return ["stable", "hausse", "baisse"][random(0, 2)];
 }
 
 function normalizeText(value = "") {
@@ -58,7 +50,7 @@ function normalizeText(value = "") {
 function normalizeForCheck(value = "") {
     return normalizeText(value)
         .replace(/[’']/g, "'")
-        .replace(/[.,;:!?()[\]{}"]/g, " ")
+        .replace(/[.,;:!?()[\]{}"«»]/g, " ")
         .replace(/\s+/g, " ")
         .trim();
 }
@@ -72,8 +64,7 @@ function slugify(value = "") {
 }
 
 function capitalize(value = "") {
-    if (!value) return "";
-    return value.charAt(0).toUpperCase() + value.slice(1);
+    return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
 }
 
 /* =========================================================
@@ -91,26 +82,17 @@ function beautifyKeyword(keyword = "") {
         [/\besthetique\b/gi, "esthétique"],
         [/\besthetiques\b/gi, "esthétiques"],
         [/\bbeaute\b/gi, "beauté"],
-        [/\bcoiffure\b/gi, "coiffure"],
-        [/\bpsychologie\b/gi, "psychologie"],
         [/\bregime\b/gi, "régime"],
         [/\bprevention\b/gi, "prévention"],
         [/\btherapie\b/gi, "thérapie"],
         [/\btherapies\b/gi, "thérapies"],
-        [/\bnaturel\b/gi, "naturel"],
-        [/\bnaturelle\b/gi, "naturelle"],
-        [/\bnaturels\b/gi, "naturels"],
-        [/\bnaturelles\b/gi, "naturelles"],
-        [/\bfrancais\b/gi, "français"],
-        [/\bfrancaise\b/gi, "française"],
-        [/\bfrancaises\b/gi, "françaises"],
-        [/\bfrancais\b/gi, "français"],
         [/\bdecoration\b/gi, "décoration"],
         [/\brenovation\b/gi, "rénovation"],
         [/\breparation\b/gi, "réparation"],
         [/\belectricite\b/gi, "électricité"],
-        [/\bmenuiserie\b/gi, "menuiserie"],
-        [/\bplomberie\b/gi, "plomberie"],
+        [/\bfrancais\b/gi, "français"],
+        [/\bfrancaise\b/gi, "française"],
+        [/\bfrancaises\b/gi, "françaises"],
         [/\bmaconnerie\b/gi, "maçonnerie"],
     ];
 
@@ -122,8 +104,7 @@ function beautifyKeyword(keyword = "") {
 }
 
 function displayCity(city = "") {
-    const value = String(city).trim();
-    return capitalize(value);
+    return capitalize(String(city).trim());
 }
 
 /* =========================================================
@@ -133,7 +114,7 @@ function displayCity(city = "") {
 async function parseSlug(slug = "") {
     const cleanSlug = slugify(slug);
 
-    const businesses = await db.all(`
+    const rows = await db.all(`
     SELECT city
     FROM business_profiles
     WHERE city IS NOT NULL
@@ -143,7 +124,7 @@ async function parseSlug(slug = "") {
 
     const cities = [
         ...new Set(
-            (businesses || [])
+            (rows || [])
                 .map((row) => String(row.city || "").trim())
                 .filter(Boolean)
         ),
@@ -227,7 +208,7 @@ async function getDirectoryContext(keyword, city) {
 }
 
 /* =========================================================
-   NETTOYAGE DES REPONSES IA
+   NETTOYAGE DU CONTENU IA
 ========================================================= */
 
 function cleanGeneratedContent(content, keyword, city) {
@@ -243,195 +224,285 @@ function cleanGeneratedContent(content, keyword, city) {
         .replace(/\n{3,}/g, "\n\n")
         .trim();
 
-    /*
-     * Corrections de formulations récurrentes
-     */
-
     const replacements = [
-        [
-            /médecin chinois/gi,
-            keywordDisplay,
-        ],
-        [
-            /medecin chinois/gi,
-            keywordDisplay,
-        ],
+        [/médecin chinois/gi, keywordDisplay],
+        [/medecin chinois/gi, keywordDisplay],
+
         [
             /professionnels de santé spécialisés/gi,
             "professionnels et structures correspondant à cette recherche",
         ],
+
         [
             /professionnels de santé/gi,
             "professionnels et structures",
         ],
+
         [
             /praticiens qualifiés/gi,
             "professionnels correspondant à cette recherche",
         ],
-        [
-            /professionnel qualifié/gi,
-            "professionnel correspondant à cette recherche",
-        ],
-        [
-            /professionnels qualifiés/gi,
-            "professionnels correspondant à cette recherche",
-        ],
-        [
-            /professionnel certifié/gi,
-            "professionnel correspondant à cette recherche",
-        ],
-        [
-            /professionnels certifiés/gi,
-            "professionnels correspondant à cette recherche",
-        ],
+
         [
             /praticien qualifié/gi,
             "professionnel correspondant à cette recherche",
         ],
+
         [
-            /praticiens qualifiés/gi,
+            /professionnels qualifiés/gi,
             "professionnels correspondant à cette recherche",
         ],
+
+        [
+            /professionnel qualifié/gi,
+            "professionnel correspondant à cette recherche",
+        ],
+
+        [
+            /professionnels certifiés/gi,
+            "professionnels correspondant à cette recherche",
+        ],
+
+        [
+            /professionnel certifié/gi,
+            "professionnel correspondant à cette recherche",
+        ],
+
         [
             /certifications nécessaires/gi,
             "informations disponibles sur le profil",
         ],
+
         [
             /certification nécessaire/gi,
             "informations disponibles sur le profil",
         ],
+
         [
             /diplômes nécessaires/gi,
             "informations disponibles sur le profil",
         ],
+
         [
             /diplôme nécessaire/gi,
             "informations disponibles sur le profil",
         ],
+
         [
             /maintenir l'équilibre et l'harmonie/gi,
             "présenter différentes pratiques ou services associés",
         ],
+
         [
             /maintien de l'équilibre et de l'harmonie/gi,
             "présentation de différentes pratiques ou services associés",
         ],
+
         [
             /équilibre et l'harmonie au sein du corps/gi,
             "description générale de différentes pratiques associées",
         ],
+
+        [
+            /équilibre et harmonie/gi,
+            "description générale de différentes pratiques associées",
+        ],
+
         [
             /circulation du qi\s*\(énergie vitale\)/gi,
             "des concepts traditionnels propres à certaines pratiques",
         ],
+
         [
             /circulation du qi/gi,
             "des concepts traditionnels propres à certaines pratiques",
         ],
+
         [
             /qi\s*\(énergie vitale\)/gi,
             "des concepts traditionnels",
         ],
+
         [
             /énergie vitale/gi,
             "des concepts traditionnels",
         ],
+
         [
             /favoriser le bien-être/gi,
-            "être présenté comme une pratique associée à ce domaine",
+            "présenter ce domaine",
         ],
+
+        [
+            /promouvoir le bien-être/gi,
+            "présenter ce domaine",
+        ],
+
+        [
+            /promouvoir un meilleur bien-être/gi,
+            "présenter ce domaine",
+        ],
+
         [
             /améliorer le bien-être/gi,
-            "être présenté dans le cadre de ce domaine",
+            "présenter ce domaine",
         ],
+
         [
             /améliore le bien-être/gi,
-            "est présenté dans le cadre de ce domaine",
+            "présente ce domaine",
         ],
+
         [
             /garantit/gi,
-            "peut être présenté comme",
+            "présente",
         ],
+
         [
             /garantie/gi,
             "présentation",
         ],
+
         [
             /guérir/gi,
             "prendre en charge",
         ],
+
         [
             /guérison/gi,
             "prise en charge",
         ],
+
         [
             /traiter une maladie/gi,
             "présenter une activité ou un service",
         ],
+
         [
             /traiter les maladies/gi,
             "présenter une activité ou un service",
         ],
+
         [
             /prévenir les maladies/gi,
             "présenter une activité ou un service",
         ],
-        [
-            /soigner/gi,
-            "proposer",
-        ],
-        [
-            /soigne/gi,
-            "propose",
-        ],
+
         [
             /soins médicaux/gi,
             "services présentés",
         ],
+
+        [
+            /soigner/gi,
+            "proposer",
+        ],
+
+        [
+            /soigne/gi,
+            "propose",
+        ],
+
         [
             /efficacité démontrée/gi,
             "description disponible",
         ],
+
         [
             /efficace pour/gi,
             "associé à",
         ],
+
         [
             /vous accéderez à une liste de professionnels/gi,
             "vous pourrez consulter les informations disponibles dans l'annuaire",
         ],
+
         [
             /vous pourrez trouver des professionnels/gi,
             "vous pourrez consulter les profils disponibles",
         ],
+
         [
-            /trouver des professionnels et des entreprises qui pratiquent/gi,
-            "consulter des profils correspondant à cette recherche",
+            /vous pourrez trouver un professionnel/gi,
+            "vous pourrez consulter les profils disponibles",
         ],
+
         [
-            /les coordonnées et les adresses des praticiens/gi,
-            "les informations affichées sur les profils",
+            /trouver des professionnels/gi,
+            "consulter les profils disponibles",
         ],
+
+        [
+            /trouver un professionnel/gi,
+            "consulter les profils disponibles",
+        ],
+
+        [
+            /trouver celui qui correspond[^.]*\./gi,
+            "comparer les informations disponibles.",
+        ],
+
         [
             /les services proposés, les coordonnées et les adresses/gi,
             "les informations affichées dans les profils",
         ],
+
+        [
+            /les coordonnées et les adresses des praticiens/gi,
+            "les informations affichées sur les profils",
+        ],
+
+        [
+            /avis et les retours/gi,
+            "informations publiées",
+        ],
+
+        [
+            /avis des clients/gi,
+            "informations publiées",
+        ],
+
+        [
+            /avis clients/gi,
+            "informations publiées",
+        ],
+
+        [
+            /retours des clients/gi,
+            "informations publiées",
+        ],
+
+        [
+            /facilitant ainsi l'accès aux services/gi,
+            "permettant de cibler une recherche locale",
+        ],
+
+        [
+            /facilitant ainsi l'accès/gi,
+            "permettant de cibler une recherche locale",
+        ],
+
         [
             /facilitant l'accès aux services/gi,
             "permettant de cibler une recherche selon la localisation",
         ],
+
         [
             /faciliter l'accès aux services/gi,
             "cibler une recherche selon la localisation",
         ],
+
         [
-            /chaque professionnel peut avoir des approches et des services différents/gi,
-            "les informations peuvent varier selon les profils disponibles",
+            /connaissent bien les besoins de la communauté locale/gi,
+            "sont présentés selon les informations disponibles",
         ],
+
         [
-            /chaque praticien peut avoir des approches différentes/gi,
-            "les informations peuvent varier selon les profils disponibles",
+            /pratique ancestrale/gi,
+            "domaine présent dans différentes sources et annuaires",
         ],
+
         [
             /dans la région/gi,
             `à ${cityDisplay}`,
@@ -442,9 +513,7 @@ function cleanGeneratedContent(content, keyword, city) {
         cleaned = cleaned.replace(pattern, replacement);
     }
 
-    /*
-     * Normalisation des titres principaux
-     */
+    /* Titres uniformisés */
 
     cleaned = cleaned.replace(
         /^##\s*Rechercher .*$/gim,
@@ -475,224 +544,265 @@ function cleanGeneratedContent(content, keyword, city) {
 }
 
 /* =========================================================
-   VALIDATION STRICTE DU CONTENU
+   VALIDATION STRICTE
 ========================================================= */
 
 function validateGeneratedContent(content, keyword, city) {
     const text = normalizeForCheck(content);
 
-    if (!text || text.length < 500) {
-        return {
-            valid: false,
-            reasons: ["contenu trop court"],
-        };
-    }
-
-    const forbiddenPatterns = [
-        {
-            test: /equilibre et harmonie/,
-            reason: "formulation autour de l'équilibre et de l'harmonie",
-        },
-        {
-            test: /maintenir l'equilibre/,
-            reason: "promesse autour du maintien de l'équilibre",
-        },
-        {
-            test: /energie vitale/,
-            reason: "référence à l'énergie vitale",
-        },
-        {
-            test: /\bqi\b/,
-            reason: "référence au Qi",
-        },
-        {
-            test: /favoriser le bien etre/,
-            reason: "promesse de bien-être",
-        },
-        {
-            test: /ameliore le bien etre/,
-            reason: "promesse d'amélioration du bien-être",
-        },
-        {
-            test: /garantit/,
-            reason: "garantie",
-        },
-        {
-            test: /garantie/,
-            reason: "garantie",
-        },
-        {
-            test: /guérir/,
-            reason: "promesse de guérison",
-        },
-        {
-            test: /guerir/,
-            reason: "promesse de guérison",
-        },
-        {
-            test: /guerison/,
-            reason: "référence à la guérison",
-        },
-        {
-            test: /traiter une maladie/,
-            reason: "affirmation médicale",
-        },
-        {
-            test: /traiter les maladies/,
-            reason: "affirmation médicale",
-        },
-        {
-            test: /prevenir les maladies/,
-            reason: "affirmation médicale",
-        },
-        {
-            test: /soigner/,
-            reason: "affirmation médicale",
-        },
-        {
-            test: /soins medicaux/,
-            reason: "affirmation médicale",
-        },
-        {
-            test: /efficacite demontree/,
-            reason: "preuve d'efficacité non sourcée",
-        },
-        {
-            test: /efficace pour/,
-            reason: "promesse d'efficacité",
-        },
-        {
-            test: /professionnel certifie/,
-            reason: "qualification non vérifiée",
-        },
-        {
-            test: /professionnels certifies/,
-            reason: "qualification non vérifiée",
-        },
-        {
-            test: /praticien qualifie/,
-            reason: "qualification non vérifiée",
-        },
-        {
-            test: /praticiens qualifies/,
-            reason: "qualification non vérifiée",
-        },
-        {
-            test: /professionnel qualifie/,
-            reason: "qualification non vérifiée",
-        },
-        {
-            test: /professionnels qualifies/,
-            reason: "qualification non vérifiée",
-        },
-        {
-            test: /certification necessaire/,
-            reason: "certification présentée comme nécessaire",
-        },
-        {
-            test: /certifications necessaires/,
-            reason: "certification présentée comme nécessaire",
-        },
-        {
-            test: /diplome necessaire/,
-            reason: "diplôme présenté comme nécessaire",
-        },
-        {
-            test: /diplomes necessaires/,
-            reason: "diplôme présenté comme nécessaire",
-        },
-        {
-            test: /vous accederez a une liste/,
-            reason: "promesse de liste exhaustive",
-        },
-        {
-            test: /vous pourrez trouver des professionnels/,
-            reason: "promesse de résultats",
-        },
-        {
-            test: /liste de professionnels et d'entreprises/,
-            reason: "affirmation de liste exhaustive",
-        },
-        {
-            test: /les coordonnees et les adresses des praticiens/,
-            reason: "informations non garanties",
-        },
-        {
-            test: /chaque professionnel peut avoir/,
-            reason: "affirmation générique non nécessaire",
-        },
-        {
-            test: /tous les professionnels/,
-            reason: "affirmation exhaustive",
-        },
-        {
-            test: /l'ensemble des professionnels/,
-            reason: "affirmation exhaustive",
-        },
-        {
-            test: /les meilleurs/,
-            reason: "affirmation de popularité",
-        },
-        {
-            test: /meilleur professionnel/,
-            reason: "affirmation de popularité",
-        },
-        {
-            test: /avis clients/,
-            reason: "avis non présents",
-        },
-        {
-            test: /nombre d'avis/,
-            reason: "avis non présents",
-        },
-        {
-            test: /note moyenne/,
-            reason: "note non sourcée",
-        },
-        {
-            test: /dans toute la region/,
-            reason: "portée géographique trop large",
-        },
-        {
-            test: /dans la region/,
-            reason: "portée géographique trop large",
-        },
-    ];
-
     const reasons = [];
 
-    for (const item of forbiddenPatterns) {
-        if (item.test.test(text)) {
-            reasons.push(item.reason);
+    if (!text || text.length < 500) {
+        reasons.push("contenu trop court");
+    }
+
+    const forbidden = [
+        [
+            /equilibre et harmonie/,
+            "formulation autour de l'équilibre et de l'harmonie",
+        ],
+
+        [
+            /maintenir l'equilibre/,
+            "promesse autour du maintien de l'équilibre",
+        ],
+
+        [
+            /energie vitale/,
+            "référence à l'énergie vitale",
+        ],
+
+        [
+            /\bqi\b/,
+            "référence au Qi",
+        ],
+
+        [
+            /favoriser le bien etre/,
+            "promesse autour du bien-être",
+        ],
+
+        [
+            /promouvoir le bien etre/,
+            "promesse autour du bien-être",
+        ],
+
+        [
+            /ameliore le bien etre/,
+            "promesse autour du bien-être",
+        ],
+
+        [
+            /garantit/,
+            "garantie",
+        ],
+
+        [
+            /garantie/,
+            "garantie",
+        ],
+
+        [
+            /guerir/,
+            "promesse de guérison",
+        ],
+
+        [
+            /guerison/,
+            "référence à la guérison",
+        ],
+
+        [
+            /traiter une maladie/,
+            "affirmation médicale",
+        ],
+
+        [
+            /traiter les maladies/,
+            "affirmation médicale",
+        ],
+
+        [
+            /prevenir les maladies/,
+            "affirmation médicale",
+        ],
+
+        [
+            /soigner/,
+            "affirmation médicale",
+        ],
+
+        [
+            /soins medicaux/,
+            "affirmation médicale",
+        ],
+
+        [
+            /efficacite demontree/,
+            "preuve d'efficacité non sourcée",
+        ],
+
+        [
+            /efficace pour/,
+            "promesse d'efficacité",
+        ],
+
+        [
+            /professionnel certifie/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /professionnels certifies/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /praticien qualifie/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /praticiens qualifies/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /professionnel qualifie/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /professionnels qualifies/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /certification necessaire/,
+            "certification non vérifiée",
+        ],
+
+        [
+            /certifications necessaires/,
+            "certification non vérifiée",
+        ],
+
+        [
+            /diplome necessaire/,
+            "diplôme non vérifié",
+        ],
+
+        [
+            /diplomes necessaires/,
+            "diplôme non vérifié",
+        ],
+
+        [
+            /vous accederez a une liste/,
+            "promesse de liste",
+        ],
+
+        [
+            /vous pourrez trouver/,
+            "promesse de résultat",
+        ],
+
+        [
+            /trouver un professionnel/,
+            "promesse de résultat",
+        ],
+
+        [
+            /trouver des professionnels/,
+            "promesse de résultat",
+        ],
+
+        [
+            /trouver celui qui correspond/,
+            "promesse de résultat",
+        ],
+
+        [
+            /avis et les retours/,
+            "avis non présents",
+        ],
+
+        [
+            /avis des clients/,
+            "avis non présents",
+        ],
+
+        [
+            /avis clients/,
+            "avis non présents",
+        ],
+
+        [
+            /retours des clients/,
+            "avis non présents",
+        ],
+
+        [
+            /facilitant ainsi l acces/,
+            "promesse implicite d'accès",
+        ],
+
+        [
+            /connaissent bien les besoins de la communaute locale/,
+            "affirmation non vérifiée",
+        ],
+
+        [
+            /les meilleurs/,
+            "affirmation de popularité",
+        ],
+
+        [
+            /meilleur professionnel/,
+            "affirmation de popularité",
+        ],
+
+        [
+            /tous les professionnels/,
+            "affirmation exhaustive",
+        ],
+
+        [
+            /l'ensemble des professionnels/,
+            "affirmation exhaustive",
+        ],
+
+        [
+            /liste de professionnels et d'entreprises/,
+            "affirmation exhaustive",
+        ],
+    ];
+
+    for (const [pattern, reason] of forbidden) {
+        if (pattern.test(text)) {
+            reasons.push(reason);
         }
     }
 
-    /*
-     * Vérification du mot-clé.
-     * On ne veut surtout pas que "médecine chinoise"
-     * devienne "médecin chinois".
-     */
-
     const expectedKeyword = normalizeForCheck(keyword);
+    const expectedCity = normalizeForCheck(city);
 
     if (
         expectedKeyword &&
-        !text.includes(expectedKeyword.replace(/[^\w\s-]/g, "").trim())
+        !text.includes(expectedKeyword)
     ) {
-        reasons.push("mot-clé principal insuffisamment présent");
+        reasons.push(
+            "mot-clé principal insuffisamment présent"
+        );
     }
-
-    /*
-     * Vérification locale.
-     */
-
-    const expectedCity = normalizeForCheck(city);
 
     if (
         expectedCity &&
         !text.includes(expectedCity)
     ) {
-        reasons.push("ville insuffisamment présente");
+        reasons.push(
+            "ville insuffisamment présente"
+        );
     }
 
     return {
@@ -702,422 +812,344 @@ function validateGeneratedContent(content, keyword, city) {
 }
 
 /* =========================================================
-   PROMPT PRINCIPAL
+   FALLBACK SECURISE
 ========================================================= */
 
-function buildGenerationPrompt({
+function buildFallbackContent(
     keyword,
     city,
-    profiles = [],
-}) {
-    const keywordDisplay = beautifyKeyword(keyword);
-    const cityDisplay = displayCity(city);
-
-    let directoryContext = "";
-
-    if (profiles.length > 0) {
-        const safeProfiles = profiles.slice(0, 10).map((profile) => ({
-            name: profile.name || "",
-            description: profile.description || "",
-            keyword: profile.keyword || "",
-            city: profile.city || "",
-        }));
-
-        directoryContext = `
-DONNÉES RÉELLES DISPONIBLES DANS L'ANNUAIRE :
-
-${JSON.stringify(safeProfiles, null, 2)}
-
-RÈGLE ABSOLUE :
-Tu ne dois utiliser que les informations réellement présentes dans ces données.
-N'invente aucune prestation, aucune adresse, aucun numéro, aucun diplôme,
-aucune certification, aucun avis, aucun horaire et aucune qualification.
-`;
-    } else {
-        directoryContext = `
-AUCUN PROFIL SPÉCIFIQUE N'EST FOURNI POUR CETTE RECHERCHE.
-
-Tu dois donc rester général et ne faire aucune affirmation sur des entreprises
-ou des professionnels précis.
-`;
-    }
-
-    return `
-Tu es un rédacteur SEO professionnel pour un annuaire local français.
-
-Tu dois rédiger une page SEO locale sur :
-
-MOT-CLÉ EXACT :
-"${keywordDisplay}"
-
-VILLE :
-"${cityDisplay}"
-
-OBJECTIF :
-Créer une page informative naturelle, utile et adaptée à une recherche locale.
-
-IMPORTANT :
-Le mot-clé "${keywordDisplay}" doit conserver exactement son sens.
-
-INTERDICTIONS STRICTES :
-
-- Ne transforme jamais le mot-clé en profession.
-- "médecine chinoise" ne doit jamais devenir "médecin chinois".
-- Ne présente jamais automatiquement une activité comme un métier.
-- Ne parle pas de qualification professionnelle sans information réelle.
-- Ne parle pas de certification ou diplôme sans information réelle.
-- N'invente aucune adresse.
-- N'invente aucun numéro de téléphone.
-- N'invente aucun horaire.
-- N'invente aucun avis client.
-- N'invente aucune note.
-- N'invente aucune prestation précise pour un professionnel.
-- N'affirme pas qu'un professionnel est qualifié ou certifié.
-- Ne dis pas qu'un service guérit, soigne, traite ou prévient une maladie.
-- Ne promets aucun résultat.
-- N'utilise pas "efficace pour".
-- N'utilise pas "garantit".
-- N'utilise pas "les meilleurs".
-- Ne présente pas une pratique comme ayant une efficacité médicale démontrée.
-- Ne parle pas de "Qi", "énergie vitale", "équilibre du corps", "harmonie du corps"
-  ou formulations similaires.
-- Ne présente pas une pratique comme permettant de maintenir ou restaurer
-  un équilibre physique ou psychologique.
-- Ne promets pas que l'utilisateur trouvera nécessairement un professionnel.
-- Ne prétends pas fournir une liste exhaustive.
-- Ne dis pas "vous accéderez à une liste de professionnels".
-- Ne dis pas "vous pourrez trouver des professionnels".
-- Ne dis pas "tous les professionnels".
-- Ne dis pas "l'ensemble des professionnels".
-- Ne prétends pas connaître tous les services disponibles dans la ville.
-
-STYLE :
-
-- Français naturel.
-- Ton professionnel.
-- SEO local sans bourrage de mots-clés.
-- Paragraphes courts.
-- Informations réellement utiles.
-- Pas de texte publicitaire excessif.
-- Pas de fausses promesses.
-- Pas de contenu médical affirmatif.
-- Entre 700 et 1000 mots environ.
-
-STRUCTURE OBLIGATOIRE :
-
-1. Introduction
-2. ## Rechercher ${keywordDisplay} à ${cityDisplay}
-3. ## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?
-4. ## Comment choisir un professionnel adapté à ${keywordDisplay} à ${cityDisplay} ?
-5. ## Rechercher un professionnel dans notre annuaire SEO
-6. ## Questions fréquentes
-7. ### Où rechercher ${keywordDisplay} à ${cityDisplay} ?
-8. ### Comment choisir un professionnel adapté à ${keywordDisplay} ?
-9. ### Quels peuvent être les avantages d'une recherche locale ?
-10. ## Conclusion
-
-POUR LA PARTIE ANNUAIRE :
-
-Explique simplement que la page permet de consulter les profils réellement
-présents dans l'annuaire et de comparer les informations affichées.
-
-Ne promets jamais un résultat.
-
-${directoryContext}
-
-RÈGLE FINALE :
-
-Le texte doit parler de "${keywordDisplay}" à "${cityDisplay}".
-Il doit conserver le sens exact du mot-clé.
-Il ne doit contenir aucune affirmation médicale, aucune qualification inventée,
-aucune information non vérifiée et aucune promesse.
-
-Retourne uniquement le contenu de la page.
-`;
-}
-
-/* =========================================================
-   PROMPT DE REPARATION
-========================================================= */
-
-function buildRepairPrompt({
-    content,
-    keyword,
-    city,
-    reasons = [],
-}) {
-    const keywordDisplay = beautifyKeyword(keyword);
-    const cityDisplay = displayCity(city);
-
-    return `
-Tu dois corriger une page SEO locale existante.
-
-MOT-CLÉ :
-"${keywordDisplay}"
-
-VILLE :
-"${cityDisplay}"
-
-PROBLÈMES DÉTECTÉS :
-${reasons.map((reason) => `- ${reason}`).join("\n")}
-
-CONTENU À CORRIGER :
-
-${content}
-
-CONSIGNES :
-
-1. Conserve le thème et l'intention SEO.
-2. Conserve "${keywordDisplay}" sans changer son sens.
-3. Ne transforme pas un domaine ou une activité en profession.
-4. Supprime toute affirmation médicale.
-5. Supprime toute promesse de guérison, de soin, d'efficacité ou de résultat.
-6. Supprime toute référence au Qi ou à l'énergie vitale.
-7. Supprime les formulations autour de l'équilibre ou de l'harmonie du corps.
-8. Supprime les qualifications, diplômes ou certifications non vérifiés.
-9. Ne crée aucune information sur les entreprises.
-10. Ne crée aucun avis.
-11. Ne crée aucune adresse.
-12. Ne crée aucun téléphone.
-13. Ne crée aucun horaire.
-14. Ne prétends pas fournir une liste exhaustive.
-15. Ne promets pas que l'utilisateur trouvera un professionnel.
-16. Garde une formulation neutre et informative.
-17. Conserve une structure SEO claire.
-
-Le résultat doit être un texte propre en français, prêt à être publié.
-`;
-}
-
-/* =========================================================
-   CONTENU DE SECOURS
-========================================================= */
-
-function buildFallbackContent(keyword, city, profiles = []) {
+    profiles = []
+) {
     const keywordDisplay = beautifyKeyword(keyword);
     const cityDisplay = displayCity(city);
 
     const hasProfiles = profiles.length > 0;
 
-    const profileText = hasProfiles
-        ? `
-Des profils correspondant à cette recherche sont actuellement présents dans
-notre annuaire. Les informations affichées sur cette page permettent de
-consulter les profils disponibles et de comparer les informations publiées.
-`
-        : `
-Aucun profil spécifique correspondant à cette recherche n'est actuellement
-présent dans les données disponibles sur cette page. La recherche peut
-néanmoins être utilisée pour consulter les évolutions futures de l'annuaire.
-`;
-
     return `
-La recherche « ${keywordDisplay} à ${cityDisplay} » permet de s'intéresser aux
-acteurs, entreprises ou services associés à ce domaine dans cette zone
-géographique. Cette page présente la recherche locale et indique les
-informations disponibles dans notre annuaire SEO.
+La recherche « ${keywordDisplay} à ${cityDisplay} » permet de cibler un domaine ou une activité dans une zone géographique précise. Cette page présente les informations disponibles dans notre annuaire SEO et peut servir de point de départ pour une recherche locale.
 
 ## Rechercher ${keywordDisplay} à ${cityDisplay}
 
-Une recherche locale permet de cibler une activité, un domaine ou un service
-en fonction d'une ville précise. Pour ${keywordDisplay} à ${cityDisplay},
-l'annuaire SEO peut servir de point de départ pour consulter les informations
-publiées sur les profils disponibles.
-
-La formulation de la recherche peut également être utilisée dans un moteur de
-recherche classique afin d'obtenir des résultats locaux correspondant au terme
-recherché.
+Une recherche locale permet de cibler ${keywordDisplay} en fonction d'une ville précise. Pour ${cityDisplay}, il est possible de consulter les informations publiées sur les profils disponibles dans l'annuaire ainsi que d'utiliser la même formulation dans un moteur de recherche.
 
 ## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?
 
-Les activités associées à ${keywordDisplay} peuvent varier selon les entreprises
-ou structures référencées. Il est donc préférable de consulter les informations
-effectivement publiées sur chaque profil plutôt que de supposer qu'un service
-particulier est disponible.
+Les activités associées à ${keywordDisplay} peuvent varier selon les entreprises ou structures référencées. Il est donc préférable de vérifier les informations réellement publiées sur chaque fiche avant de prendre contact.
 
-${profileText}
+${hasProfiles
+            ? "Des profils correspondant à cette recherche sont actuellement présents dans notre annuaire. Les informations affichées sur ces fiches peuvent être consultées et comparées."
+            : "Aucun profil spécifique correspondant à cette recherche n'est actuellement présent dans les données disponibles sur cette page."
+        }
 
 ## Comment choisir un professionnel adapté à ${keywordDisplay} à ${cityDisplay} ?
 
-Pour comparer les profils disponibles, il est utile de vérifier les
-informations réellement affichées sur chaque fiche, notamment l'activité
-déclarée, la localisation et les autres renseignements publiés dans
-l'annuaire.
-
-Une recherche locale permet ainsi de comparer plusieurs profils selon les
-informations disponibles, sans supposer que chaque entreprise propose les mêmes
-services.
+Pour comparer les profils disponibles, il est utile de vérifier l'activité déclarée, la localisation et les autres renseignements réellement publiés dans chaque fiche. Les informations peuvent varier d'un profil à l'autre.
 
 ## Rechercher un professionnel dans notre annuaire SEO
 
-Notre annuaire SEO permet de consulter des profils classés selon leur activité
-et leur localisation. Les résultats présentés dépendent des données réellement
-enregistrées dans l'annuaire.
-
-Pour une recherche portant sur ${keywordDisplay} à ${cityDisplay}, il est
-possible de parcourir les profils affichés puis de comparer les informations
-publiées sur chaque fiche.
+Notre annuaire SEO permet de consulter des profils classés selon leur activité et leur localisation. Les résultats présentés dépendent des données réellement enregistrées dans l'annuaire.
 
 ## Questions fréquentes
 
 ### Où rechercher ${keywordDisplay} à ${cityDisplay} ?
 
-La recherche peut être effectuée dans notre annuaire SEO ainsi que dans les
-moteurs de recherche en utilisant le terme « ${keywordDisplay} à ${cityDisplay} ».
+La recherche peut être effectuée dans notre annuaire SEO et dans les moteurs de recherche en utilisant le terme « ${keywordDisplay} à ${cityDisplay} ».
 
 ### Comment choisir un professionnel adapté à ${keywordDisplay} ?
 
-Il est recommandé de comparer les informations disponibles sur les différents
-profils et de vérifier les renseignements publiés avant de prendre contact.
+Il est conseillé de comparer les informations disponibles sur les différents profils et de vérifier les renseignements publiés avant de prendre contact.
 
 ### Quels peuvent être les avantages d'une recherche locale ?
 
-Une recherche locale permet de cibler les résultats selon une ville précise et
-de comparer plus facilement les informations publiées pour les profils
-disponibles.
+Une recherche locale permet de cibler les résultats selon une ville précise et de comparer les informations disponibles pour les profils publiés.
 
 ## Conclusion
 
-La recherche « ${keywordDisplay} à ${cityDisplay} » permet d'orienter les
-recherches vers une zone géographique précise. Notre annuaire présente les
-profils réellement disponibles et les informations qui leur sont associées.
-
-Pour obtenir une vue plus précise des possibilités disponibles, il est conseillé
-de consulter directement les fiches publiées dans l'annuaire.
+La recherche « ${keywordDisplay} à ${cityDisplay} » permet d'orienter les recherches vers une zone géographique précise. Notre annuaire présente les profils réellement disponibles et les informations qui leur sont associées.
 `.trim();
 }
 
 /* =========================================================
-   GENERATION IA
+   PROMPT IA
 ========================================================= */
 
-async function generateContent(slug) {
-    const parsed = await parseSlug(slug);
+function buildGenerationPrompt({
+    keyword,
+    city,
+    profiles,
+}) {
+    const keywordDisplay = beautifyKeyword(keyword);
+    const cityDisplay = displayCity(city);
 
-    const keyword = parsed.keyword;
-    const city = parsed.city;
+    const directoryContext =
+        profiles.length > 0
+            ? `
+DONNÉES RÉELLES DISPONIBLES :
 
-    const profiles = await getDirectoryContext(keyword, city);
+${JSON.stringify(
+                profiles.slice(0, 10).map((profile) => ({
+                    name: profile.name || "",
+                    description: profile.description || "",
+                    keyword: profile.keyword || "",
+                    city: profile.city || "",
+                })),
+                null,
+                2
+            )}
 
+Utilise uniquement ces données pour parler de profils précis.
+N'invente aucune adresse, téléphone, horaire, certification,
+diplôme, avis ou prestation.
+`
+            : `
+AUCUN PROFIL SPÉCIFIQUE N'EST FOURNI.
+
+Reste général et ne parle pas d'entreprise ou de professionnel précis.
+`;
+
+    return `
+Tu rédiges une page SEO locale française sur « ${keywordDisplay} à ${cityDisplay} ».
+
+RÈGLES ABSOLUES :
+
+- Conserve exactement le sens du mot-clé.
+- « médecine chinoise » ne doit jamais devenir « médecin chinois ».
+- Ne transforme pas une activité ou un domaine en profession.
+- N'invente aucune donnée.
+- Aucun avis client.
+- Aucun chiffre de recherche dans le texte.
+- Aucun CPC dans le texte.
+- Aucun revenu dans le texte.
+- Aucun trafic estimé dans le texte.
+- Aucune qualification, certification ou diplôme non fourni.
+- Aucune promesse médicale.
+- Ne dis pas guérir.
+- Ne dis pas soigner.
+- Ne dis pas traiter une maladie.
+- Ne dis pas prévenir une maladie.
+- N'utilise pas « efficace pour ».
+- N'utilise pas « garantit ».
+- Ne parle pas de Qi.
+- Ne parle pas d'énergie vitale.
+- Ne parle pas d'équilibre du corps.
+- Ne parle pas d'harmonie du corps.
+- Ne dis pas « vous pourrez trouver un professionnel ».
+- Ne dis pas « vous pourrez trouver des professionnels ».
+- Ne dis pas « trouver un professionnel » comme résultat garanti.
+- Ne dis pas « trouver des professionnels » comme résultat garanti.
+- Ne parle pas des « meilleurs ».
+- Ne parle pas d'avis ou de retours clients.
+- Ne dis pas « facilitant l'accès aux services ».
+- N'affirme pas qu'un professionnel connaît les besoins de la communauté locale.
+- Ne prétends pas fournir une liste exhaustive.
+
+STRUCTURE :
+
+Introduction
+
+## Rechercher ${keywordDisplay} à ${cityDisplay}
+
+## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?
+
+## Comment choisir un professionnel adapté à ${keywordDisplay} à ${cityDisplay} ?
+
+## Rechercher un professionnel dans notre annuaire SEO
+
+## Questions fréquentes
+
+### Où rechercher ${keywordDisplay} à ${cityDisplay} ?
+
+### Comment choisir un professionnel adapté à ${keywordDisplay} ?
+
+### Quels peuvent être les avantages d'une recherche locale ?
+
+## Conclusion
+
+Style naturel, informatif et professionnel.
+Évite le bourrage de mots-clés.
+Ne fais aucune promesse.
+Ne crée aucune information.
+
+${directoryContext}
+
+Retourne uniquement le contenu final de la page.
+`;
+}
+
+/* =========================================================
+   REPARATION IA
+========================================================= */
+
+async function repairContent(
+    content,
+    keyword,
+    city,
+    reasons
+) {
     if (!process.env.OPENAI_API_KEY) {
-        return {
-            content: buildFallbackContent(keyword, city, profiles),
-            keyword,
-            city,
-            profiles,
-            ai: false,
-        };
+        return "";
     }
 
-    const prompt = buildGenerationPrompt({
-        keyword,
-        city,
-        profiles,
-    });
+    const keywordDisplay = beautifyKeyword(keyword);
+    const cityDisplay = displayCity(city);
 
-    let content = "";
-
-    try {
-        const response = await openai.chat.completions.create({
+    const response =
+        await openai.chat.completions.create({
             model: "gpt-4o-mini",
-            temperature: 0.1,
+            temperature: 0,
             messages: [
                 {
                     role: "system",
                     content:
-                        "Tu es un rédacteur SEO français très rigoureux. Tu n'inventes aucune information et tu respectes strictement les contraintes fournies.",
+                        "Tu corriges un contenu SEO français. Tu supprimes toute affirmation non vérifiée et toute promesse. Tu n'inventes rien.",
                 },
                 {
                     role: "user",
-                    content: prompt,
+                    content: `
+Corrige cette page SEO sur « ${keywordDisplay} à ${cityDisplay} ».
+
+PROBLÈMES DÉTECTÉS :
+${reasons.map((r) => `- ${r}`).join("\n")}
+
+CONTENU :
+
+${content}
+
+CONSIGNES :
+
+- Conserve le sens exact du mot-clé.
+- Ne transforme jamais « médecine chinoise » en « médecin chinois ».
+- Supprime les avis et retours clients.
+- Supprime les promesses de résultat.
+- Supprime toute affirmation médicale.
+- Supprime les qualifications non vérifiées.
+- Supprime les références au Qi et à l'énergie vitale.
+- Supprime les formulations sur l'équilibre et l'harmonie du corps.
+- Ne promets jamais que l'utilisateur trouvera un professionnel.
+- N'invente aucune donnée.
+
+Retourne uniquement le contenu corrigé.
+`,
                 },
             ],
         });
 
-        content =
-            response?.choices?.[0]?.message?.content?.trim() || "";
-    } catch (error) {
-        console.error("OPENAI SEO GENERATION ERROR:", error);
+    return (
+        response?.choices?.[0]?.message?.content?.trim() ||
+        ""
+    );
+}
 
-        return {
-            content: buildFallbackContent(keyword, city, profiles),
-            keyword,
-            city,
-            profiles,
-            ai: false,
-        };
+/* =========================================================
+   GENERATION DU CONTENU
+========================================================= */
+
+async function generateContent(slug) {
+    const { keyword, city } = await parseSlug(slug);
+
+    const profiles = await getDirectoryContext(
+        keyword,
+        city
+    );
+
+    let content = "";
+
+    if (process.env.OPENAI_API_KEY) {
+        try {
+            const response =
+                await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    temperature: 0.1,
+                    messages: [
+                        {
+                            role: "system",
+                            content:
+                                "Tu es un rédacteur SEO français rigoureux. Tu respectes strictement les contraintes et n'inventes rien.",
+                        },
+                        {
+                            role: "user",
+                            content: buildGenerationPrompt({
+                                keyword,
+                                city,
+                                profiles,
+                            }),
+                        },
+                    ],
+                });
+
+            content =
+                response?.choices?.[0]?.message?.content?.trim() ||
+                "";
+        } catch (error) {
+            console.error(
+                "OPENAI SEO GENERATION ERROR:",
+                error.message
+            );
+        }
     }
 
-    content = cleanGeneratedContent(content, keyword, city);
+    if (!content) {
+        content = buildFallbackContent(
+            keyword,
+            city,
+            profiles
+        );
+    }
 
-    /*
-     * PREMIÈRE VALIDATION
-     */
-
-    let validation = validateGeneratedContent(
+    content = cleanGeneratedContent(
         content,
         keyword,
         city
     );
 
-    /*
-     * REPARATION AUTOMATIQUE
-     */
+    let validation =
+        validateGeneratedContent(
+            content,
+            keyword,
+            city
+        );
 
-    for (let attempt = 1; attempt <= 2 && !validation.valid; attempt++) {
+    /* Deux tentatives de réparation */
+
+    for (
+        let attempt = 1;
+        attempt <= 2 && !validation.valid;
+        attempt += 1
+    ) {
         try {
-            const repairPrompt = buildRepairPrompt({
-                content,
-                keyword,
-                city,
-                reasons: validation.reasons,
-            });
-
-            const repairedResponse =
-                await openai.chat.completions.create({
-                    model: "gpt-4o-mini",
-                    temperature: 0,
-                    messages: [
-                        {
-                            role: "system",
-                            content:
-                                "Tu corriges du contenu SEO français. Tu supprimes strictement les affirmations non vérifiées et les promesses. Tu ne dois rien inventer.",
-                        },
-                        {
-                            role: "user",
-                            content: repairPrompt,
-                        },
-                    ],
-                });
-
-            const repairedContent =
-                repairedResponse?.choices?.[0]?.message?.content?.trim() || "";
-
-            if (repairedContent) {
-                content = cleanGeneratedContent(
-                    repairedContent,
+            const repaired =
+                await repairContent(
+                    content,
                     keyword,
-                    city
+                    city,
+                    validation.reasons
                 );
 
-                validation = validateGeneratedContent(
+            if (!repaired) {
+                break;
+            }
+
+            content = cleanGeneratedContent(
+                repaired,
+                keyword,
+                city
+            );
+
+            validation =
+                validateGeneratedContent(
                     content,
                     keyword,
                     city
                 );
-            }
         } catch (error) {
             console.error(
-                `SEO CONTENT REPAIR ERROR attempt=${attempt}:`,
-                error
+                `SEO CONTENT REPAIR ERROR ${attempt}:`,
+                error.message
             );
         }
     }
 
-    /*
-     * SI LE TEXTE RESTE PROBLÉMATIQUE :
-     * ON UTILISE LE TEMPLATE DE SECOURS.
-     */
+    /* Fallback si le texte reste mauvais */
 
     if (!validation.valid) {
         console.warn(
@@ -1132,17 +1164,110 @@ async function generateContent(slug) {
         );
     }
 
+    /* Dernier contrôle */
+
+    const finalValidation =
+        validateGeneratedContent(
+            content,
+            keyword,
+            city
+        );
+
+    if (!finalValidation.valid) {
+        console.warn(
+            "SEO FINAL FALLBACK USED:",
+            finalValidation.reasons
+        );
+
+        content = buildFallbackContent(
+            keyword,
+            city,
+            profiles
+        );
+    }
+
     return {
-        content,
         keyword,
         city,
         profiles,
-        ai: true,
+        content,
     };
 }
 
 /* =========================================================
-   ROUTE : DIRECTORY PAGES
+   SAUVEGARDE / REGENERATION
+========================================================= */
+
+async function saveGeneratedPage(slug) {
+    const generated =
+        await generateContent(slug);
+
+    const keywordDisplay =
+        beautifyKeyword(
+            generated.keyword
+        );
+
+    const cityDisplay =
+        displayCity(
+            generated.city
+        );
+
+    const title =
+        `${keywordDisplay} à ${cityDisplay} | Annuaire SEO`;
+
+    const score = random(70, 95);
+    const volume = random(20, 800);
+    const difficulty = random(10, 70);
+    const cpc = Number(
+        (Math.random() * 4 + 0.2).toFixed(2)
+    );
+    const revenue = random(50, 1000);
+    const trend = generateTrend();
+
+    await db.run(
+        `
+      UPDATE seo_pages
+      SET
+        keyword = ?,
+        city = ?,
+        title = ?,
+        content = ?,
+        score = ?,
+        volume = ?,
+        difficulty = ?,
+        cpc = ?,
+        revenue = ?,
+        trend = ?
+      WHERE slug = ?
+    `,
+        [
+            generated.keyword,
+            generated.city,
+            title,
+            generated.content,
+            score,
+            volume,
+            difficulty,
+            cpc,
+            revenue,
+            trend,
+            slug,
+        ]
+    );
+
+    return db.get(
+        `
+      SELECT *
+      FROM seo_pages
+      WHERE slug = ?
+      LIMIT 1
+    `,
+        [slug]
+    );
+}
+
+/* =========================================================
+   DIRECTORY PAGES
 ========================================================= */
 
 router.get(
@@ -1150,32 +1275,41 @@ router.get(
     seoPageLimiter,
     async (req, res) => {
         try {
-            const requestedLimit = Number(req.query.limit || 30);
+            const requestedLimit =
+                Number(req.query.limit || 30);
 
             const limit = Math.min(
-                Math.max(Number.isFinite(requestedLimit) ? requestedLimit : 30, 1),
+                Math.max(
+                    Number.isFinite(
+                        requestedLimit
+                    )
+                        ? requestedLimit
+                        : 30,
+                    1
+                ),
                 100
             );
 
-            /*
-             * On récupère uniquement les villes réellement utilisées
-             * dans business_profiles.
-             */
+            const cityRows =
+                await db.all(`
+          SELECT DISTINCT city
+          FROM business_profiles
+          WHERE city IS NOT NULL
+            AND TRIM(city) != ''
+        `);
 
-            const cityRows = await db.all(`
-        SELECT DISTINCT city
-        FROM business_profiles
-        WHERE city IS NOT NULL
-          AND TRIM(city) != ''
-      `);
+            const validCities =
+                new Set(
+                    (cityRows || [])
+                        .map((row) =>
+                            slugify(
+                                row.city || ""
+                            )
+                        )
+                        .filter(Boolean)
+                );
 
-            const validCities = new Set(
-                (cityRows || [])
-                    .map((row) => slugify(row.city || ""))
-                    .filter(Boolean)
-            );
-
-            if (validCities.size === 0) {
+            if (!validCities.size) {
                 return res.json({
                     success: true,
                     pages: [],
@@ -1183,15 +1317,8 @@ router.get(
                 });
             }
 
-            /*
-             * On récupère davantage de résultats que nécessaire afin
-             * de pouvoir filtrer les anciennes pages mal formées.
-             */
-
-            const rawLimit = Math.min(limit * 3, 300);
-
-            const rows = await db.all(
-                `
+            const rows =
+                await db.all(`
           SELECT
             id,
             keyword,
@@ -1210,35 +1337,49 @@ router.get(
           WHERE slug IS NOT NULL
             AND TRIM(slug) != ''
           ORDER BY created_at DESC
-          LIMIT ${rawLimit}
-        `
-            );
+          LIMIT ${Math.min(
+                    limit * 3,
+                    300
+                )}
+        `);
 
-            const seen = new Set();
+            const seen =
+                new Set();
+
             const pages = [];
 
             for (const row of rows || []) {
-                const rowSlug = slugify(row.slug || "");
-                const rowCitySlug = slugify(row.city || "");
+                const rowSlug =
+                    slugify(
+                        row.slug || ""
+                    );
 
-                if (!rowSlug || !rowCitySlug) {
+                const rowCitySlug =
+                    slugify(
+                        row.city || ""
+                    );
+
+                if (
+                    !rowSlug ||
+                    !rowCitySlug ||
+                    !validCities.has(
+                        rowCitySlug
+                    )
+                ) {
                     continue;
                 }
 
-                /*
-                 * La page doit être liée à une vraie ville présente
-                 * dans l'annuaire.
-                 */
-
-                if (!validCities.has(rowCitySlug)) {
+                if (
+                    !rowSlug.endsWith(
+                        `-${rowCitySlug}`
+                    )
+                ) {
                     continue;
                 }
 
-                if (!rowSlug.endsWith(`-${rowCitySlug}`)) {
-                    continue;
-                }
-
-                if (seen.has(rowSlug)) {
+                if (
+                    seen.has(rowSlug)
+                ) {
                     continue;
                 }
 
@@ -1246,26 +1387,43 @@ router.get(
 
                 pages.push({
                     id: row.id,
-                    keyword: beautifyKeyword(row.keyword || ""),
-                    city: displayCity(row.city || ""),
+                    keyword:
+                        beautifyKeyword(
+                            row.keyword || ""
+                        ),
+                    city:
+                        displayCity(
+                            row.city || ""
+                        ),
                     slug: row.slug,
                     title:
                         row.title ||
-                        `${beautifyKeyword(row.keyword || "")} à ${displayCity(
+                        `${beautifyKeyword(
+                            row.keyword || ""
+                        )
+                        } à ${displayCity(
                             row.city || ""
-                        )} | Annuaire SEO`,
-                    content: row.content || "",
+                        )
+                        } | Annuaire SEO`,
+                    content:
+                        row.content || "",
                     score: row.score,
                     volume: row.volume,
-                    difficulty: row.difficulty,
-                    competition: row.difficulty,
+                    difficulty:
+                        row.difficulty,
+                    competition:
+                        row.difficulty,
                     cpc: row.cpc,
                     revenue: row.revenue,
                     trend: row.trend,
-                    created_at: row.created_at,
+                    created_at:
+                        row.created_at,
                 });
 
-                if (pages.length >= limit) {
+                if (
+                    pages.length >=
+                    limit
+                ) {
                     break;
                 }
             }
@@ -1273,21 +1431,26 @@ router.get(
             return res.json({
                 success: true,
                 pages,
-                count: pages.length,
+                count:
+                    pages.length,
             });
         } catch (error) {
-            console.error("DIRECTORY PAGES ERROR:", error);
+            console.error(
+                "DIRECTORY PAGES ERROR:",
+                error
+            );
 
             return res.status(500).json({
                 success: false,
-                message: "Erreur lors de la récupération des pages SEO.",
+                message:
+                    "Erreur lors de la récupération des pages SEO.",
             });
         }
     }
 );
 
 /* =========================================================
-   ROUTE : REGENERER UNE PAGE EXISTANTE
+   REGENERER UNE PAGE EXISTANTE
 ========================================================= */
 
 router.get(
@@ -1295,129 +1458,71 @@ router.get(
     seoPageLimiter,
     async (req, res) => {
         try {
-            const slug = slugify(req.query.slug || "");
+            const slug =
+                slugify(
+                    req.query.slug || ""
+                );
 
             if (!slug) {
                 return res.status(400).json({
                     success: false,
-                    message: "Slug manquant.",
+                    message:
+                        "Slug manquant.",
                 });
             }
 
-            const existingPage = await db.get(
-                `
-          SELECT *
-          FROM seo_pages
-          WHERE slug = ?
-          LIMIT 1
-        `,
-                [slug]
-            );
+            const existingPage =
+                await db.get(
+                    `
+            SELECT *
+            FROM seo_pages
+            WHERE slug = ?
+            LIMIT 1
+          `,
+                    [slug]
+                );
 
             if (!existingPage) {
                 return res.status(404).json({
                     success: false,
-                    message: "Page SEO introuvable.",
+                    message:
+                        "Page SEO introuvable.",
                 });
             }
 
-            const generated = await generateContent(slug);
-
-            const keyword = generated.keyword;
-            const city = generated.city;
-
-            const keywordDisplay = beautifyKeyword(keyword);
-            const cityDisplay = displayCity(city);
-
-            const title =
-                `${keywordDisplay} à ${cityDisplay} | Annuaire SEO`;
-
-            const content = cleanGeneratedContent(
-                generated.content,
-                keyword,
-                city
-            );
-
-            const finalValidation = validateGeneratedContent(
-                content,
-                keyword,
-                city
-            );
-
-            const finalContent = finalValidation.valid
-                ? content
-                : buildFallbackContent(
-                    keyword,
-                    city,
-                    generated.profiles
+            const updatedPage =
+                await saveGeneratedPage(
+                    slug
                 );
-
-            await db.run(
-                `
-          UPDATE seo_pages
-          SET
-            keyword = ?,
-            city = ?,
-            title = ?,
-            content = ?,
-            score = ?,
-            volume = ?,
-            difficulty = ?,
-            cpc = ?,
-            revenue = ?,
-            trend = ?
-          WHERE slug = ?
-        `,
-                [
-                    keyword,
-                    city,
-                    title,
-                    finalContent,
-                    random(70, 95),
-                    random(20, 800),
-                    random(10, 70),
-                    Number((Math.random() * 4 + 0.2).toFixed(2)),
-                    random(50, 1000),
-                    generateTrend(),
-                    slug,
-                ]
-            );
-
-            const updatedPage = await db.get(
-                `
-          SELECT *
-          FROM seo_pages
-          WHERE slug = ?
-          LIMIT 1
-        `,
-                [slug]
-            );
 
             return res.json({
                 success: true,
-                message: "Page SEO régénérée avec succès",
+                message:
+                    "Page SEO régénérée avec succès",
                 page: {
                     ...updatedPage,
-                    competition: updatedPage?.difficulty ?? null,
+                    competition:
+                        updatedPage?.difficulty ??
+                        null,
                 },
             });
         } catch (error) {
-            console.error("SEO REGENERATE ERROR:", error);
+            console.error(
+                "SEO REGENERATE ERROR:",
+                error
+            );
 
             return res.status(500).json({
                 success: false,
-                message: "Erreur lors de la régénération de la page SEO.",
-                error:
-                    process.env.NODE_ENV === "development"
-                        ? error.message
-                        : undefined,
+                message:
+                    "Erreur lors de la régénération de la page SEO.",
             });
         }
     }
 );
 
 /* =========================================================
-   ROUTE : RECUPERER / GENERER UNE PAGE SEO
+   RECUPERER / CREER UNE PAGE SEO
 ========================================================= */
 
 router.get(
@@ -1425,173 +1530,186 @@ router.get(
     seoPageLimiter,
     async (req, res) => {
         try {
-            const slug = slugify(req.query.slug || "");
+            const slug =
+                slugify(
+                    req.query.slug || ""
+                );
 
             if (!slug) {
                 return res.status(400).json({
                     success: false,
-                    message: "Slug manquant.",
+                    message:
+                        "Slug manquant.",
                 });
             }
 
-            /*
-             * On cherche d'abord une page existante.
-             */
-
-            let page = await db.get(
-                `
-          SELECT *
-          FROM seo_pages
-          WHERE slug = ?
-          LIMIT 1
-        `,
-                [slug]
-            );
+            let page =
+                await db.get(
+                    `
+            SELECT *
+            FROM seo_pages
+            WHERE slug = ?
+            LIMIT 1
+          `,
+                    [slug]
+                );
 
             /*
-             * Si elle existe déjà, on la renvoie.
+             * IMPORTANT :
+             * si une ancienne page existe mais contient
+             * un mauvais texte, on la régénère automatiquement.
              */
 
             if (page) {
-                return res.json({
-                    success: true,
-                    slug: page.slug,
-                    keyword: page.keyword,
-                    city: page.city,
-                    title: page.title,
-                    content: page.content,
-                    score: page.score,
-                    volume: page.volume,
-                    difficulty: page.difficulty,
-                    competition: page.difficulty,
-                    cpc: page.cpc,
-                    revenue: page.revenue,
-                    trend: page.trend,
-                    created_at: page.created_at,
-                });
-            }
+                const validation =
+                    validateGeneratedContent(
+                        page.content || "",
+                        page.keyword || "",
+                        page.city || ""
+                    );
 
-            /*
-             * Sinon, on génère.
-             */
+                const missingTitle =
+                    !page.title ||
+                    !String(
+                        page.title
+                    ).trim();
 
-            const generated = await generateContent(slug);
+                if (
+                    !validation.valid ||
+                    missingTitle
+                ) {
+                    console.log(
+                        "♻️ SEO OLD PAGE INVALID -> REGEN:",
+                        slug,
+                        validation.reasons
+                    );
 
-            const keyword = generated.keyword;
-            const city = generated.city;
+                    page =
+                        await saveGeneratedPage(
+                            slug
+                        );
+                }
+            } else {
+                const generated =
+                    await generateContent(
+                        slug
+                    );
 
-            const keywordDisplay = beautifyKeyword(keyword);
-            const cityDisplay = displayCity(city);
+                const title =
+                    `${beautifyKeyword(
+                        generated.keyword
+                    )
+                    } à ${displayCity(
+                        generated.city
+                    )
+                    } | Annuaire SEO`;
 
-            const title =
-                `${keywordDisplay} à ${cityDisplay} | Annuaire SEO`;
+                const score =
+                    random(70, 95);
 
-            let content = cleanGeneratedContent(
-                generated.content,
-                keyword,
-                city
-            );
+                const volume =
+                    random(20, 800);
 
-            const validation = validateGeneratedContent(
-                content,
-                keyword,
-                city
-            );
+                const difficulty =
+                    random(10, 70);
 
-            if (!validation.valid) {
-                content = buildFallbackContent(
-                    keyword,
-                    city,
-                    generated.profiles
+                const cpc =
+                    Number(
+                        (
+                            Math.random() *
+                            4 +
+                            0.2
+                        ).toFixed(2)
+                    );
+
+                const revenue =
+                    random(50, 1000);
+
+                const trend =
+                    generateTrend();
+
+                await db.run(
+                    `
+            INSERT INTO seo_pages (
+              keyword,
+              city,
+              slug,
+              title,
+              content,
+              score,
+              volume,
+              difficulty,
+              cpc,
+              revenue,
+              trend
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `,
+                    [
+                        generated.keyword,
+                        generated.city,
+                        slug,
+                        title,
+                        generated.content,
+                        score,
+                        volume,
+                        difficulty,
+                        cpc,
+                        revenue,
+                        trend,
+                    ]
                 );
+
+                page =
+                    await db.get(
+                        `
+              SELECT *
+              FROM seo_pages
+              WHERE slug = ?
+              LIMIT 1
+            `,
+                        [slug]
+                    );
             }
-
-            const score = random(70, 95);
-            const volume = random(20, 800);
-            const difficulty = random(10, 70);
-            const cpc = Number(
-                (Math.random() * 4 + 0.2).toFixed(2)
-            );
-            const revenue = random(50, 1000);
-            const trend = generateTrend();
-
-            await db.run(
-                `
-          INSERT INTO seo_pages (
-            keyword,
-            city,
-            slug,
-            title,
-            content,
-            score,
-            volume,
-            difficulty,
-            cpc,
-            revenue,
-            trend
-          )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `,
-                [
-                    keyword,
-                    city,
-                    slug,
-                    title,
-                    content,
-                    score,
-                    volume,
-                    difficulty,
-                    cpc,
-                    revenue,
-                    trend,
-                ]
-            );
-
-            page = await db.get(
-                `
-          SELECT *
-          FROM seo_pages
-          WHERE slug = ?
-          LIMIT 1
-        `,
-                [slug]
-            );
 
             return res.json({
                 success: true,
-                slug: page?.slug || slug,
-                keyword: page?.keyword || keyword,
-                city: page?.city || city,
-                title: page?.title || title,
-                content: page?.content || content,
-                score: page?.score ?? score,
-                volume: page?.volume ?? volume,
+                slug: page.slug,
+                keyword: page.keyword,
+                city: page.city,
+                title: page.title,
+                content: page.content,
+                score: page.score,
+                volume: page.volume,
                 difficulty:
-                    page?.difficulty ?? difficulty,
+                    page.difficulty,
                 competition:
-                    page?.difficulty ?? difficulty,
-                cpc: page?.cpc ?? cpc,
-                revenue: page?.revenue ?? revenue,
-                trend: page?.trend ?? trend,
-                created_at: page?.created_at || null,
+                    page.difficulty,
+                cpc: page.cpc,
+                revenue:
+                    page.revenue,
+                trend:
+                    page.trend,
+                created_at:
+                    page.created_at,
             });
         } catch (error) {
-            console.error("SEO PAGE ERROR:", error);
+            console.error(
+                "SEO PAGE ERROR:",
+                error
+            );
 
             return res.status(500).json({
                 success: false,
-                message: "Erreur lors de la récupération de la page SEO.",
-                error:
-                    process.env.NODE_ENV === "development"
-                        ? error.message
-                        : undefined,
+                message:
+                    "Erreur lors de la récupération de la page SEO.",
             });
         }
     }
 );
 
 /* =========================================================
-   EXPORT
+   EXPORT ESM
 ========================================================= */
 
 export default router;

@@ -1,7 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
 import OpenAI from "openai";
-import crypto from "crypto";
 
 import db from "../config/database.js";
 
@@ -29,14 +28,6 @@ const seoPageLimiter = rateLimit({
 /* =========================================================
    HELPERS
 ========================================================= */
-
-function hash(value = "") {
-    return crypto
-        .createHash("sha256")
-        .update(String(value))
-        .digest("hex")
-        .slice(0, 12);
-}
 
 function random(min, max) {
     return Math.floor(
@@ -164,8 +155,6 @@ async function parseSlug(slug = "") {
         ),
     ];
 
-    /* Recherche de la ville réelle la plus longue */
-
     for (const city of cities) {
         const citySlug = slugify(city);
 
@@ -193,17 +182,18 @@ async function parseSlug(slug = "") {
         }
     }
 
-    /* Fallback */
-
     const parts =
         cleanSlug.split("-");
 
     if (parts.length >= 2) {
-        const citySlug = parts.pop();
+        const citySlug =
+            parts.pop();
 
         return {
             keyword:
-                parts.join(" ").trim(),
+                parts
+                    .join(" ")
+                    .trim(),
             city:
                 citySlug
                     .replace(/-/g, " ")
@@ -287,7 +277,7 @@ async function getDirectoryContext(
 }
 
 /* =========================================================
-   NETTOYAGE DU CONTENU IA
+   NETTOYAGE CONTENU IA
 ========================================================= */
 
 function cleanGeneratedContent(
@@ -320,7 +310,9 @@ function cleanGeneratedContent(
             .trim();
 
     const replacements = [
-        /* Erreurs médecine chinoise */
+        /* =========================
+           MOT-CLE
+        ========================= */
 
         [
             /médecin chinois/gi,
@@ -332,7 +324,9 @@ function cleanGeneratedContent(
             keywordDisplay,
         ],
 
-        /* Qualifications */
+        /* =========================
+           QUALIFICATIONS
+        ========================= */
 
         [
             /professionnels de santé spécialisés/gi,
@@ -394,7 +388,9 @@ function cleanGeneratedContent(
             "informations disponibles sur le profil",
         ],
 
-        /* Santé / bien-être */
+        /* =========================
+           SANTE / BIEN-ETRE
+        ========================= */
 
         [
             /maintenir l'équilibre et l'harmonie/gi,
@@ -437,6 +433,11 @@ function cleanGeneratedContent(
         ],
 
         [
+            /favoriser la circulation/gi,
+            "présenter certaines pratiques associées",
+        ],
+
+        [
             /favoriser le bien-être/gi,
             "présenter ce domaine",
         ],
@@ -457,11 +458,28 @@ function cleanGeneratedContent(
         ],
 
         [
+            /améliorer la santé/gi,
+            "présenter ce domaine",
+        ],
+
+        [
+            /ameliorer la sante/gi,
+            "présenter ce domaine",
+        ],
+
+        [
             /offrir une approche différente du bien-être et de la santé/gi,
             "présenter différentes pratiques associées à ce domaine",
         ],
 
-        /* Promesses médicales */
+        [
+            /offre une approche différente du bien-être et de la santé/gi,
+            "présente différentes pratiques associées à ce domaine",
+        ],
+
+        /* =========================
+           PROMESSES MEDICALES
+        ========================= */
 
         [
             /guérir/gi,
@@ -489,11 +507,6 @@ function cleanGeneratedContent(
         ],
 
         [
-            /soins médicaux/gi,
-            "services présentés",
-        ],
-
-        [
             /soigner/gi,
             "proposer",
         ],
@@ -501,6 +514,11 @@ function cleanGeneratedContent(
         [
             /soigne/gi,
             "propose",
+        ],
+
+        [
+            /soins médicaux/gi,
+            "services présentés",
         ],
 
         [
@@ -523,7 +541,9 @@ function cleanGeneratedContent(
             "présentation",
         ],
 
-        /* Avis */
+        /* =========================
+           AVIS
+        ========================= */
 
         [
             /les avis d'autres personnes/gi,
@@ -555,7 +575,9 @@ function cleanGeneratedContent(
             "les informations publiées",
         ],
 
-        /* Recherche de professionnels */
+        /* =========================
+           PROMESSES DE RESULTAT
+        ========================= */
 
         [
             /vous accéderez à une liste de professionnels/gi,
@@ -617,7 +639,9 @@ function cleanGeneratedContent(
             "comparer les informations disponibles.",
         ],
 
-        /* Accès / communauté */
+        /* =========================
+           LOCAL / COMMUNAUTE
+        ========================= */
 
         [
             /facilitant ainsi l'accès aux services/gi,
@@ -645,11 +669,18 @@ function cleanGeneratedContent(
         ],
 
         [
+            /besoins de la communauté locale/gi,
+            "informations disponibles selon la localisation",
+        ],
+
+        [
             /dans la région/gi,
             `à ${cityDisplay}`,
         ],
 
-        /* Anciennes formulations SEO */
+        /* =========================
+           ANCIENS CONTENUS SEO
+        ========================= */
 
         [
             /trafic qualifié/gi,
@@ -696,15 +727,16 @@ function cleanGeneratedContent(
         pattern,
         replacement,
     ] of replacements) {
-        cleaned = cleaned.replace(
-            pattern,
-            replacement
-        );
+        cleaned =
+            cleaned.replace(
+                pattern,
+                replacement
+            );
     }
 
-    /* =====================================================
-       NORMALISATION DES TITRES
-    ===================================================== */
+    /* =========================
+       TITRES
+    ========================= */
 
     cleaned =
         cleaned.replace(
@@ -789,6 +821,11 @@ function validateGeneratedContent(
         ],
 
         [
+            /favoriser la circulation/,
+            "favoriser la circulation",
+        ],
+
+        [
             /favoriser le bien etre/,
             "promesse de bien-être",
         ],
@@ -801,6 +838,16 @@ function validateGeneratedContent(
         [
             /ameliore le bien etre/,
             "promesse de bien-être",
+        ],
+
+        [
+            /ameliorer le bien etre/,
+            "promesse de bien-être",
+        ],
+
+        [
+            /ameliorer la sante/,
+            "formulation santé",
         ],
 
         [
@@ -874,22 +921,22 @@ function validateGeneratedContent(
         ],
 
         [
-            /praticien qualifie/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /praticiens qualifies/,
-            "qualification non vérifiée",
-        ],
-
-        [
             /professionnel qualifie/,
             "qualification non vérifiée",
         ],
 
         [
             /professionnels qualifies/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /praticien qualifie/,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /praticiens qualifies/,
             "qualification non vérifiée",
         ],
 
@@ -979,7 +1026,7 @@ function validateGeneratedContent(
         ],
 
         [
-            /facilitant ainsi l acces aux services/,
+            /facilitant ainsi l acces/,
             "formulation d'accès",
         ],
 
@@ -1063,14 +1110,18 @@ function validateGeneratedContent(
         pattern,
         reason,
     ] of forbiddenPatterns) {
-        if (pattern.test(text)) {
-            reasons.push(reason);
+        if (
+            pattern.test(text)
+        ) {
+            reasons.push(
+                reason
+            );
         }
     }
 
-    /* =====================================================
-       MOT-CLÉ
-    ===================================================== */
+    /* =========================
+       MOT-CLE
+    ========================= */
 
     const expectedKeyword =
         normalizeForCheck(
@@ -1088,12 +1139,14 @@ function validateGeneratedContent(
         );
     }
 
-    /* =====================================================
+    /* =========================
        VILLE
-    ===================================================== */
+    ========================= */
 
     const expectedCity =
-        normalizeForCheck(city);
+        normalizeForCheck(
+            city
+        );
 
     if (
         expectedCity &&
@@ -1114,7 +1167,7 @@ function validateGeneratedContent(
 }
 
 /* =========================================================
-   FALLBACK SECURISE
+   FALLBACK
 ========================================================= */
 
 function buildFallbackContent(
@@ -1178,7 +1231,7 @@ La recherche « ${keywordDisplay} à ${cityDisplay} » permet d'orienter les rec
 }
 
 /* =========================================================
-   PROMPT PRINCIPAL
+   PROMPT IA
 ========================================================= */
 
 function buildGenerationPrompt({
@@ -1196,20 +1249,28 @@ function buildGenerationPrompt({
 
     let directoryContext = "";
 
-    if (profiles.length > 0) {
+    if (
+        profiles.length > 0
+    ) {
         const safeProfiles =
             profiles
                 .slice(0, 10)
-                .map((profile) => ({
-                    name:
-                        profile.name || "",
-                    description:
-                        profile.description || "",
-                    keyword:
-                        profile.keyword || "",
-                    city:
-                        profile.city || "",
-                }));
+                .map(
+                    (profile) => ({
+                        name:
+                            profile.name ||
+                            "",
+                        description:
+                            profile.description ||
+                            "",
+                        keyword:
+                            profile.keyword ||
+                            "",
+                        city:
+                            profile.city ||
+                            "",
+                    })
+                );
 
         directoryContext = `
 DONNÉES RÉELLES DISPONIBLES DANS L'ANNUAIRE :
@@ -1220,101 +1281,93 @@ ${JSON.stringify(
             2
         )}
 
-RÈGLE :
-Utilise uniquement les informations présentes dans ces données pour parler des profils.
+Tu ne dois utiliser que ces informations pour parler de profils précis.
 
-N'invente aucune adresse.
-N'invente aucun téléphone.
-N'invente aucun horaire.
-N'invente aucune certification.
-N'invente aucun diplôme.
-N'invente aucun avis.
-N'invente aucune prestation.
-N'invente aucune qualification.
+N'invente :
+- aucune adresse ;
+- aucun numéro ;
+- aucun horaire ;
+- aucun avis ;
+- aucune certification ;
+- aucun diplôme ;
+- aucune qualification ;
+- aucune prestation.
 `;
     } else {
         directoryContext = `
 AUCUN PROFIL SPÉCIFIQUE N'EST FOURNI.
 
-Reste général.
-Ne parle d'aucune entreprise ou personne précise.
+Reste général et ne parle d'aucune entreprise ou personne précise.
 `;
     }
 
     return `
-Tu rédiges une page SEO locale française.
+Tu rédiges une page SEO locale française sur :
 
-MOT-CLÉ :
-"${keywordDisplay}"
+"${keywordDisplay}" à "${cityDisplay}"
 
-VILLE :
-"${cityDisplay}"
-
-OBJECTIF :
-
-Créer une page informative naturelle et utile sur cette recherche locale.
-
-RÈGLE ABSOLUE SUR LE MOT-CLÉ :
+RÈGLE ABSOLUE :
 
 Le mot-clé doit conserver exactement son sens.
 
-Par exemple :
+"médecine chinoise" doit rester "médecine chinoise".
+Ne transforme jamais ce terme en "médecin chinois".
 
-"médecine chinoise" = médecine chinoise.
+INTERDICTIONS :
 
-Ne transforme jamais "médecine chinoise" en "médecin chinois".
+- aucune invention ;
+- aucun avis client ;
+- aucun chiffre de recherche ;
+- aucun CPC ;
+- aucun revenu ;
+- aucun potentiel financier ;
+- aucun trafic estimé ;
+- aucune donnée SEO dans le texte ;
+- aucune certification inventée ;
+- aucun diplôme inventé ;
+- aucune qualification inventée ;
+- aucune adresse inventée ;
+- aucun téléphone inventé ;
+- aucun horaire inventé ;
+- aucune promesse médicale ;
+- aucun traitement ;
+- aucune guérison ;
+- aucun soin présenté comme efficace ;
+- aucune promesse de résultat ;
+- aucune garantie ;
+- aucun "Qi" ;
+- aucune "énergie vitale" ;
+- aucun "équilibre du corps" ;
+- aucune "harmonie du corps" ;
+- aucune affirmation sur l'efficacité ;
+- aucun avis ;
+- aucun "meilleur professionnel" ;
+- aucune liste exhaustive ;
+- aucune promesse de trouver un professionnel ;
+- aucune expression "vous pourrez trouver" ;
+- aucune expression "pour trouver un professionnel" ;
+- aucune expression "pour trouver des professionnels" ;
+- aucune expression "trouver des praticiens" ;
+- aucune affirmation selon laquelle des professionnels connaissent les besoins de la communauté.
 
-INTERDICTIONS ABSOLUES :
-
-- Ne transforme jamais une activité en profession.
-- Ne transforme jamais un domaine en métier.
-- N'invente aucune information.
-- Aucun avis client.
-- Aucun nombre de recherches mensuelles dans le texte.
-- Aucun CPC dans le texte.
-- Aucun revenu dans le texte.
-- Aucun potentiel financier dans le texte.
-- Aucun trafic estimé dans le texte.
-- Aucune donnée SEO simulée dans le texte.
-- Aucune qualification non fournie.
-- Aucun diplôme non fourni.
-- Aucune certification non fournie.
-- Aucune adresse non fournie.
-- Aucun téléphone non fourni.
-- Aucun horaire non fourni.
-- Aucune promesse médicale.
-- Ne dis pas guérir.
-- Ne dis pas soigner.
-- Ne dis pas traiter une maladie.
-- Ne dis pas prévenir une maladie.
-- Ne dis pas efficace pour.
-- Ne dis pas garantit.
-- Ne dis pas les meilleurs.
-- Ne parle pas d'avis clients.
-- Ne parle pas de retours clients.
-- Ne parle pas de Qi.
-- Ne parle pas d'énergie vitale.
-- Ne parle pas d'équilibre du corps.
-- Ne parle pas d'harmonie du corps.
-- Ne dis pas que la pratique maintient ou restaure l'équilibre du corps.
-- Ne dis pas que les professionnels connaissent les besoins de la communauté locale.
-- Ne promets jamais que l'utilisateur trouvera un professionnel.
-- Ne dis pas "vous pourrez trouver".
-- Ne dis pas "pour trouver un professionnel".
-- Ne dis pas "pour trouver des professionnels".
-- Ne prétends jamais fournir une liste exhaustive.
+Ne dis jamais :
+"favoriser la circulation"
+"améliorer la santé"
+"promouvoir le bien-être"
+"garantir"
+"efficace pour"
+"les meilleurs"
+"avis clients".
 
 STYLE :
 
-- Français naturel.
-- Ton professionnel.
-- Informatif.
-- Neutre.
-- SEO local naturel.
-- Paragraphes courts.
-- Pas de bourrage de mots-clés.
-- Pas de publicité excessive.
-- Pas de promesse.
+- français naturel ;
+- professionnel ;
+- informatif ;
+- neutre ;
+- SEO local naturel ;
+- pas de bourrage de mots-clés ;
+- pas de publicité excessive.
 
 STRUCTURE :
 
@@ -1342,17 +1395,11 @@ Introduction
 
 PARTIE ANNUAIRE :
 
-Explique simplement que l'annuaire permet de consulter les profils réellement disponibles et de comparer les informations affichées.
-
-Ne promets aucun résultat.
+Explique uniquement que l'annuaire permet de consulter les profils réellement disponibles et les informations publiées sur leurs fiches.
 
 ${directoryContext}
 
-IMPORTANT :
-
-Le texte doit parler de "${keywordDisplay}" à "${cityDisplay}".
-
-Retourne uniquement le contenu final de la page.
+Retourne uniquement le contenu final.
 `;
 }
 
@@ -1380,21 +1427,22 @@ async function repairContent(
     const cityDisplay =
         displayCity(city);
 
-    const response =
-        await openai.chat.completions.create(
-            {
-                model:
-                    "gpt-4o-mini",
-                temperature: 0,
-                messages: [
-                    {
-                        role: "system",
-                        content:
-                            "Tu corriges strictement du contenu SEO français. Tu ne dois rien inventer.",
-                    },
-                    {
-                        role: "user",
-                        content: `
+    try {
+        const response =
+            await openai.chat.completions.create(
+                {
+                    model:
+                        "gpt-4o-mini",
+                    temperature: 0,
+                    messages: [
+                        {
+                            role: "system",
+                            content:
+                                "Tu corriges strictement un texte SEO français. Tu ne dois rien inventer.",
+                        },
+                        {
+                            role: "user",
+                            content: `
 Corrige cette page SEO locale.
 
 MOT-CLÉ :
@@ -1403,55 +1451,63 @@ MOT-CLÉ :
 VILLE :
 "${cityDisplay}"
 
-PROBLÈMES :
-
+PROBLÈMES DÉTECTÉS :
 ${reasons
-                                .map(
-                                    (reason) =>
-                                        `- ${reason}`
-                                )
-                                .join("\n")}
+                                    .map(
+                                        (reason) =>
+                                            `- ${reason}`
+                                    )
+                                    .join("\n")}
 
 CONTENU :
 
 ${content}
 
-CONSIGNES :
+RÈGLES :
 
-- Conserve le sens exact du mot-clé.
+- Le mot-clé doit conserver exactement son sens.
 - "médecine chinoise" reste "médecine chinoise".
-- Ne transforme jamais le mot-clé en profession.
-- Supprime les avis.
-- Supprime les promesses.
+- Supprime tous les avis.
+- Supprime les promesses de résultat.
 - Supprime toute affirmation médicale.
 - Supprime Qi.
 - Supprime énergie vitale.
 - Supprime équilibre du corps.
 - Supprime harmonie du corps.
+- Supprime "favoriser la circulation".
+- Supprime "améliorer la santé".
 - Supprime toute qualification non vérifiée.
 - Supprime toute donnée SEO.
 - Supprime tout chiffre de recherches mensuelles.
 - Supprime CPC, revenu, potentiel et trafic.
 - Ne promets pas que l'utilisateur trouvera quelqu'un.
 - N'invente rien.
-- Garde une structure SEO claire.
 
 Retourne uniquement le contenu corrigé.
 `,
-                    },
-                ],
-            }
+                        },
+                    ],
+                }
+            );
+
+        return (
+            response?.choices?.[0]
+                ?.message
+                ?.content
+                ?.trim() || ""
+        );
+    } catch (error) {
+        console.error(
+            "SEO CONTENT REPAIR ERROR:",
+            error.message
         );
 
-    return (
-        response?.choices?.[0]?.message
-            ?.content
-            ?.trim() || ""
-    );
+        return "";
+    }
 }
 
 /* =========================================================
-   GENERATION CONTENU
+   GENERATION DU CONTENU
 ========================================================= */
 
 async function generateContent(
@@ -1474,9 +1530,9 @@ async function generateContent(
 
     let content = "";
 
-    /* =====================================================
-       GENERATION OPENAI
-    ===================================================== */
+    /* =========================
+       IA
+    ========================= */
 
     if (
         process.env.OPENAI_API_KEY
@@ -1492,7 +1548,7 @@ async function generateContent(
                             {
                                 role: "system",
                                 content:
-                                    "Tu es un rédacteur SEO français rigoureux. Respecte strictement les contraintes et n'invente aucune donnée.",
+                                    "Tu es un rédacteur SEO français extrêmement rigoureux. Tu ne dois rien inventer.",
                             },
                             {
                                 role: "user",
@@ -1520,9 +1576,9 @@ async function generateContent(
         }
     }
 
-    /* =====================================================
-       FALLBACK SI OPENAI ECHOUE
-    ===================================================== */
+    /* =========================
+       FALLBACK
+    ========================= */
 
     if (!content) {
         content =
@@ -1533,9 +1589,9 @@ async function generateContent(
             );
     }
 
-    /* =====================================================
+    /* =========================
        NETTOYAGE
-    ===================================================== */
+    ========================= */
 
     content =
         cleanGeneratedContent(
@@ -1544,9 +1600,9 @@ async function generateContent(
             city
         );
 
-    /* =====================================================
+    /* =========================
        VALIDATION
-    ===================================================== */
+    ========================= */
 
     let validation =
         validateGeneratedContent(
@@ -1555,9 +1611,9 @@ async function generateContent(
             city
         );
 
-    /* =====================================================
-       DEUX TENTATIVES DE REPARATION
-    ===================================================== */
+    /* =========================
+       REPARATIONS
+    ========================= */
 
     for (
         let attempt = 1;
@@ -1565,43 +1621,36 @@ async function generateContent(
         !validation.valid;
         attempt++
     ) {
-        try {
-            const repaired =
-                await repairContent(
-                    content,
-                    keyword,
-                    city,
-                    validation.reasons
-                );
-
-            if (!repaired) {
-                break;
-            }
-
-            content =
-                cleanGeneratedContent(
-                    repaired,
-                    keyword,
-                    city
-                );
-
-            validation =
-                validateGeneratedContent(
-                    content,
-                    keyword,
-                    city
-                );
-        } catch (error) {
-            console.error(
-                `SEO CONTENT REPAIR ERROR ${attempt}:`,
-                error.message
+        const repaired =
+            await repairContent(
+                content,
+                keyword,
+                city,
+                validation.reasons
             );
+
+        if (!repaired) {
+            break;
         }
+
+        content =
+            cleanGeneratedContent(
+                repaired,
+                keyword,
+                city
+            );
+
+        validation =
+            validateGeneratedContent(
+                content,
+                keyword,
+                city
+            );
     }
 
-    /* =====================================================
+    /* =========================
        FALLBACK FINAL
-    ===================================================== */
+    ========================= */
 
     if (!validation.valid) {
         console.warn(
@@ -1617,26 +1666,22 @@ async function generateContent(
             );
     }
 
-    /* =====================================================
-       DERNIER CONTROLE
-    ===================================================== */
+    /* =========================
+       VERIFICATION FINALE
+    ========================= */
 
-    let finalValidation =
+    const finalValidation =
         validateGeneratedContent(
             content,
             keyword,
             city
         );
 
-    /*
-     * Le fallback lui-même doit être sûr.
-     */
-
     if (
         !finalValidation.valid
     ) {
         console.warn(
-            "SEO FINAL FALLBACK CHECK FAILED:",
+            "SEO FINAL FALLBACK USED:",
             finalValidation.reasons
         );
 
@@ -1645,13 +1690,6 @@ async function generateContent(
                 keyword,
                 city,
                 []
-            );
-
-        finalValidation =
-            validateGeneratedContent(
-                content,
-                keyword,
-                city
             );
     }
 
@@ -1664,7 +1702,7 @@ async function generateContent(
 }
 
 /* =========================================================
-   SAUVEGARDER UNE PAGE EXISTANTE
+   SAUVEGARDE
 ========================================================= */
 
 async function saveGeneratedPage(
@@ -1813,12 +1851,6 @@ router.get(
                 });
             }
 
-            const rawLimit =
-                Math.min(
-                    limit * 3,
-                    300
-                );
-
             const rows =
                 await db.all(`
           SELECT
@@ -1839,7 +1871,10 @@ router.get(
           WHERE slug IS NOT NULL
             AND TRIM(slug) != ''
           ORDER BY created_at DESC
-          LIMIT ${rawLimit}
+          LIMIT ${Math.min(
+                    limit * 3,
+                    300
+                )}
         `);
 
             const seen =
@@ -1885,9 +1920,7 @@ router.get(
                 }
 
                 if (
-                    seen.has(
-                        rowSlug
-                    )
+                    seen.has(rowSlug)
                 ) {
                     continue;
                 }
@@ -1987,7 +2020,10 @@ router.get(
 );
 
 /* =========================================================
-   REGENERER UNE PAGE
+   REGENERER UNE PAGE EXISTANTE
+   IMPORTANT :
+   On conserve le slug exact de la base,
+   y compris les accents.
 ========================================================= */
 
 router.get(
@@ -1998,13 +2034,18 @@ router.get(
         res
     ) => {
         try {
-            const slug =
-                slugify(
+            const requestedSlug =
+                String(
                     req.query.slug ||
                     ""
+                ).trim();
+
+            const normalizedSlug =
+                slugify(
+                    requestedSlug
                 );
 
-            if (!slug) {
+            if (!requestedSlug) {
                 return res.status(
                     400
                 ).json({
@@ -2014,7 +2055,11 @@ router.get(
                 });
             }
 
-            const existingPage =
+            /*
+             * 1. Recherche avec le slug EXACT
+             */
+
+            let existingPage =
                 await db.get(
                     `
             SELECT *
@@ -2022,8 +2067,29 @@ router.get(
             WHERE slug = ?
             LIMIT 1
           `,
-                    [slug]
+                    [requestedSlug]
                 );
+
+            /*
+             * 2. Fallback avec slug normalisé
+             */
+
+            if (
+                !existingPage &&
+                normalizedSlug !==
+                requestedSlug
+            ) {
+                existingPage =
+                    await db.get(
+                        `
+              SELECT *
+              FROM seo_pages
+              WHERE slug = ?
+              LIMIT 1
+            `,
+                        [normalizedSlug]
+                    );
+            }
 
             if (
                 !existingPage
@@ -2037,9 +2103,27 @@ router.get(
                 });
             }
 
+            /*
+             * IMPORTANT :
+             * on utilise le slug réellement présent
+             * dans SQLite.
+             */
+
+            const slugToRegenerate =
+                existingPage.slug;
+
+            console.log(
+                "♻️ SEO REGEN:",
+                {
+                    requestedSlug,
+                    slugToRegenerate,
+                    id: existingPage.id,
+                }
+            );
+
             const updatedPage =
                 await saveGeneratedPage(
-                    slug
+                    slugToRegenerate
                 );
 
             return res.json({
@@ -2074,7 +2158,7 @@ router.get(
 );
 
 /* =========================================================
-   RECUPERER OU CREER UNE PAGE
+   RECUPERER / CREER UNE PAGE
 ========================================================= */
 
 router.get(
@@ -2085,13 +2169,18 @@ router.get(
         res
     ) => {
         try {
-            const slug =
-                slugify(
+            const requestedSlug =
+                String(
                     req.query.slug ||
                     ""
+                ).trim();
+
+            const normalizedSlug =
+                slugify(
+                    requestedSlug
                 );
 
-            if (!slug) {
+            if (!requestedSlug) {
                 return res.status(
                     400
                 ).json({
@@ -2101,6 +2190,10 @@ router.get(
                 });
             }
 
+            /*
+             * Recherche exacte en premier.
+             */
+
             let page =
                 await db.get(
                     `
@@ -2109,8 +2202,30 @@ router.get(
             WHERE slug = ?
             LIMIT 1
           `,
-                    [slug]
+                    [requestedSlug]
                 );
+
+            /*
+             * Fallback normalisé uniquement
+             * si nécessaire.
+             */
+
+            if (
+                !page &&
+                normalizedSlug !==
+                requestedSlug
+            ) {
+                page =
+                    await db.get(
+                        `
+              SELECT *
+              FROM seo_pages
+              WHERE slug = ?
+              LIMIT 1
+            `,
+                        [normalizedSlug]
+                    );
+            }
 
             /* ===================================================
                PAGE EXISTANTE
@@ -2134,8 +2249,8 @@ router.get(
                     ).trim();
 
                 /*
-                 * Si l'ancienne page est mauvaise,
-                 * on la régénère automatiquement.
+                 * Ancienne page invalide :
+                 * on la régénère.
                  */
 
                 if (
@@ -2144,13 +2259,13 @@ router.get(
                 ) {
                     console.log(
                         "♻️ SEO OLD PAGE INVALID -> REGEN:",
-                        slug,
+                        page.slug,
                         validation.reasons
                     );
 
                     page =
                         await saveGeneratedPage(
-                            slug
+                            page.slug
                         );
                 }
             }
@@ -2162,7 +2277,7 @@ router.get(
             if (!page) {
                 const generated =
                     await generateContent(
-                        slug
+                        requestedSlug
                     );
 
                 const keywordDisplay =
@@ -2222,7 +2337,7 @@ router.get(
                     [
                         generated.keyword,
                         generated.city,
-                        slug,
+                        requestedSlug,
                         title,
                         generated.content,
                         score,
@@ -2242,7 +2357,7 @@ router.get(
               WHERE slug = ?
               LIMIT 1
             `,
-                        [slug]
+                        [requestedSlug]
                     );
             }
 
@@ -2252,43 +2367,30 @@ router.get(
 
             return res.json({
                 success: true,
-
                 slug:
                     page.slug,
-
                 keyword:
                     page.keyword,
-
                 city:
                     page.city,
-
                 title:
                     page.title,
-
                 content:
                     page.content,
-
                 score:
                     page.score,
-
                 volume:
                     page.volume,
-
                 difficulty:
                     page.difficulty,
-
                 competition:
                     page.difficulty,
-
                 cpc:
                     page.cpc,
-
                 revenue:
                     page.revenue,
-
                 trend:
                     page.trend,
-
                 created_at:
                     page.created_at,
             });

@@ -354,13 +354,8 @@ function cleanGeneratedContent(
     /*
      * Supprime les faux titres
      * d'introduction.
-     *
-     * Exemple :
-     * ### Introduction
-     *
-     * L'introduction doit rester
-     * un simple paragraphe.
      */
+
     cleaned = cleaned.replace(
         /^\s*#{1,3}\s*Introduction\s*$/gim,
         ""
@@ -370,6 +365,7 @@ function cleanGeneratedContent(
      * Corrige quelques formulations
      * artificielles fréquentes.
      */
+
     const replacements = [
         [
             new RegExp(
@@ -413,9 +409,9 @@ function cleanGeneratedContent(
     }
 
     /*
-     * Corrige les formulations FAQ
-     * encore générées par l'IA.
+     * Corrige les formulations FAQ.
      */
+
     cleaned = cleaned.replace(
         /Où trouver un professionnel de\s+/gi,
         "Où trouver un "
@@ -426,6 +422,7 @@ function cleanGeneratedContent(
      * confirmé, on supprime certaines
      * affirmations trop fortes.
      */
+
     if (!hasProfiles) {
 
         cleaned =
@@ -462,6 +459,7 @@ function cleanGeneratedContent(
     /*
      * Évite les doubles espaces.
      */
+
     cleaned =
         cleaned.replace(
             /[ \t]+/g,
@@ -471,6 +469,7 @@ function cleanGeneratedContent(
     /*
      * Nettoyage des lignes vides excessives.
      */
+
     cleaned =
         cleaned.replace(
             /\n{3,}/g,
@@ -479,13 +478,8 @@ function cleanGeneratedContent(
 
     /*
      * Évite un H1 généré par erreur.
-     *
-     * Exemple :
-     * # Garage à Lille
-     *
-     * Le H1 principal est déjà présent
-     * côté frontend.
      */
+
     cleaned =
         cleaned.replace(
             /^\s*#\s+.+$/gim,
@@ -496,23 +490,16 @@ function cleanGeneratedContent(
      * Si l'IA génère encore un titre
      * "Introduction" sans #, on le retire.
      */
+
     cleaned =
         cleaned.replace(
             /^\s*Introduction\s*$/gim,
             ""
         );
 
-    /*
-     * Petit nettoyage final.
-     */
     cleaned =
         cleaned.trim();
 
-    /*
-     * Variables conservées volontairement
-     * pour rendre explicite le contexte
-     * utilisé par la fonction.
-     */
     void keywordLabel;
     void cityLabel;
 
@@ -809,6 +796,214 @@ STYLE :
 }
 
 /* ========================= */
+/* 🔗 PAGES SEO POUR MAILLAGE INTERNE */
+/* ========================= */
+
+router.get(
+    "/directory-pages",
+    limiter,
+    async (req, res) => {
+        try {
+
+            const limit = Math.min(
+                Math.max(
+                    Number(req.query.limit) || 30,
+                    1
+                ),
+                100
+            );
+
+            /*
+             * Récupère uniquement les villes
+             * réellement présentes dans
+             * business_profiles.
+             */
+
+            const cityRows =
+                await db.all(
+                    `
+                    SELECT DISTINCT city
+                    FROM business_profiles
+                    WHERE city IS NOT NULL
+                    AND TRIM(city) != ''
+                    `
+                );
+
+            const validCitySlugs =
+                new Set(
+                    cityRows
+                        .map(
+                            (row) =>
+                                slugify(
+                                    row?.city || ""
+                                )
+                        )
+                        .filter(Boolean)
+                );
+
+            if (
+                validCitySlugs.size === 0
+            ) {
+                return res.json({
+                    success: true,
+                    pages: []
+                });
+            }
+
+            /*
+             * Récupération des pages SEO.
+             *
+             * On prend un peu plus de résultats
+             * que la limite finale afin de pouvoir
+             * filtrer proprement les anciennes
+             * pages incorrectes.
+             */
+
+            const rawPages =
+                await db.all(
+                    `
+                    SELECT
+                        slug,
+                        keyword,
+                        city,
+                        title
+                    FROM seo_pages
+                    WHERE slug IS NOT NULL
+                    AND TRIM(slug) != ''
+                    AND keyword IS NOT NULL
+                    AND TRIM(keyword) != ''
+                    AND city IS NOT NULL
+                    AND TRIM(city) != ''
+                    ORDER BY created_at DESC
+                    LIMIT ?
+                    `,
+                    [Math.min(limit * 3, 300)]
+                );
+
+            /*
+             * Filtre des pages :
+             *
+             * - ville réellement connue ;
+             * - slug non vide ;
+             * - activité non vide ;
+             * - suppression des doublons.
+             */
+
+            const seen = new Set();
+            const pages = [];
+
+            for (const page of rawPages) {
+
+                const citySlug =
+                    slugify(
+                        page.city || ""
+                    );
+
+                const pageSlug =
+                    slugify(
+                        page.slug || ""
+                    );
+
+                const keyword =
+                    String(
+                        page.keyword || ""
+                    ).trim();
+
+                if (!citySlug) {
+                    continue;
+                }
+
+                if (
+                    !validCitySlugs.has(
+                        citySlug
+                    )
+                ) {
+                    continue;
+                }
+
+                if (!pageSlug) {
+                    continue;
+                }
+
+                if (!keyword) {
+                    continue;
+                }
+
+                /*
+                 * Vérification supplémentaire :
+                 * le slug doit réellement se terminer
+                 * par la ville correspondante.
+                 */
+
+                if (
+                    !pageSlug.endsWith(
+                        `-${citySlug}`
+                    )
+                ) {
+                    continue;
+                }
+
+                /*
+                 * Déduplication par slug.
+                 */
+
+                if (
+                    seen.has(pageSlug)
+                ) {
+                    continue;
+                }
+
+                seen.add(pageSlug);
+
+                pages.push({
+                    slug: pageSlug,
+
+                    keyword:
+                        keyword,
+
+                    city:
+                        page.city,
+
+                    title:
+                        page.title ||
+                        `${capitalize(
+                            keyword
+                        )} à ${capitalize(
+                            page.city
+                        )} | Annuaire SEO`
+                });
+
+                if (
+                    pages.length >= limit
+                ) {
+                    break;
+                }
+            }
+
+            return res.json({
+                success: true,
+                pages
+            });
+
+        } catch (error) {
+
+            console.error(
+                "DIRECTORY PAGES ERROR:",
+                error.message
+            );
+
+            return res
+                .status(500)
+                .json({
+                    success: false,
+                    error:
+                        "Impossible de récupérer les pages SEO"
+                });
+        }
+    }
+);
+
+/* ========================= */
 /* 🚫 ANTI DOUBLE GENERATION */
 /* ========================= */
 
@@ -819,220 +1014,166 @@ const generating =
 /* GET SEO PAGE */
 /* ========================= */
 
-router.get(
-    "/",
-    limiter,
-    async (
-        req,
-        res
-    ) => {
+router.get("/", limiter, async (req, res) => {
 
-        try {
+    try {
 
-            /* ========================= */
-            /* SLUG */
-            /* ========================= */
+        /* ========================= */
+        /* SLUG */
+        /* ========================= */
 
-            const slug =
-                slugify(
-                    String(
-                        req.query.slug ||
-                        ""
-                    )
-                ).slice(
-                    0,
-                    MAX_SLUG
-                );
+        const slug =
+            slugify(
+                String(
+                    req.query.slug ||
+                    ""
+                )
+            ).slice(
+                0,
+                MAX_SLUG
+            );
 
-            if (!slug) {
+        if (!slug) {
+            return res
+                .status(400)
+                .json({
+                    error:
+                        "Invalid slug"
+                });
+        }
+
+        /* ========================= */
+        /* CACHE */
+        /* ========================= */
+
+        let page =
+            await db.get(
+                `
+                SELECT
+                    slug,
+                    title,
+                    content,
+                    volume,
+                    trend,
+                    keyword,
+                    city,
+                    revenue,
+                    score,
+                    difficulty,
+                    cpc
+                FROM seo_pages
+                WHERE slug = ?
+                LIMIT 1
+                `,
+                [slug]
+            );
+
+        /* ========================= */
+        /* GENERATE IF NOT EXISTS */
+        /* ========================= */
+
+        if (!page) {
+
+            if (
+                generating.has(
+                    slug
+                )
+            ) {
                 return res
-                    .status(400)
+                    .status(429)
                     .json({
                         error:
-                            "Invalid slug"
+                            "Generation in progress"
                     });
             }
 
-            /* ========================= */
-            /* CACHE */
-            /* ========================= */
+            generating.add(
+                slug
+            );
 
-            let page =
-                await db.get(
-                    `
-                    SELECT
-                        slug,
-                        title,
-                        content,
-                        volume,
-                        trend,
-                        keyword,
-                        city,
-                        revenue,
-                        score,
-                        difficulty,
-                        cpc
-                    FROM seo_pages
-                    WHERE slug = ?
-                    LIMIT 1
-                    `,
-                    [slug]
-                );
+            try {
 
-            /* ========================= */
-            /* GENERATE IF NOT EXISTS */
-            /* ========================= */
+                /* ========================= */
+                /* PARSE */
+                /* ========================= */
 
-            if (!page) {
-
-                if (
-                    generating.has(
+                const {
+                    keyword,
+                    city
+                } =
+                    await parseSlug(
                         slug
-                    )
-                ) {
-                    return res
-                        .status(429)
-                        .json({
-                            error:
-                                "Generation in progress"
-                        });
-                }
-
-                generating.add(
-                    slug
-                );
-
-                try {
-
-                    /* ========================= */
-                    /* PARSE */
-                    /* ========================= */
-
-                    const {
-                        keyword,
-                        city
-                    } =
-                        await parseSlug(
-                            slug
-                        );
-
-                    /* ========================= */
-                    /* CONTENT */
-                    /* ========================= */
-
-                    const content =
-                        await generateContent(
-                            slug
-                        );
-
-                    /* ========================= */
-                    /* TITLE */
-                    /* ========================= */
-
-                    const title =
-                        `${capitalize(
-                            keyword
-                        )} à ${capitalize(
-                            city
-                        )} | Annuaire SEO`;
-
-                    /* ========================= */
-                    /* TREND */
-                    /* ========================= */
-
-                    const trend =
-                        generateTrend(
-                            slug
-                        );
-
-                    /*
-                     * Cette valeur est une
-                     * estimation interne,
-                     * pas une donnée Google.
-                     */
-
-                    const volume =
-                        trend.reduce(
-                            (a, b) =>
-                                a + b,
-                            0
-                        );
-
-                    /* ========================= */
-                    /* SCORE */
-                    /* ========================= */
-
-                    const score =
-                        Math.min(
-                            100,
-                            Math.round(
-                                volume / 100
-                            )
-                        );
-
-                    /*
-                     * Valeurs par défaut.
-                     */
-
-                    const difficulty = 0;
-                    const cpc = 0;
-                    const revenue = 0;
-
-                    /* ========================= */
-                    /* SAVE */
-                    /* ========================= */
-
-                    await db.run(
-                        `
-                        INSERT INTO seo_pages (
-                            keyword,
-                            city,
-                            slug,
-                            title,
-                            content,
-                            score,
-                            volume,
-                            difficulty,
-                            cpc,
-                            revenue,
-                            trend
-                        )
-                        VALUES (
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?,
-                            ?
-                        )
-                        `,
-                        [
-                            keyword,
-                            city,
-                            slug,
-                            title,
-                            content,
-                            score,
-                            volume,
-                            difficulty,
-                            cpc,
-                            revenue,
-                            JSON.stringify(
-                                trend
-                            )
-                        ]
                     );
 
-                    /* ========================= */
-                    /* RESPONSE OBJECT */
-                    /* ========================= */
+                /* ========================= */
+                /* CONTENT */
+                /* ========================= */
 
-                    page = {
+                const content =
+                    await generateContent(
+                        slug
+                    );
+
+                /* ========================= */
+                /* TITLE */
+                /* ========================= */
+
+                const title =
+                    `${capitalize(
+                        keyword
+                    )} à ${capitalize(
+                        city
+                    )} | Annuaire SEO`;
+
+                /* ========================= */
+                /* TREND */
+                /* ========================= */
+
+                const trend =
+                    generateTrend(
+                        slug
+                    );
+
+                /*
+                 * Cette valeur est une
+                 * estimation interne,
+                 * pas une donnée Google.
+                 */
+
+                const volume =
+                    trend.reduce(
+                        (a, b) =>
+                            a + b,
+                        0
+                    );
+
+                /* ========================= */
+                /* SCORE */
+                /* ========================= */
+
+                const score =
+                    Math.min(
+                        100,
+                        Math.round(
+                            volume / 100
+                        )
+                    );
+
+                /*
+                 * Valeurs par défaut.
+                 */
+
+                const difficulty = 0;
+                const cpc = 0;
+                const revenue = 0;
+
+                /* ========================= */
+                /* SAVE */
+                /* ========================= */
+
+                await db.run(
+                    `
+                    INSERT INTO seo_pages (
                         keyword,
                         city,
                         slug,
@@ -1044,120 +1185,169 @@ router.get(
                         cpc,
                         revenue,
                         trend
-                    };
+                    )
+                    VALUES (
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?
+                    )
+                    `,
+                    [
+                        keyword,
+                        city,
+                        slug,
+                        title,
+                        content,
+                        score,
+                        volume,
+                        difficulty,
+                        cpc,
+                        revenue,
+                        JSON.stringify(
+                            trend
+                        )
+                    ]
+                );
 
-                } finally {
+                /* ========================= */
+                /* RESPONSE OBJECT */
+                /* ========================= */
 
-                    generating.delete(
-                        slug
+                page = {
+                    keyword,
+                    city,
+                    slug,
+                    title,
+                    content,
+                    score,
+                    volume,
+                    difficulty,
+                    cpc,
+                    revenue,
+                    trend
+                };
+
+            } finally {
+
+                generating.delete(
+                    slug
+                );
+
+            }
+        }
+
+        /* ========================= */
+        /* TREND PARSING */
+        /* ========================= */
+
+        if (
+            typeof page.trend ===
+            "string"
+        ) {
+
+            try {
+
+                page.trend =
+                    JSON.parse(
+                        page.trend
                     );
 
-                }
+            } catch {
+
+                page.trend = [];
+
             }
-
-            /* ========================= */
-            /* TREND PARSING */
-            /* ========================= */
-
-            if (
-                typeof page.trend ===
-                "string"
-            ) {
-
-                try {
-
-                    page.trend =
-                        JSON.parse(
-                            page.trend
-                        );
-
-                } catch {
-
-                    page.trend = [];
-
-                }
-            }
-
-            /* ========================= */
-            /* RESPONSE */
-            /* ========================= */
-
-            return res.json({
-
-                success: true,
-
-                slug:
-                    page.slug,
-
-                keyword:
-                    page.keyword,
-
-                city:
-                    page.city,
-
-                title:
-                    page.title,
-
-                content:
-                    page.content,
-
-                volume:
-                    Number(
-                        page.volume
-                    ) || 0,
-
-                trend:
-                    page.trend || [],
-
-                revenue:
-                    Number(
-                        page.revenue
-                    ) || 0,
-
-                /*
-                 * AnnuairePage.jsx utilise
-                 * "competition".
-                 *
-                 * La base utilise "difficulty".
-                 */
-
-                competition:
-                    Number(
-                        page.difficulty
-                    ) || 0,
-
-                score:
-                    Number(
-                        page.score
-                    ) || 0,
-
-                difficulty:
-                    Number(
-                        page.difficulty
-                    ) || 0,
-
-                cpc:
-                    Number(
-                        page.cpc
-                    ) || 0
-
-            });
-
-        } catch (error) {
-
-            console.error(
-                "SEO:",
-                error.message
-            );
-
-            return res
-                .status(500)
-                .json({
-                    error:
-                        "SEO page error"
-                });
         }
+
+        /* ========================= */
+        /* RESPONSE */
+        /* ========================= */
+
+        return res.json({
+
+            success: true,
+
+            slug:
+                page.slug,
+
+            keyword:
+                page.keyword,
+
+            city:
+                page.city,
+
+            title:
+                page.title,
+
+            content:
+                page.content,
+
+            volume:
+                Number(
+                    page.volume
+                ) || 0,
+
+            trend:
+                page.trend || [],
+
+            revenue:
+                Number(
+                    page.revenue
+                ) || 0,
+
+            /*
+             * AnnuairePage.jsx utilise
+             * "competition".
+             *
+             * La base utilise
+             * "difficulty".
+             */
+
+            competition:
+                Number(
+                    page.difficulty
+                ) || 0,
+
+            score:
+                Number(
+                    page.score
+                ) || 0,
+
+            difficulty:
+                Number(
+                    page.difficulty
+                ) || 0,
+
+            cpc:
+                Number(
+                    page.cpc
+                ) || 0
+
+        });
+
+    } catch (error) {
+
+        console.error(
+            "SEO:",
+            error.message
+        );
+
+        return res
+            .status(500)
+            .json({
+                error:
+                    "SEO page error"
+            });
     }
-);
+
+});
 
 export default router;

@@ -7,9 +7,17 @@ import db from "../config/database.js";
 
 const router = express.Router();
 
+/* =========================================================
+   OPENAI
+========================================================= */
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
+
+/* =========================================================
+   RATE LIMIT
+========================================================= */
 
 const seoPageLimiter = rateLimit({
     windowMs: 60 * 1000,
@@ -31,12 +39,20 @@ function hash(value = "") {
 }
 
 function random(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(
+        Math.random() * (max - min + 1)
+    ) + min;
 }
 
 function generateTrend() {
-    return ["stable", "hausse", "baisse"][random(0, 2)];
+    return ["stable", "hausse", "baisse"][
+        random(0, 2)
+    ];
 }
+
+/* =========================================================
+   NORMALISATION
+========================================================= */
 
 function normalizeText(value = "") {
     return String(value)
@@ -50,7 +66,10 @@ function normalizeText(value = "") {
 function normalizeForCheck(value = "") {
     return normalizeText(value)
         .replace(/[’']/g, "'")
-        .replace(/[.,;:!?()[\]{}"«»]/g, " ")
+        .replace(
+            /[.,;:!?()[\]{}"«»€$%]/g,
+            " "
+        )
         .replace(/\s+/g, " ")
         .trim();
 }
@@ -64,7 +83,12 @@ function slugify(value = "") {
 }
 
 function capitalize(value = "") {
-    return value ? value.charAt(0).toUpperCase() + value.slice(1) : "";
+    if (!value) return "";
+
+    return (
+        value.charAt(0).toUpperCase() +
+        value.slice(1)
+    );
 }
 
 /* =========================================================
@@ -96,15 +120,23 @@ function beautifyKeyword(keyword = "") {
         [/\bmaconnerie\b/gi, "maçonnerie"],
     ];
 
-    for (const [pattern, replacement] of replacements) {
-        value = value.replace(pattern, replacement);
+    for (const [
+        pattern,
+        replacement,
+    ] of replacements) {
+        value = value.replace(
+            pattern,
+            replacement
+        );
     }
 
     return value;
 }
 
 function displayCity(city = "") {
-    return capitalize(String(city).trim());
+    return capitalize(
+        String(city).trim()
+    );
 }
 
 /* =========================================================
@@ -125,44 +157,65 @@ async function parseSlug(slug = "") {
     const cities = [
         ...new Set(
             (rows || [])
-                .map((row) => String(row.city || "").trim())
+                .map((row) =>
+                    String(row.city || "").trim()
+                )
                 .filter(Boolean)
         ),
     ];
+
+    /* Recherche de la ville réelle la plus longue */
 
     for (const city of cities) {
         const citySlug = slugify(city);
 
         if (
             citySlug &&
-            cleanSlug.endsWith(`-${citySlug}`) &&
-            cleanSlug.length > citySlug.length + 1
+            cleanSlug.endsWith(
+                `-${citySlug}`
+            ) &&
+            cleanSlug.length >
+            citySlug.length + 1
         ) {
-            const keywordSlug = cleanSlug.slice(
-                0,
-                -(citySlug.length + 1)
-            );
+            const keywordSlug =
+                cleanSlug.slice(
+                    0,
+                    -(citySlug.length + 1)
+                );
 
             return {
-                keyword: keywordSlug.replace(/-/g, " ").trim(),
+                keyword:
+                    keywordSlug
+                        .replace(/-/g, " ")
+                        .trim(),
                 city,
             };
         }
     }
 
-    const parts = cleanSlug.split("-");
+    /* Fallback */
+
+    const parts =
+        cleanSlug.split("-");
 
     if (parts.length >= 2) {
         const citySlug = parts.pop();
 
         return {
-            keyword: parts.join(" ").trim(),
-            city: citySlug.replace(/-/g, " ").trim(),
+            keyword:
+                parts.join(" ").trim(),
+            city:
+                citySlug
+                    .replace(/-/g, " ")
+                    .trim(),
         };
     }
 
     return {
-        keyword: cleanSlug.replace(/-/g, " ").trim(),
+        keyword:
+            cleanSlug
+                .replace(/-/g, " ")
+                .trim(),
         city: "",
     };
 }
@@ -171,38 +224,64 @@ async function parseSlug(slug = "") {
    CONTEXTE ANNUAIRE
 ========================================================= */
 
-async function getDirectoryContext(keyword, city) {
-    if (!city) return [];
+async function getDirectoryContext(
+    keyword,
+    city
+) {
+    if (!city) {
+        return [];
+    }
 
-    const rows = await db.all(
-        `
-      SELECT
-        id,
-        name,
-        description,
-        keyword,
-        city,
-        score,
-        is_featured
-      FROM business_profiles
-      WHERE LOWER(TRIM(city)) = LOWER(TRIM(?))
-      ORDER BY is_featured DESC, score DESC, id DESC
-      LIMIT 20
-    `,
-        [city]
-    );
+    const rows =
+        await db.all(
+            `
+        SELECT
+          id,
+          name,
+          description,
+          keyword,
+          city,
+          score,
+          is_featured
+        FROM business_profiles
+        WHERE LOWER(TRIM(city))
+          = LOWER(TRIM(?))
+        ORDER BY
+          is_featured DESC,
+          score DESC,
+          id DESC
+        LIMIT 20
+      `,
+            [city]
+        );
 
-    const normalizedKeyword = normalizeText(keyword);
+    const normalizedKeyword =
+        normalizeText(keyword);
 
-    return (rows || []).filter((row) => {
-        const rowKeyword = normalizeText(row.keyword || "");
-        const rowDescription = normalizeText(row.description || "");
+    return (
+        rows || []
+    ).filter((row) => {
+        const rowKeyword =
+            normalizeText(
+                row.keyword || ""
+            );
+
+        const rowDescription =
+            normalizeText(
+                row.description || ""
+            );
 
         return (
             !normalizedKeyword ||
-            rowKeyword.includes(normalizedKeyword) ||
-            normalizedKeyword.includes(rowKeyword) ||
-            rowDescription.includes(normalizedKeyword)
+            rowKeyword.includes(
+                normalizedKeyword
+            ) ||
+            normalizedKeyword.includes(
+                rowKeyword
+            ) ||
+            rowDescription.includes(
+                normalizedKeyword
+            )
         );
     });
 }
@@ -211,22 +290,49 @@ async function getDirectoryContext(keyword, city) {
    NETTOYAGE DU CONTENU IA
 ========================================================= */
 
-function cleanGeneratedContent(content, keyword, city) {
-    if (!content) return "";
+function cleanGeneratedContent(
+    content,
+    keyword,
+    city
+) {
+    if (!content) {
+        return "";
+    }
 
-    const keywordDisplay = beautifyKeyword(keyword);
-    const cityDisplay = displayCity(city);
+    const keywordDisplay =
+        beautifyKeyword(keyword);
 
-    let cleaned = String(content)
-        .replace(/\r\n/g, "\n")
-        .replace(/\r/g, "\n")
-        .replace(/[ \t]+\n/g, "\n")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
+    const cityDisplay =
+        displayCity(city);
+
+    let cleaned =
+        String(content)
+            .replace(/\r\n/g, "\n")
+            .replace(/\r/g, "\n")
+            .replace(
+                /[ \t]+\n/g,
+                "\n"
+            )
+            .replace(
+                /\n{3,}/g,
+                "\n\n"
+            )
+            .trim();
 
     const replacements = [
-        [/médecin chinois/gi, keywordDisplay],
-        [/medecin chinois/gi, keywordDisplay],
+        /* Erreurs médecine chinoise */
+
+        [
+            /médecin chinois/gi,
+            keywordDisplay,
+        ],
+
+        [
+            /medecin chinois/gi,
+            keywordDisplay,
+        ],
+
+        /* Qualifications */
 
         [
             /professionnels de santé spécialisés/gi,
@@ -288,6 +394,8 @@ function cleanGeneratedContent(content, keyword, city) {
             "informations disponibles sur le profil",
         ],
 
+        /* Santé / bien-être */
+
         [
             /maintenir l'équilibre et l'harmonie/gi,
             "présenter différentes pratiques ou services associés",
@@ -339,11 +447,6 @@ function cleanGeneratedContent(content, keyword, city) {
         ],
 
         [
-            /promouvoir un meilleur bien-être/gi,
-            "présenter ce domaine",
-        ],
-
-        [
             /améliorer le bien-être/gi,
             "présenter ce domaine",
         ],
@@ -354,14 +457,11 @@ function cleanGeneratedContent(content, keyword, city) {
         ],
 
         [
-            /garantit/gi,
-            "présente",
+            /offrir une approche différente du bien-être et de la santé/gi,
+            "présenter différentes pratiques associées à ce domaine",
         ],
 
-        [
-            /garantie/gi,
-            "présentation",
-        ],
+        /* Promesses médicales */
 
         [
             /guérir/gi,
@@ -414,6 +514,50 @@ function cleanGeneratedContent(content, keyword, city) {
         ],
 
         [
+            /garantit/gi,
+            "présente",
+        ],
+
+        [
+            /garantie/gi,
+            "présentation",
+        ],
+
+        /* Avis */
+
+        [
+            /les avis d'autres personnes/gi,
+            "les informations disponibles",
+        ],
+
+        [
+            /avis d'autres personnes/gi,
+            "informations disponibles",
+        ],
+
+        [
+            /avis des clients/gi,
+            "informations disponibles",
+        ],
+
+        [
+            /avis clients/gi,
+            "informations disponibles",
+        ],
+
+        [
+            /retours des clients/gi,
+            "informations disponibles",
+        ],
+
+        [
+            /les avis et les retours/gi,
+            "les informations publiées",
+        ],
+
+        /* Recherche de professionnels */
+
+        [
             /vous accéderez à une liste de professionnels/gi,
             "vous pourrez consulter les informations disponibles dans l'annuaire",
         ],
@@ -426,6 +570,36 @@ function cleanGeneratedContent(content, keyword, city) {
         [
             /vous pourrez trouver un professionnel/gi,
             "vous pourrez consulter les profils disponibles",
+        ],
+
+        [
+            /pour trouver des professionnels/gi,
+            "pour consulter les profils disponibles",
+        ],
+
+        [
+            /pour trouver un professionnel/gi,
+            "pour consulter les profils disponibles",
+        ],
+
+        [
+            /afin de trouver des professionnels/gi,
+            "afin de consulter les profils disponibles",
+        ],
+
+        [
+            /afin de trouver un professionnel/gi,
+            "afin de consulter les profils disponibles",
+        ],
+
+        [
+            /trouver des praticiens/gi,
+            "consulter les profils disponibles",
+        ],
+
+        [
+            /trouver un praticien/gi,
+            "consulter les profils disponibles",
         ],
 
         [
@@ -443,43 +617,10 @@ function cleanGeneratedContent(content, keyword, city) {
             "comparer les informations disponibles.",
         ],
 
-        [
-            /les services proposés, les coordonnées et les adresses/gi,
-            "les informations affichées dans les profils",
-        ],
-
-        [
-            /les coordonnées et les adresses des praticiens/gi,
-            "les informations affichées sur les profils",
-        ],
-
-        [
-            /avis et les retours/gi,
-            "informations publiées",
-        ],
-
-        [
-            /avis des clients/gi,
-            "informations publiées",
-        ],
-
-        [
-            /avis clients/gi,
-            "informations publiées",
-        ],
-
-        [
-            /retours des clients/gi,
-            "informations publiées",
-        ],
+        /* Accès / communauté */
 
         [
             /facilitant ainsi l'accès aux services/gi,
-            "permettant de cibler une recherche locale",
-        ],
-
-        [
-            /facilitant ainsi l'accès/gi,
             "permettant de cibler une recherche locale",
         ],
 
@@ -494,51 +635,106 @@ function cleanGeneratedContent(content, keyword, city) {
         ],
 
         [
-            /connaissent bien les besoins de la communauté locale/gi,
+            /connaissent bien le contexte et les besoins de la communauté locale/gi,
             "sont présentés selon les informations disponibles",
         ],
 
         [
-            /pratique ancestrale/gi,
-            "domaine présent dans différentes sources et annuaires",
+            /connaissent mieux le contexte et les besoins de la communauté/gi,
+            "sont présentés selon les informations disponibles",
         ],
 
         [
             /dans la région/gi,
             `à ${cityDisplay}`,
         ],
+
+        /* Anciennes formulations SEO */
+
+        [
+            /trafic qualifié/gi,
+            "recherche locale",
+        ],
+
+        [
+            /générer des clients/gi,
+            "présenter les informations disponibles",
+        ],
+
+        [
+            /generer des clients/gi,
+            "présenter les informations disponibles",
+        ],
+
+        [
+            /manière durable grâce au seo/gi,
+            "dans le cadre d'une recherche locale",
+        ],
+
+        [
+            /potentiel estimé\s*:\s*[^<\n]*/gi,
+            "",
+        ],
+
+        [
+            /concurrence\s*:\s*[^<\n]*/gi,
+            "",
+        ],
+
+        [
+            /cpc moyen\s*:\s*[^<\n]*/gi,
+            "",
+        ],
+
+        [
+            /\d[\d\s]*recherches mensuelles/gi,
+            "des recherches locales",
+        ],
     ];
 
-    for (const [pattern, replacement] of replacements) {
-        cleaned = cleaned.replace(pattern, replacement);
+    for (const [
+        pattern,
+        replacement,
+    ] of replacements) {
+        cleaned = cleaned.replace(
+            pattern,
+            replacement
+        );
     }
 
-    /* Titres uniformisés */
+    /* =====================================================
+       NORMALISATION DES TITRES
+    ===================================================== */
 
-    cleaned = cleaned.replace(
-        /^##\s*Rechercher .*$/gim,
-        `## Rechercher ${keywordDisplay} à ${cityDisplay}`
-    );
+    cleaned =
+        cleaned.replace(
+            /^##\s*Rechercher .*$/gim,
+            `## Rechercher ${keywordDisplay} à ${cityDisplay}`
+        );
 
-    cleaned = cleaned.replace(
-        /^##\s*Quels services .*$/gim,
-        `## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?`
-    );
+    cleaned =
+        cleaned.replace(
+            /^##\s*Quels services .*$/gim,
+            `## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?`
+        );
 
-    cleaned = cleaned.replace(
-        /^##\s*Comment choisir .*$/gim,
-        `## Comment choisir un professionnel adapté à ${keywordDisplay} à ${cityDisplay} ?`
-    );
+    cleaned =
+        cleaned.replace(
+            /^##\s*Comment choisir .*$/gim,
+            `## Comment choisir un professionnel adapté à ${keywordDisplay} à ${cityDisplay} ?`
+        );
 
-    cleaned = cleaned.replace(
-        /^###\s*Où rechercher .*$/gim,
-        `### Où rechercher ${keywordDisplay} à ${cityDisplay} ?`
-    );
+    cleaned =
+        cleaned.replace(
+            /^###\s*Où rechercher .*$/gim,
+            `### Où rechercher ${keywordDisplay} à ${cityDisplay} ?`
+        );
 
-    cleaned = cleaned.replace(
-        /^###\s*Comment choisir .*$/gim,
-        `### Comment choisir un professionnel adapté à ${keywordDisplay} ?`
-    );
+    cleaned =
+        cleaned.replace(
+            /^###\s*Comment choisir .*$/gim,
+            `### Comment choisir un professionnel adapté à ${keywordDisplay} ?`
+        );
 
     return cleaned.trim();
 }
@@ -547,49 +743,69 @@ function cleanGeneratedContent(content, keyword, city) {
    VALIDATION STRICTE
 ========================================================= */
 
-function validateGeneratedContent(content, keyword, city) {
-    const text = normalizeForCheck(content);
+function validateGeneratedContent(
+    content,
+    keyword,
+    city
+) {
+    const text =
+        normalizeForCheck(content);
 
     const reasons = [];
 
-    if (!text || text.length < 500) {
-        reasons.push("contenu trop court");
+    if (
+        !text ||
+        text.length < 500
+    ) {
+        reasons.push(
+            "contenu trop court"
+        );
     }
 
-    const forbidden = [
+    const forbiddenPatterns = [
         [
             /equilibre et harmonie/,
-            "formulation autour de l'équilibre et de l'harmonie",
+            "équilibre et harmonie",
         ],
 
         [
             /maintenir l'equilibre/,
-            "promesse autour du maintien de l'équilibre",
+            "maintien de l'équilibre",
+        ],
+
+        [
+            /maintien de l'equilibre/,
+            "maintien de l'équilibre",
         ],
 
         [
             /energie vitale/,
-            "référence à l'énergie vitale",
+            "énergie vitale",
         ],
 
         [
             /\bqi\b/,
-            "référence au Qi",
+            "Qi",
         ],
 
         [
             /favoriser le bien etre/,
-            "promesse autour du bien-être",
+            "promesse de bien-être",
         ],
 
         [
             /promouvoir le bien etre/,
-            "promesse autour du bien-être",
+            "promesse de bien-être",
         ],
 
         [
             /ameliore le bien etre/,
-            "promesse autour du bien-être",
+            "promesse de bien-être",
+        ],
+
+        [
+            /offrir une approche differente du bien etre et de la sante/,
+            "formulation santé/bien-être",
         ],
 
         [
@@ -604,12 +820,12 @@ function validateGeneratedContent(content, keyword, city) {
 
         [
             /guerir/,
-            "promesse de guérison",
+            "guérison",
         ],
 
         [
             /guerison/,
-            "référence à la guérison",
+            "guérison",
         ],
 
         [
@@ -639,7 +855,7 @@ function validateGeneratedContent(content, keyword, city) {
 
         [
             /efficacite demontree/,
-            "preuve d'efficacité non sourcée",
+            "efficacité non sourcée",
         ],
 
         [
@@ -698,32 +914,7 @@ function validateGeneratedContent(content, keyword, city) {
         ],
 
         [
-            /vous accederez a une liste/,
-            "promesse de liste",
-        ],
-
-        [
-            /vous pourrez trouver/,
-            "promesse de résultat",
-        ],
-
-        [
-            /trouver un professionnel/,
-            "promesse de résultat",
-        ],
-
-        [
-            /trouver des professionnels/,
-            "promesse de résultat",
-        ],
-
-        [
-            /trouver celui qui correspond/,
-            "promesse de résultat",
-        ],
-
-        [
-            /avis et les retours/,
+            /avis d'autres/,
             "avis non présents",
         ],
 
@@ -743,23 +934,113 @@ function validateGeneratedContent(content, keyword, city) {
         ],
 
         [
-            /facilitant ainsi l acces/,
-            "promesse implicite d'accès",
+            /vous accederez a une liste/,
+            "liste promise",
         ],
 
         [
-            /connaissent bien les besoins de la communaute locale/,
+            /vous pourrez trouver/,
+            "résultat promis",
+        ],
+
+        [
+            /pour trouver des professionnels/,
+            "résultat promis",
+        ],
+
+        [
+            /pour trouver un professionnel/,
+            "résultat promis",
+        ],
+
+        [
+            /trouver des professionnels/,
+            "résultat promis",
+        ],
+
+        [
+            /trouver un professionnel/,
+            "résultat promis",
+        ],
+
+        [
+            /trouver des praticiens/,
+            "résultat promis",
+        ],
+
+        [
+            /trouver un praticien/,
+            "résultat promis",
+        ],
+
+        [
+            /trouver celui qui correspond/,
+            "résultat promis",
+        ],
+
+        [
+            /facilitant ainsi l acces aux services/,
+            "formulation d'accès",
+        ],
+
+        [
+            /facilitant l acces/,
+            "formulation d'accès",
+        ],
+
+        [
+            /connaissent bien le contexte/,
             "affirmation non vérifiée",
         ],
 
         [
-            /les meilleurs/,
-            "affirmation de popularité",
+            /connaissent mieux le contexte/,
+            "affirmation non vérifiée",
+        ],
+
+        [
+            /besoins de la communaute/,
+            "affirmation non vérifiée",
+        ],
+
+        [
+            /trafic qualifie/,
+            "trafic SEO",
+        ],
+
+        [
+            /generer des clients/,
+            "promesse commerciale",
+        ],
+
+        [
+            /recherches mensuelles/,
+            "donnée SEO",
+        ],
+
+        [
+            /potentiel estime/,
+            "donnée SEO",
+        ],
+
+        [
+            /cpc moyen/,
+            "donnée SEO",
+        ],
+
+        [
+            /concurrence\s*:/,
+            "donnée SEO",
         ],
 
         [
             /meilleur professionnel/,
-            "affirmation de popularité",
+            "popularité",
+        ],
+
+        [
+            /les meilleurs/,
+            "popularité",
         ],
 
         [
@@ -774,31 +1055,51 @@ function validateGeneratedContent(content, keyword, city) {
 
         [
             /liste de professionnels et d'entreprises/,
-            "affirmation exhaustive",
+            "liste exhaustive",
         ],
     ];
 
-    for (const [pattern, reason] of forbidden) {
+    for (const [
+        pattern,
+        reason,
+    ] of forbiddenPatterns) {
         if (pattern.test(text)) {
             reasons.push(reason);
         }
     }
 
-    const expectedKeyword = normalizeForCheck(keyword);
-    const expectedCity = normalizeForCheck(city);
+    /* =====================================================
+       MOT-CLÉ
+    ===================================================== */
+
+    const expectedKeyword =
+        normalizeForCheck(
+            keyword
+        );
 
     if (
         expectedKeyword &&
-        !text.includes(expectedKeyword)
+        !text.includes(
+            expectedKeyword
+        )
     ) {
         reasons.push(
             "mot-clé principal insuffisamment présent"
         );
     }
 
+    /* =====================================================
+       VILLE
+    ===================================================== */
+
+    const expectedCity =
+        normalizeForCheck(city);
+
     if (
         expectedCity &&
-        !text.includes(expectedCity)
+        !text.includes(
+            expectedCity
+        )
     ) {
         reasons.push(
             "ville insuffisamment présente"
@@ -806,7 +1107,8 @@ function validateGeneratedContent(content, keyword, city) {
     }
 
     return {
-        valid: reasons.length === 0,
+        valid:
+            reasons.length === 0,
         reasons,
     };
 }
@@ -820,21 +1122,27 @@ function buildFallbackContent(
     city,
     profiles = []
 ) {
-    const keywordDisplay = beautifyKeyword(keyword);
-    const cityDisplay = displayCity(city);
+    const keywordDisplay =
+        beautifyKeyword(
+            keyword
+        );
 
-    const hasProfiles = profiles.length > 0;
+    const cityDisplay =
+        displayCity(city);
+
+    const hasProfiles =
+        profiles.length > 0;
 
     return `
 La recherche « ${keywordDisplay} à ${cityDisplay} » permet de cibler un domaine ou une activité dans une zone géographique précise. Cette page présente les informations disponibles dans notre annuaire SEO et peut servir de point de départ pour une recherche locale.
 
 ## Rechercher ${keywordDisplay} à ${cityDisplay}
 
-Une recherche locale permet de cibler ${keywordDisplay} en fonction d'une ville précise. Pour ${cityDisplay}, il est possible de consulter les informations publiées sur les profils disponibles dans l'annuaire ainsi que d'utiliser la même formulation dans un moteur de recherche.
+Une recherche locale permet de cibler ${keywordDisplay} en fonction d'une ville précise. Pour ${cityDisplay}, il est possible de consulter les informations publiées sur les profils disponibles dans l'annuaire et d'utiliser la même formulation dans un moteur de recherche.
 
 ## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?
 
-Les activités associées à ${keywordDisplay} peuvent varier selon les entreprises ou structures référencées. Il est donc préférable de vérifier les informations réellement publiées sur chaque fiche avant de prendre contact.
+Les activités associées à ${keywordDisplay} peuvent varier selon les entreprises ou structures référencées. Il est préférable de vérifier les informations réellement publiées sur chaque fiche plutôt que de supposer qu'un service particulier est disponible.
 
 ${hasProfiles
             ? "Des profils correspondant à cette recherche sont actuellement présents dans notre annuaire. Les informations affichées sur ces fiches peuvent être consultées et comparées."
@@ -870,80 +1178,147 @@ La recherche « ${keywordDisplay} à ${cityDisplay} » permet d'orienter les rec
 }
 
 /* =========================================================
-   PROMPT IA
+   PROMPT PRINCIPAL
 ========================================================= */
 
 function buildGenerationPrompt({
     keyword,
     city,
-    profiles,
+    profiles = [],
 }) {
-    const keywordDisplay = beautifyKeyword(keyword);
-    const cityDisplay = displayCity(city);
+    const keywordDisplay =
+        beautifyKeyword(
+            keyword
+        );
 
-    const directoryContext =
-        profiles.length > 0
-            ? `
-DONNÉES RÉELLES DISPONIBLES :
+    const cityDisplay =
+        displayCity(city);
+
+    let directoryContext = "";
+
+    if (profiles.length > 0) {
+        const safeProfiles =
+            profiles
+                .slice(0, 10)
+                .map((profile) => ({
+                    name:
+                        profile.name || "",
+                    description:
+                        profile.description || "",
+                    keyword:
+                        profile.keyword || "",
+                    city:
+                        profile.city || "",
+                }));
+
+        directoryContext = `
+DONNÉES RÉELLES DISPONIBLES DANS L'ANNUAIRE :
 
 ${JSON.stringify(
-                profiles.slice(0, 10).map((profile) => ({
-                    name: profile.name || "",
-                    description: profile.description || "",
-                    keyword: profile.keyword || "",
-                    city: profile.city || "",
-                })),
-                null,
-                2
-            )}
+            safeProfiles,
+            null,
+            2
+        )}
 
-Utilise uniquement ces données pour parler de profils précis.
-N'invente aucune adresse, téléphone, horaire, certification,
-diplôme, avis ou prestation.
-`
-            : `
+RÈGLE :
+Utilise uniquement les informations présentes dans ces données pour parler des profils.
+
+N'invente aucune adresse.
+N'invente aucun téléphone.
+N'invente aucun horaire.
+N'invente aucune certification.
+N'invente aucun diplôme.
+N'invente aucun avis.
+N'invente aucune prestation.
+N'invente aucune qualification.
+`;
+    } else {
+        directoryContext = `
 AUCUN PROFIL SPÉCIFIQUE N'EST FOURNI.
 
-Reste général et ne parle pas d'entreprise ou de professionnel précis.
+Reste général.
+Ne parle d'aucune entreprise ou personne précise.
 `;
+    }
 
     return `
-Tu rédiges une page SEO locale française sur « ${keywordDisplay} à ${cityDisplay} ».
+Tu rédiges une page SEO locale française.
 
-RÈGLES ABSOLUES :
+MOT-CLÉ :
+"${keywordDisplay}"
 
-- Conserve exactement le sens du mot-clé.
-- « médecine chinoise » ne doit jamais devenir « médecin chinois ».
-- Ne transforme pas une activité ou un domaine en profession.
-- N'invente aucune donnée.
+VILLE :
+"${cityDisplay}"
+
+OBJECTIF :
+
+Créer une page informative naturelle et utile sur cette recherche locale.
+
+RÈGLE ABSOLUE SUR LE MOT-CLÉ :
+
+Le mot-clé doit conserver exactement son sens.
+
+Par exemple :
+
+"médecine chinoise" = médecine chinoise.
+
+Ne transforme jamais "médecine chinoise" en "médecin chinois".
+
+INTERDICTIONS ABSOLUES :
+
+- Ne transforme jamais une activité en profession.
+- Ne transforme jamais un domaine en métier.
+- N'invente aucune information.
 - Aucun avis client.
-- Aucun chiffre de recherche dans le texte.
+- Aucun nombre de recherches mensuelles dans le texte.
 - Aucun CPC dans le texte.
 - Aucun revenu dans le texte.
+- Aucun potentiel financier dans le texte.
 - Aucun trafic estimé dans le texte.
-- Aucune qualification, certification ou diplôme non fourni.
+- Aucune donnée SEO simulée dans le texte.
+- Aucune qualification non fournie.
+- Aucun diplôme non fourni.
+- Aucune certification non fournie.
+- Aucune adresse non fournie.
+- Aucun téléphone non fourni.
+- Aucun horaire non fourni.
 - Aucune promesse médicale.
 - Ne dis pas guérir.
 - Ne dis pas soigner.
 - Ne dis pas traiter une maladie.
 - Ne dis pas prévenir une maladie.
-- N'utilise pas « efficace pour ».
-- N'utilise pas « garantit ».
+- Ne dis pas efficace pour.
+- Ne dis pas garantit.
+- Ne dis pas les meilleurs.
+- Ne parle pas d'avis clients.
+- Ne parle pas de retours clients.
 - Ne parle pas de Qi.
 - Ne parle pas d'énergie vitale.
 - Ne parle pas d'équilibre du corps.
 - Ne parle pas d'harmonie du corps.
-- Ne dis pas « vous pourrez trouver un professionnel ».
-- Ne dis pas « vous pourrez trouver des professionnels ».
-- Ne dis pas « trouver un professionnel » comme résultat garanti.
-- Ne dis pas « trouver des professionnels » comme résultat garanti.
-- Ne parle pas des « meilleurs ».
-- Ne parle pas d'avis ou de retours clients.
-- Ne dis pas « facilitant l'accès aux services ».
-- N'affirme pas qu'un professionnel connaît les besoins de la communauté locale.
-- Ne prétends pas fournir une liste exhaustive.
+- Ne dis pas que la pratique maintient ou restaure l'équilibre du corps.
+- Ne dis pas que les professionnels connaissent les besoins de la communauté locale.
+- Ne promets jamais que l'utilisateur trouvera un professionnel.
+- Ne dis pas "vous pourrez trouver".
+- Ne dis pas "pour trouver un professionnel".
+- Ne dis pas "pour trouver des professionnels".
+- Ne prétends jamais fournir une liste exhaustive.
+
+STYLE :
+
+- Français naturel.
+- Ton professionnel.
+- Informatif.
+- Neutre.
+- SEO local naturel.
+- Paragraphes courts.
+- Pas de bourrage de mots-clés.
+- Pas de publicité excessive.
+- Pas de promesse.
 
 STRUCTURE :
+
+# ${keywordDisplay} à ${cityDisplay}
 
 Introduction
 
@@ -965,12 +1340,17 @@ Introduction
 
 ## Conclusion
 
-Style naturel, informatif et professionnel.
-Évite le bourrage de mots-clés.
-Ne fais aucune promesse.
-Ne crée aucune information.
+PARTIE ANNUAIRE :
+
+Explique simplement que l'annuaire permet de consulter les profils réellement disponibles et de comparer les informations affichées.
+
+Ne promets aucun résultat.
 
 ${directoryContext}
+
+IMPORTANT :
+
+Le texte doit parler de "${keywordDisplay}" à "${cityDisplay}".
 
 Retourne uniquement le contenu final de la page.
 `;
@@ -986,30 +1366,51 @@ async function repairContent(
     city,
     reasons
 ) {
-    if (!process.env.OPENAI_API_KEY) {
+    if (
+        !process.env.OPENAI_API_KEY
+    ) {
         return "";
     }
 
-    const keywordDisplay = beautifyKeyword(keyword);
-    const cityDisplay = displayCity(city);
+    const keywordDisplay =
+        beautifyKeyword(
+            keyword
+        );
+
+    const cityDisplay =
+        displayCity(city);
 
     const response =
-        await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            temperature: 0,
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "Tu corriges un contenu SEO français. Tu supprimes toute affirmation non vérifiée et toute promesse. Tu n'inventes rien.",
-                },
-                {
-                    role: "user",
-                    content: `
-Corrige cette page SEO sur « ${keywordDisplay} à ${cityDisplay} ».
+        await openai.chat.completions.create(
+            {
+                model:
+                    "gpt-4o-mini",
+                temperature: 0,
+                messages: [
+                    {
+                        role: "system",
+                        content:
+                            "Tu corriges strictement du contenu SEO français. Tu ne dois rien inventer.",
+                    },
+                    {
+                        role: "user",
+                        content: `
+Corrige cette page SEO locale.
 
-PROBLÈMES DÉTECTÉS :
-${reasons.map((r) => `- ${r}`).join("\n")}
+MOT-CLÉ :
+"${keywordDisplay}"
+
+VILLE :
+"${cityDisplay}"
+
+PROBLÈMES :
+
+${reasons
+                                .map(
+                                    (reason) =>
+                                        `- ${reason}`
+                                )
+                                .join("\n")}
 
 CONTENU :
 
@@ -1018,68 +1419,99 @@ ${content}
 CONSIGNES :
 
 - Conserve le sens exact du mot-clé.
-- Ne transforme jamais « médecine chinoise » en « médecin chinois ».
-- Supprime les avis et retours clients.
-- Supprime les promesses de résultat.
+- "médecine chinoise" reste "médecine chinoise".
+- Ne transforme jamais le mot-clé en profession.
+- Supprime les avis.
+- Supprime les promesses.
 - Supprime toute affirmation médicale.
-- Supprime les qualifications non vérifiées.
-- Supprime les références au Qi et à l'énergie vitale.
-- Supprime les formulations sur l'équilibre et l'harmonie du corps.
-- Ne promets jamais que l'utilisateur trouvera un professionnel.
-- N'invente aucune donnée.
+- Supprime Qi.
+- Supprime énergie vitale.
+- Supprime équilibre du corps.
+- Supprime harmonie du corps.
+- Supprime toute qualification non vérifiée.
+- Supprime toute donnée SEO.
+- Supprime tout chiffre de recherches mensuelles.
+- Supprime CPC, revenu, potentiel et trafic.
+- Ne promets pas que l'utilisateur trouvera quelqu'un.
+- N'invente rien.
+- Garde une structure SEO claire.
 
 Retourne uniquement le contenu corrigé.
 `,
-                },
-            ],
-        });
+                    },
+                ],
+            }
+        );
 
     return (
-        response?.choices?.[0]?.message?.content?.trim() ||
-        ""
+        response?.choices?.[0]?.message
+            ?.content
+            ?.trim() || ""
     );
 }
 
 /* =========================================================
-   GENERATION DU CONTENU
+   GENERATION CONTENU
 ========================================================= */
 
-async function generateContent(slug) {
-    const { keyword, city } = await parseSlug(slug);
+async function generateContent(
+    slug
+) {
+    const parsed =
+        await parseSlug(slug);
 
-    const profiles = await getDirectoryContext(
-        keyword,
-        city
-    );
+    const keyword =
+        parsed.keyword;
+
+    const city =
+        parsed.city;
+
+    const profiles =
+        await getDirectoryContext(
+            keyword,
+            city
+        );
 
     let content = "";
 
-    if (process.env.OPENAI_API_KEY) {
+    /* =====================================================
+       GENERATION OPENAI
+    ===================================================== */
+
+    if (
+        process.env.OPENAI_API_KEY
+    ) {
         try {
             const response =
-                await openai.chat.completions.create({
-                    model: "gpt-4o-mini",
-                    temperature: 0.1,
-                    messages: [
-                        {
-                            role: "system",
-                            content:
-                                "Tu es un rédacteur SEO français rigoureux. Tu respectes strictement les contraintes et n'inventes rien.",
-                        },
-                        {
-                            role: "user",
-                            content: buildGenerationPrompt({
-                                keyword,
-                                city,
-                                profiles,
-                            }),
-                        },
-                    ],
-                });
+                await openai.chat.completions.create(
+                    {
+                        model:
+                            "gpt-4o-mini",
+                        temperature: 0.1,
+                        messages: [
+                            {
+                                role: "system",
+                                content:
+                                    "Tu es un rédacteur SEO français rigoureux. Respecte strictement les contraintes et n'invente aucune donnée.",
+                            },
+                            {
+                                role: "user",
+                                content:
+                                    buildGenerationPrompt({
+                                        keyword,
+                                        city,
+                                        profiles,
+                                    }),
+                            },
+                        ],
+                    }
+                );
 
             content =
-                response?.choices?.[0]?.message?.content?.trim() ||
-                "";
+                response?.choices?.[0]
+                    ?.message
+                    ?.content
+                    ?.trim() || "";
         } catch (error) {
             console.error(
                 "OPENAI SEO GENERATION ERROR:",
@@ -1088,19 +1520,33 @@ async function generateContent(slug) {
         }
     }
 
+    /* =====================================================
+       FALLBACK SI OPENAI ECHOUE
+    ===================================================== */
+
     if (!content) {
-        content = buildFallbackContent(
-            keyword,
-            city,
-            profiles
-        );
+        content =
+            buildFallbackContent(
+                keyword,
+                city,
+                profiles
+            );
     }
 
-    content = cleanGeneratedContent(
-        content,
-        keyword,
-        city
-    );
+    /* =====================================================
+       NETTOYAGE
+    ===================================================== */
+
+    content =
+        cleanGeneratedContent(
+            content,
+            keyword,
+            city
+        );
+
+    /* =====================================================
+       VALIDATION
+    ===================================================== */
 
     let validation =
         validateGeneratedContent(
@@ -1109,12 +1555,15 @@ async function generateContent(slug) {
             city
         );
 
-    /* Deux tentatives de réparation */
+    /* =====================================================
+       DEUX TENTATIVES DE REPARATION
+    ===================================================== */
 
     for (
         let attempt = 1;
-        attempt <= 2 && !validation.valid;
-        attempt += 1
+        attempt <= 2 &&
+        !validation.valid;
+        attempt++
     ) {
         try {
             const repaired =
@@ -1129,11 +1578,12 @@ async function generateContent(slug) {
                 break;
             }
 
-            content = cleanGeneratedContent(
-                repaired,
-                keyword,
-                city
-            );
+            content =
+                cleanGeneratedContent(
+                    repaired,
+                    keyword,
+                    city
+                );
 
             validation =
                 validateGeneratedContent(
@@ -1149,7 +1599,9 @@ async function generateContent(slug) {
         }
     }
 
-    /* Fallback si le texte reste mauvais */
+    /* =====================================================
+       FALLBACK FINAL
+    ===================================================== */
 
     if (!validation.valid) {
         console.warn(
@@ -1157,33 +1609,50 @@ async function generateContent(slug) {
             validation.reasons
         );
 
-        content = buildFallbackContent(
-            keyword,
-            city,
-            profiles
-        );
+        content =
+            buildFallbackContent(
+                keyword,
+                city,
+                profiles
+            );
     }
 
-    /* Dernier contrôle */
+    /* =====================================================
+       DERNIER CONTROLE
+    ===================================================== */
 
-    const finalValidation =
+    let finalValidation =
         validateGeneratedContent(
             content,
             keyword,
             city
         );
 
-    if (!finalValidation.valid) {
+    /*
+     * Le fallback lui-même doit être sûr.
+     */
+
+    if (
+        !finalValidation.valid
+    ) {
         console.warn(
-            "SEO FINAL FALLBACK USED:",
+            "SEO FINAL FALLBACK CHECK FAILED:",
             finalValidation.reasons
         );
 
-        content = buildFallbackContent(
-            keyword,
-            city,
-            profiles
-        );
+        content =
+            buildFallbackContent(
+                keyword,
+                city,
+                []
+            );
+
+        finalValidation =
+            validateGeneratedContent(
+                content,
+                keyword,
+                city
+            );
     }
 
     return {
@@ -1195,12 +1664,16 @@ async function generateContent(slug) {
 }
 
 /* =========================================================
-   SAUVEGARDE / REGENERATION
+   SAUVEGARDER UNE PAGE EXISTANTE
 ========================================================= */
 
-async function saveGeneratedPage(slug) {
+async function saveGeneratedPage(
+    slug
+) {
     const generated =
-        await generateContent(slug);
+        await generateContent(
+            slug
+        );
 
     const keywordDisplay =
         beautifyKeyword(
@@ -1215,14 +1688,29 @@ async function saveGeneratedPage(slug) {
     const title =
         `${keywordDisplay} à ${cityDisplay} | Annuaire SEO`;
 
-    const score = random(70, 95);
-    const volume = random(20, 800);
-    const difficulty = random(10, 70);
-    const cpc = Number(
-        (Math.random() * 4 + 0.2).toFixed(2)
-    );
-    const revenue = random(50, 1000);
-    const trend = generateTrend();
+    const score =
+        random(70, 95);
+
+    const volume =
+        random(20, 800);
+
+    const difficulty =
+        random(10, 70);
+
+    const cpc =
+        Number(
+            (
+                Math.random() *
+                4 +
+                0.2
+            ).toFixed(2)
+        );
+
+    const revenue =
+        random(50, 1000);
+
+    const trend =
+        generateTrend();
 
     await db.run(
         `
@@ -1273,22 +1761,28 @@ async function saveGeneratedPage(slug) {
 router.get(
     "/directory-pages",
     seoPageLimiter,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
         try {
             const requestedLimit =
-                Number(req.query.limit || 30);
+                Number(
+                    req.query.limit || 30
+                );
 
-            const limit = Math.min(
-                Math.max(
-                    Number.isFinite(
-                        requestedLimit
-                    )
-                        ? requestedLimit
-                        : 30,
-                    1
-                ),
-                100
-            );
+            const limit =
+                Math.min(
+                    Math.max(
+                        Number.isFinite(
+                            requestedLimit
+                        )
+                            ? requestedLimit
+                            : 30,
+                        1
+                    ),
+                    100
+                );
 
             const cityRows =
                 await db.all(`
@@ -1309,13 +1803,21 @@ router.get(
                         .filter(Boolean)
                 );
 
-            if (!validCities.size) {
+            if (
+                validCities.size === 0
+            ) {
                 return res.json({
                     success: true,
                     pages: [],
                     count: 0,
                 });
             }
+
+            const rawLimit =
+                Math.min(
+                    limit * 3,
+                    300
+                );
 
             const rows =
                 await db.all(`
@@ -1337,10 +1839,7 @@ router.get(
           WHERE slug IS NOT NULL
             AND TRIM(slug) != ''
           ORDER BY created_at DESC
-          LIMIT ${Math.min(
-                    limit * 3,
-                    300
-                )}
+          LIMIT ${rawLimit}
         `);
 
             const seen =
@@ -1348,7 +1847,10 @@ router.get(
 
             const pages = [];
 
-            for (const row of rows || []) {
+            for (
+                const row of
+                rows || []
+            ) {
                 const rowSlug =
                     slugify(
                         row.slug || ""
@@ -1361,7 +1863,12 @@ router.get(
 
                 if (
                     !rowSlug ||
-                    !rowCitySlug ||
+                    !rowCitySlug
+                ) {
+                    continue;
+                }
+
+                if (
                     !validCities.has(
                         rowCitySlug
                     )
@@ -1378,44 +1885,72 @@ router.get(
                 }
 
                 if (
-                    seen.has(rowSlug)
+                    seen.has(
+                        rowSlug
+                    )
                 ) {
                     continue;
                 }
 
-                seen.add(rowSlug);
+                seen.add(
+                    rowSlug
+                );
 
                 pages.push({
                     id: row.id,
+
                     keyword:
                         beautifyKeyword(
-                            row.keyword || ""
+                            row.keyword ||
+                            ""
                         ),
+
                     city:
                         displayCity(
-                            row.city || ""
+                            row.city ||
+                            ""
                         ),
-                    slug: row.slug,
+
+                    slug:
+                        row.slug,
+
                     title:
                         row.title ||
                         `${beautifyKeyword(
-                            row.keyword || ""
+                            row.keyword ||
+                            ""
                         )
                         } à ${displayCity(
-                            row.city || ""
+                            row.city ||
+                            ""
                         )
                         } | Annuaire SEO`,
+
                     content:
-                        row.content || "",
-                    score: row.score,
-                    volume: row.volume,
+                        row.content ||
+                        "",
+
+                    score:
+                        row.score,
+
+                    volume:
+                        row.volume,
+
                     difficulty:
                         row.difficulty,
+
                     competition:
                         row.difficulty,
-                    cpc: row.cpc,
-                    revenue: row.revenue,
-                    trend: row.trend,
+
+                    cpc:
+                        row.cpc,
+
+                    revenue:
+                        row.revenue,
+
+                    trend:
+                        row.trend,
+
                     created_at:
                         row.created_at,
                 });
@@ -1440,7 +1975,9 @@ router.get(
                 error
             );
 
-            return res.status(500).json({
+            return res.status(
+                500
+            ).json({
                 success: false,
                 message:
                     "Erreur lors de la récupération des pages SEO.",
@@ -1450,21 +1987,27 @@ router.get(
 );
 
 /* =========================================================
-   REGENERER UNE PAGE EXISTANTE
+   REGENERER UNE PAGE
 ========================================================= */
 
 router.get(
     "/regenerate",
     seoPageLimiter,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
         try {
             const slug =
                 slugify(
-                    req.query.slug || ""
+                    req.query.slug ||
+                    ""
                 );
 
             if (!slug) {
-                return res.status(400).json({
+                return res.status(
+                    400
+                ).json({
                     success: false,
                     message:
                         "Slug manquant.",
@@ -1482,8 +2025,12 @@ router.get(
                     [slug]
                 );
 
-            if (!existingPage) {
-                return res.status(404).json({
+            if (
+                !existingPage
+            ) {
+                return res.status(
+                    404
+                ).json({
                     success: false,
                     message:
                         "Page SEO introuvable.",
@@ -1497,10 +2044,13 @@ router.get(
 
             return res.json({
                 success: true,
+
                 message:
                     "Page SEO régénérée avec succès",
+
                 page: {
                     ...updatedPage,
+
                     competition:
                         updatedPage?.difficulty ??
                         null,
@@ -1512,7 +2062,9 @@ router.get(
                 error
             );
 
-            return res.status(500).json({
+            return res.status(
+                500
+            ).json({
                 success: false,
                 message:
                     "Erreur lors de la régénération de la page SEO.",
@@ -1522,21 +2074,27 @@ router.get(
 );
 
 /* =========================================================
-   RECUPERER / CREER UNE PAGE SEO
+   RECUPERER OU CREER UNE PAGE
 ========================================================= */
 
 router.get(
     "/",
     seoPageLimiter,
-    async (req, res) => {
+    async (
+        req,
+        res
+    ) => {
         try {
             const slug =
                 slugify(
-                    req.query.slug || ""
+                    req.query.slug ||
+                    ""
                 );
 
             if (!slug) {
-                return res.status(400).json({
+                return res.status(
+                    400
+                ).json({
                     success: false,
                     message:
                         "Slug manquant.",
@@ -1554,18 +2112,19 @@ router.get(
                     [slug]
                 );
 
-            /*
-             * IMPORTANT :
-             * si une ancienne page existe mais contient
-             * un mauvais texte, on la régénère automatiquement.
-             */
+            /* ===================================================
+               PAGE EXISTANTE
+            =================================================== */
 
             if (page) {
                 const validation =
                     validateGeneratedContent(
-                        page.content || "",
-                        page.keyword || "",
-                        page.city || ""
+                        page.content ||
+                        "",
+                        page.keyword ||
+                        "",
+                        page.city ||
+                        ""
                     );
 
                 const missingTitle =
@@ -1573,6 +2132,11 @@ router.get(
                     !String(
                         page.title
                     ).trim();
+
+                /*
+                 * Si l'ancienne page est mauvaise,
+                 * on la régénère automatiquement.
+                 */
 
                 if (
                     !validation.valid ||
@@ -1589,20 +2153,30 @@ router.get(
                             slug
                         );
                 }
-            } else {
+            }
+
+            /* ===================================================
+               PAGE NOUVELLE
+            =================================================== */
+
+            if (!page) {
                 const generated =
                     await generateContent(
                         slug
                     );
 
-                const title =
-                    `${beautifyKeyword(
+                const keywordDisplay =
+                    beautifyKeyword(
                         generated.keyword
-                    )
-                    } à ${displayCity(
+                    );
+
+                const cityDisplay =
+                    displayCity(
                         generated.city
-                    )
-                    } | Annuaire SEO`;
+                    );
+
+                const title =
+                    `${keywordDisplay} à ${cityDisplay} | Annuaire SEO`;
 
                 const score =
                     random(70, 95);
@@ -1672,24 +2246,49 @@ router.get(
                     );
             }
 
+            /* ===================================================
+               REPONSE
+            =================================================== */
+
             return res.json({
                 success: true,
-                slug: page.slug,
-                keyword: page.keyword,
-                city: page.city,
-                title: page.title,
-                content: page.content,
-                score: page.score,
-                volume: page.volume,
+
+                slug:
+                    page.slug,
+
+                keyword:
+                    page.keyword,
+
+                city:
+                    page.city,
+
+                title:
+                    page.title,
+
+                content:
+                    page.content,
+
+                score:
+                    page.score,
+
+                volume:
+                    page.volume,
+
                 difficulty:
                     page.difficulty,
+
                 competition:
                     page.difficulty,
-                cpc: page.cpc,
+
+                cpc:
+                    page.cpc,
+
                 revenue:
                     page.revenue,
+
                 trend:
                     page.trend,
+
                 created_at:
                     page.created_at,
             });
@@ -1699,7 +2298,9 @@ router.get(
                 error
             );
 
-            return res.status(500).json({
+            return res.status(
+                500
+            ).json({
                 success: false,
                 message:
                     "Erreur lors de la récupération de la page SEO.",

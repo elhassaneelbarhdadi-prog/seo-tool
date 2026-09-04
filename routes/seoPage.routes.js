@@ -1,12 +1,11 @@
-const express = require("express");
-const rateLimit = require("express-rate-limit");
-const OpenAI = require("openai");
-const crypto = require("crypto");
+import express from "express";
+import rateLimit from "express-rate-limit";
+import OpenAI from "openai";
+import crypto from "crypto";
 
-const db = require("../config/database");
+import db from "../config/database.js";
 
 const router = express.Router();
-
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
@@ -1595,4 +1594,4 @@ router.get(
    EXPORT
 ========================================================= */
 
-module.exports = router;
+export default router;

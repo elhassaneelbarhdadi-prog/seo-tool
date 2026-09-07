@@ -1,12 +1,13 @@
 {
     "$schema": "https://openapi.vercel.sh/vercel.json",
-    "routes": [
+    "rewrites": [
         {
-            "handle": "filesystem"
+            "source": "/sitemap.xml",
+            "destination": "https://seo-tool-api-lo6k.onrender.com/sitemap.xml"
         },
         {
-            "src": "/.*",
-            "dest": "/index.html"
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
     ]
 }

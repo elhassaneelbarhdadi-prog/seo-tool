@@ -1,14 +1,64 @@
 
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, Link } from "react-router-dom";
+import { Helmet } from "react-helmet";
 
 export default function Home() {
-
     const navigate = useNavigate();
     const { lang = "fr" } = useParams();
 
-    return (
+    const canonicalUrl = `https://referenciaseo.com/${lang}/`;
 
+    return (
         <div className="min-h-screen bg-white">
+
+            {/* SEO */}
+            <Helmet>
+                <html lang={lang} />
+
+                <title>
+                    Outil SEO gratuit : mots-clés, analyse et référencement | Referencia SEO
+                </title>
+
+                <meta
+                    name="description"
+                    content="Utilisez notre outil SEO gratuit pour analyser vos mots-clés, étudier la concurrence, trouver des opportunités SEO et améliorer votre référencement."
+                />
+
+                <meta
+                    name="robots"
+                    content="index, follow"
+                />
+
+                <link
+                    rel="canonical"
+                    href={canonicalUrl}
+                />
+
+                <meta
+                    property="og:title"
+                    content="Referencia SEO | Outil SEO gratuit"
+                />
+
+                <meta
+                    property="og:description"
+                    content="Analysez vos mots-clés, étudiez la concurrence et trouvez des opportunités SEO pour développer votre visibilité sur Google."
+                />
+
+                <meta
+                    property="og:type"
+                    content="website"
+                />
+
+                <meta
+                    property="og:url"
+                    content={canonicalUrl}
+                />
+
+                <meta
+                    property="og:site_name"
+                    content="Referencia SEO"
+                />
+            </Helmet>
 
             {/* HERO */}
             <section className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-24 px-6 text-center">
@@ -22,6 +72,7 @@ export default function Home() {
                     et trouvez des opportunités SEO capables de générer du trafic
                     et des clients pour votre activité.
                 </p>
+
                 <button
                     onClick={() => navigate(`/${lang}/free-analyzer`)}
                     className="bg-black text-white px-8 py-4 rounded-xl text-lg font-semibold hover:scale-105 transition"
@@ -70,6 +121,7 @@ export default function Home() {
                 </div>
 
             </section>
+
             {/* PROBLEME */}
             <section className="bg-gray-50 py-20 px-6 text-center">
 
@@ -84,6 +136,14 @@ export default function Home() {
                     <p>❌ Faible potentiel commercial</p>
 
                 </div>
+
+                <p className="max-w-3xl mx-auto mt-10 text-lg text-gray-600">
+                    Referencia SEO vous aide à identifier les mots-clés les plus
+                    intéressants avant de créer votre contenu. Analysez leur
+                    potentiel, la concurrence et les opportunités SEO afin de
+                    concentrer vos efforts sur les recherches qui peuvent
+                    réellement développer votre activité.
+                </p>
 
             </section>
 
@@ -107,25 +167,43 @@ export default function Home() {
                         <ul className="space-y-6">
                             <li>✅ Suggestions SEO intelligentes</li>
                             <li>✅ Analyse de la concurrence</li>
-                            <li>✅ Référencement de votre entreprise sur Google via notre annuaire SEO</li>
+                            <li>
+                                ✅ Référencement de votre entreprise sur Google
+                                via notre annuaire SEO
+                            </li>
                         </ul>
-                        <div className="mt-12 bg-indigo-50 rounded-2xl p-8">
-                            <h3 className="text-2xl font-bold mb-4">
-                                📍 Annuaire SEO Professionnel
-                            </h3>
 
-                            <p className="text-gray-600 mb-4">
-                                Publiez votre entreprise dans notre annuaire SEO,
-                                améliorez votre visibilité locale et obtenez des visiteurs
-                                qualifiés depuis Google.
-                            </p>
+                    </div>
+
+                    {/* ANNUAIRE */}
+                    <div className="mt-12 bg-indigo-50 rounded-2xl p-8">
+
+                        <h3 className="text-2xl font-bold mb-4">
+                            📍 Annuaire SEO Professionnel
+                        </h3>
+
+                        <p className="text-gray-600 mb-6">
+                            Publiez votre entreprise dans notre annuaire SEO,
+                            améliorez votre visibilité locale et obtenez des
+                            visiteurs qualifiés depuis Google.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row gap-4">
+
+                            <Link
+                                to={`/${lang}/annuaire`}
+                                className="bg-white border border-indigo-600 text-indigo-600 px-6 py-3 rounded-xl font-semibold text-center hover:bg-indigo-50"
+                            >
+                                🔎 Voir l'annuaire SEO
+                            </Link>
 
                             <button
                                 onClick={() => navigate(`/${lang}/register`)}
-                                className="bg-indigo-600 text-white px-6 py-3 rounded-xl"
+                                className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold"
                             >
                                 Ajouter mon entreprise
                             </button>
+
                         </div>
 
                     </div>
@@ -155,6 +233,5 @@ export default function Home() {
             </section>
 
         </div>
-
     );
 }

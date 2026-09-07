@@ -109,6 +109,12 @@ function beautifyKeyword(keyword = "") {
         [/\bfrancaise\b/gi, "française"],
         [/\bfrancaises\b/gi, "françaises"],
         [/\bmaconnerie\b/gi, "maçonnerie"],
+
+        // Corrections des mots courants sans accents
+        [/\bvelo\b/gi, "vélo"],
+        [/\bvelos\b/gi, "vélos"],
+        [/\bitineraire\b/gi, "itinéraire"],
+        [/\bitineraires\b/gi, "itinéraires"],
     ];
 
     for (const [
@@ -128,6 +134,57 @@ function displayCity(city = "") {
     return capitalize(
         String(city).trim()
     );
+}
+/* =========================================================
+   RECHERCHE ROBUSTE D'UNE PAGE SEO
+   Gère les slugs avec ou sans accents :
+   "vélo-lyon" <=> "velo-lyon"
+========================================================= */
+
+async function findSeoPageBySlug(requestedSlug = "") {
+    const rawSlug = String(
+        requestedSlug || ""
+    ).trim();
+
+    if (!rawSlug) {
+        return null;
+    }
+
+    const normalizedSlug =
+        slugify(rawSlug);
+
+    // 1. Recherche exacte
+    let page = await db.get(
+        `
+        SELECT *
+        FROM seo_pages
+        WHERE slug = ?
+        LIMIT 1
+        `,
+        [rawSlug]
+    );
+
+    if (page) {
+        return page;
+    }
+
+    // 2. Recherche normalisée
+    const candidates = await db.all(
+        `
+        SELECT *
+        FROM seo_pages
+        WHERE slug IS NOT NULL
+          AND TRIM(slug) != ''
+        `
+    );
+
+    page = (candidates || []).find(
+        (row) =>
+            slugify(row.slug || "") ===
+            normalizedSlug
+    );
+
+    return page || null;
 }
 
 /* =========================================================
@@ -795,315 +852,196 @@ function validateGeneratedContent(
     }
 
     const forbiddenPatterns = [
-        [
-            /equilibre et harmonie/,
-            "équilibre et harmonie",
-        ],
+        // =====================================================
+        // AFFIRMATIONS MÉDICALES / THÉRAPEUTIQUES
+        // =====================================================
 
-        [
-            /maintenir l'equilibre/,
-            "maintien de l'équilibre",
-        ],
+        /\bguérit\b/i,
+        /\bguérir\b/i,
+        /\bguérison\b/i,
+        /\bsoigne\b/i,
+        /\bsoigner\b/i,
+        /\bsoigné\b/i,
+        /\bsoignée\b/i,
+        /\btraiter\b/i,
+        /\btraite\b/i,
+        /\btraitement\b/i,
+        /\bprévenir\b/i,
+        /\bprévention\b/i,
+        /\befficacité\b/i,
+        /\befficace\b/i,
+        /\bpathologie\b/i,
+        /\bmaladie\b/i,
+        /\btrouble\b/i,
+        /\bsymptôme\b/i,
+        /\bsymptômes\b/i,
+        /\bdiagnostic\b/i,
+        /\bdiagnostiquer\b/i,
+        /\bdiagnostique\b/i,
 
-        [
-            /maintien de l'equilibre/,
-            "maintien de l'équilibre",
-        ],
+        // =====================================================
+        // PRATIQUES / ACTES MÉDICAUX NON CONFIRMÉS
+        // =====================================================
 
-        [
-            /energie vitale/,
-            "énergie vitale",
-        ],
+        /\bacupuncture\b/i,
+        /\bphytothérapie\b/i,
+        /\bphytotherapie\b/i,
+        /\bostéopathie\b/i,
+        /\bosteopathie\b/i,
+        /\bchiropractie\b/i,
+        /\bchiropratique\b/i,
+        /\bmassage thérapeutique\b/i,
+        /\bmassage therapeutique\b/i,
+        /\bconsultation médicale\b/i,
+        /\bconsultation medicale\b/i,
 
-        [
-            /\bqi\b/,
-            "Qi",
-        ],
+        // =====================================================
+        // QUALIFICATIONS NON VÉRIFIÉES
+        // =====================================================
 
-        [
-            /favoriser la circulation/,
-            "favoriser la circulation",
-        ],
+        /\bprofessionnel certifié\b/i,
+        /\bprofessionnels certifiés\b/i,
+        /\bprofessionnel qualifié\b/i,
+        /\bprofessionnels qualifiés\b/i,
+        /\bpraticien qualifié\b/i,
+        /\bpraticiens qualifiés\b/i,
+        /\bpraticien spécialisé\b/i,
+        /\bpraticiens spécialisés\b/i,
+        /\bpraticien specialise\b/i,
+        /\bpraticiens specialises\b/i,
+        /\bdiplômé\b/i,
+        /\bdiplômée\b/i,
+        /\bdiplômés\b/i,
+        /\bdiplômées\b/i,
+        /\bcertifié\b/i,
+        /\bcertifiée\b/i,
+        /\bcertifiés\b/i,
+        /\bcertifiées\b/i,
+        /\bqualification\b/i,
+        /\bqualifications\b/i,
 
-        [
-            /favoriser le bien etre/,
-            "promesse de bien-être",
-        ],
+        // =====================================================
+        // RÉPUTATION / POPULARITÉ NON VÉRIFIÉE
+        // =====================================================
 
-        [
-            /promouvoir le bien etre/,
-            "promesse de bien-être",
-        ],
+        /\bbonne réputation\b/i,
+        /\bbonne reputation\b/i,
+        /\bmauvaise réputation\b/i,
+        /\bmauvaise reputation\b/i,
+        /\bgagne en popularité\b/i,
+        /\bgagne en popularite\b/i,
+        /\btrès populaire\b/i,
+        /\btrès populaires\b/i,
+        /\btrès apprécié\b/i,
+        /\btrès appréciée\b/i,
+        /\btrès appréciés\b/i,
+        /\btrès appréciées\b/i,
 
-        [
-            /ameliore le bien etre/,
-            "promesse de bien-être",
-        ],
+        // =====================================================
+        // AFFIRMATIONS LOCALES NON VÉRIFIÉES
+        // =====================================================
 
-        [
-            /ameliorer le bien etre/,
-            "promesse de bien-être",
-        ],
+        /\bune large gamme\b/i,
+        /\blarge gamme\b/i,
+        /\bune grande variété\b/i,
+        /\bgrande variété\b/i,
+        /\bgrande variete\b/i,
+        /\bvariété de services\b/i,
+        /\bvariete de services\b/i,
+        /\bnombreuses infrastructures\b/i,
+        /\bplusieurs options\b/i,
+        /\bde nombreux services\b/i,
+        /\bde nombreuses entreprises\b/i,
+        /\bde nombreux professionnels\b/i,
+        /\bde nombreux praticiens\b/i,
 
-        [
-            /ameliorer la sante/,
-            "formulation santé",
-        ],
+        // =====================================================
+        // DISPONIBILITÉ NON PROUVÉE
+        // =====================================================
 
-        [
-            /offrir une approche differente du bien etre et de la sante/,
-            "formulation santé/bien-être",
-        ],
+        /\bsont disponibles\b/i,
+        /\best disponible\b/i,
+        /\bsont proposés\b/i,
+        /\bsont proposées\b/i,
+        /\best proposé\b/i,
+        /\best proposée\b/i,
+        /\bpropose des services\b/i,
+        /\bproposent des services\b/i,
 
-        [
-            /garantit/,
-            "garantie",
-        ],
+        // =====================================================
+        // ORGANISATION / ÉVÉNEMENTS NON PROUVÉS
+        // =====================================================
 
-        [
-            /garantie/,
-            "garantie",
-        ],
+        /\brégulièrement organisés\b/i,
+        /\brégulièrement organisées\b/i,
+        /\bregulierement organises\b/i,
+        /\bregulierement organisees\b/i,
+        /\bévénements locaux\b/i,
+        /\bevenements locaux\b/i,
+        /\binitiatives locales\b/i,
 
-        [
-            /guerir/,
-            "guérison",
-        ],
+        // =====================================================
+        // BÉNÉFICES / PROMESSES NON VÉRIFIÉS
+        // =====================================================
 
-        [
-            /guerison/,
-            "guérison",
-        ],
+        /\bbien entretenues\b/i,
+        /\bbien entretenus\b/i,
+        /\bcirculer en toute sécurité\b/i,
+        /\bcirculer en toute securite\b/i,
+        /\bfacilitant l'accès\b/i,
+        /\bfacilitant l'acces\b/i,
+        /\bfaciliter l'accès\b/i,
+        /\bfaciliter l'acces\b/i,
+        /\bfaciliter la compréhension\b/i,
+        /\bfaciliter la comprehension\b/i,
+        /\bprofiter pleinement\b/i,
+        /\bconnaissent bien la région\b/i,
+        /\bconnaissent bien la region\b/i,
+        /\brelation de confiance\b/i,
 
-        [
-            /traiter une maladie/,
-            "affirmation médicale",
-        ],
+        // =====================================================
+        // FORMULATIONS TROP AFFIRMATIVES
+        // =====================================================
 
-        [
-            /traiter les maladies/,
-            "affirmation médicale",
-        ],
+        /\bpermet de traiter\b/i,
+        /\bpermet de soigner\b/i,
+        /\bpermet de prévenir\b/i,
+        /\bpermettrait de traiter\b/i,
+        /\bpeut traiter\b/i,
+        /\bpeut soigner\b/i,
+        /\bpeut prévenir\b/i,
+        // FORMULATIONS MÉDICALES OU TROP AFFIRMATIVES
+        /\bsoin\b/i,
+        /\bsoins\b/i,
+        /\bméthodes alternatives\b/i,
+        /\bmethodes alternatives\b/i,
+        /\balternative de soins\b/i,
+        /\balternatives de soins\b/i,
 
-        [
-            /prevenir les maladies/,
-            "affirmation médicale",
-        ],
+        // QUALIFICATIONS / FORMATION NON VÉRIFIÉES
+        /\bformation\b/i,
+        /\bformations\b/i,
+        /\bse spécialise\b/i,
+        /\bse specialise\b/i,
+        /\bspécialisé\b/i,
+        /\bspécialisée\b/i,
+        /\bspécialisés\b/i,
+        /\bspécialisées\b/i,
 
-        [
-            /soigner/,
-            "affirmation médicale",
-        ],
+        // RECONNAISSANCE / POPULARITÉ NON PROUVÉE
+        /\bde plus en plus reconnue\b/i,
+        /\bde plus en plus recherché\b/i,
+        /\bde plus en plus recherchée\b/i,
+        /\bintérêt croissant\b/i,
+        /\binteret croissant\b/i,
+        /\breconnue et recherchée\b/i,
+        /\breconnue et recherchee\b/i,
 
-        [
-            /soins medicaux/,
-            "affirmation médicale",
-        ],
-
-        [
-            /efficacite demontree/,
-            "efficacité non sourcée",
-        ],
-
-        [
-            /efficace pour/,
-            "promesse d'efficacité",
-        ],
-
-        [
-            /professionnel certifie/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /professionnels certifies/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /professionnel qualifie/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /professionnels qualifies/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /praticien qualifie/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /praticiens qualifies/,
-            "qualification non vérifiée",
-        ],
-
-        [
-            /certification necessaire/,
-            "certification non vérifiée",
-        ],
-
-        [
-            /certifications necessaires/,
-            "certification non vérifiée",
-        ],
-
-        [
-            /diplome necessaire/,
-            "diplôme non vérifié",
-        ],
-
-        [
-            /diplomes necessaires/,
-            "diplôme non vérifié",
-        ],
-
-        [
-            /avis d'autres/,
-            "avis non présents",
-        ],
-
-        [
-            /avis des clients/,
-            "avis non présents",
-        ],
-
-        [
-            /avis clients/,
-            "avis non présents",
-        ],
-
-        [
-            /retours des clients/,
-            "avis non présents",
-        ],
-
-        [
-            /vous accederez a une liste/,
-            "liste promise",
-        ],
-
-        [
-            /vous pourrez trouver/,
-            "résultat promis",
-        ],
-
-        [
-            /pour trouver des professionnels/,
-            "résultat promis",
-        ],
-
-        [
-            /pour trouver un professionnel/,
-            "résultat promis",
-        ],
-
-        [
-            /trouver des professionnels/,
-            "résultat promis",
-        ],
-
-        [
-            /trouver un professionnel/,
-            "résultat promis",
-        ],
-
-        [
-            /trouver des praticiens/,
-            "résultat promis",
-        ],
-
-        [
-            /trouver un praticien/,
-            "résultat promis",
-        ],
-
-        [
-            /trouver celui qui correspond/,
-            "résultat promis",
-        ],
-
-        [
-            /facilitant ainsi l acces/,
-            "formulation d'accès",
-        ],
-
-        [
-            /facilitant l acces/,
-            "formulation d'accès",
-        ],
-
-        [
-            /connaissent bien le contexte/,
-            "affirmation non vérifiée",
-        ],
-
-        [
-            /connaissent mieux le contexte/,
-            "affirmation non vérifiée",
-        ],
-
-        [
-            /besoins de la communaute/,
-            "affirmation non vérifiée",
-        ],
-
-        [
-            /trafic qualifie/,
-            "trafic SEO",
-        ],
-
-        [
-            /generer des clients/,
-            "promesse commerciale",
-        ],
-
-        [
-            /recherches mensuelles/,
-            "donnée SEO",
-        ],
-
-        [
-            /potentiel estime/,
-            "donnée SEO",
-        ],
-
-        [
-            /cpc moyen/,
-            "donnée SEO",
-        ],
-
-        [
-            /concurrence\s*:/,
-            "donnée SEO",
-        ],
-
-        [
-            /meilleur professionnel/,
-            "popularité",
-        ],
-
-        [
-            /les meilleurs/,
-            "popularité",
-        ],
-
-        [
-            /tous les professionnels/,
-            "affirmation exhaustive",
-        ],
-
-        [
-            /l'ensemble des professionnels/,
-            "affirmation exhaustive",
-        ],
-
-        [
-            /liste de professionnels et d'entreprises/,
-            "liste exhaustive",
-        ],
+        // AFFIRMATIONS SUR LES PROFILS
+        /\bpeuvent offrir\b/i,
+        /\bpeut offrir\b/i,
+        /\boffrent\b/i,
+        /\boffre\b/i,
     ];
 
     for (const [
@@ -2059,41 +1997,12 @@ router.get(
              * 1. Recherche avec le slug EXACT
              */
 
-            let existingPage =
-                await db.get(
-                    `
-            SELECT *
-            FROM seo_pages
-            WHERE slug = ?
-            LIMIT 1
-          `,
-                    [requestedSlug]
+            const existingPage =
+                await findSeoPageBySlug(
+                    requestedSlug
                 );
 
-            /*
-             * 2. Fallback avec slug normalisé
-             */
-
-            if (
-                !existingPage &&
-                normalizedSlug !==
-                requestedSlug
-            ) {
-                existingPage =
-                    await db.get(
-                        `
-              SELECT *
-              FROM seo_pages
-              WHERE slug = ?
-              LIMIT 1
-            `,
-                        [normalizedSlug]
-                    );
-            }
-
-            if (
-                !existingPage
-            ) {
+            if (!existingPage) {
                 return res.status(
                     404
                 ).json({
@@ -2194,38 +2103,20 @@ router.get(
              * Recherche exacte en premier.
              */
 
-            let page =
-                await db.get(
-                    `
-            SELECT *
-            FROM seo_pages
-            WHERE slug = ?
-            LIMIT 1
-          `,
-                    [requestedSlug]
-                );
-
             /*
-             * Fallback normalisé uniquement
-             * si nécessaire.
-             */
+     * Recherche robuste :
+     * retrouve les slugs avec ou sans accents.
+     *
+     * Exemple :
+     * velo-lyon
+     * retrouve également :
+     * vélo-lyon
+     */
 
-            if (
-                !page &&
-                normalizedSlug !==
-                requestedSlug
-            ) {
-                page =
-                    await db.get(
-                        `
-              SELECT *
-              FROM seo_pages
-              WHERE slug = ?
-              LIMIT 1
-            `,
-                        [normalizedSlug]
-                    );
-            }
+            let page =
+                await findSeoPageBySlug(
+                    requestedSlug
+                );
 
             /* ===================================================
                PAGE EXISTANTE

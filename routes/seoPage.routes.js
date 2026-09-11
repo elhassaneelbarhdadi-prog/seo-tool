@@ -2161,97 +2161,42 @@ router.get(
                 }
             }
 
+
+
             /* ===================================================
-               PAGE NOUVELLE
-            =================================================== */
+    PAGE INEXISTANTE
+ 
+    IMPORTANT :
+    Une URL inconnue ne doit pas créer
+    automatiquement une page SEO.
+ 
+    Cela évite notamment qu'une URL erronée,
+    une ancienne URL avec des espaces ou un robot
+    puisse remplir la table seo_pages.
+ =================================================== */
 
             if (!page) {
-                const generated =
-                    await generateContent(
-                        requestedSlug
-                    );
 
-                const keywordDisplay =
-                    beautifyKeyword(
-                        generated.keyword
-                    );
-
-                const cityDisplay =
-                    displayCity(
-                        generated.city
-                    );
-
-                const title =
-                    `${keywordDisplay} à ${cityDisplay} | Annuaire SEO`;
-
-                const score =
-                    random(70, 95);
-
-                const volume =
-                    random(20, 800);
-
-                const difficulty =
-                    random(10, 70);
-
-                const cpc =
-                    Number(
-                        (
-                            Math.random() *
-                            4 +
-                            0.2
-                        ).toFixed(2)
-                    );
-
-                const revenue =
-                    random(50, 1000);
-
-                const trend =
-                    generateTrend();
-
-                await db.run(
-                    `
-            INSERT INTO seo_pages (
-              keyword,
-              city,
-              slug,
-              title,
-              content,
-              score,
-              volume,
-              difficulty,
-              cpc,
-              revenue,
-              trend
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `,
-                    [
-                        generated.keyword,
-                        generated.city,
+                console.log(
+                    "❌ SEO PAGE NOT FOUND:",
+                    {
                         requestedSlug,
-                        title,
-                        generated.content,
-                        score,
-                        volume,
-                        difficulty,
-                        cpc,
-                        revenue,
-                        trend,
-                    ]
+                        normalizedSlug,
+                    }
                 );
 
-                page =
-                    await db.get(
-                        `
-              SELECT *
-              FROM seo_pages
-              WHERE slug = ?
-              LIMIT 1
-            `,
-                        [requestedSlug]
-                    );
-            }
+                return res.status(
+                    404
+                ).json({
+                    success: false,
 
+                    message:
+                        "Page SEO introuvable.",
+
+                    slug:
+                        normalizedSlug,
+                });
+            }
             /* ===================================================
                REPONSE
             =================================================== */

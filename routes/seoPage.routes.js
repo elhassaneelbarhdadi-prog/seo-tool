@@ -135,6 +135,7 @@ function displayCity(city = "") {
         String(city).trim()
     );
 }
+
 /* =========================================================
    RECHERCHE ROBUSTE D'UNE PAGE SEO
    Gère les slugs avec ou sans accents :
@@ -827,7 +828,6 @@ function cleanGeneratedContent(
 
     return cleaned.trim();
 }
-
 /* =========================================================
    VALIDATION STRICTE
 ========================================================= */
@@ -1010,6 +1010,7 @@ function validateGeneratedContent(
         /\bpeut traiter\b/i,
         /\bpeut soigner\b/i,
         /\bpeut prévenir\b/i,
+
         // FORMULATIONS MÉDICALES OU TROP AFFIRMATIVES
         /\bsoin\b/i,
         /\bsoins\b/i,
@@ -1443,7 +1444,6 @@ Retourne uniquement le contenu corrigé.
         return "";
     }
 }
-
 /* =========================================================
    GENERATION DU CONTENU
 ========================================================= */
@@ -1890,12 +1890,10 @@ router.get(
                         `${beautifyKeyword(
                             row.keyword ||
                             ""
-                        )
-                        } à ${displayCity(
+                        )} à ${displayCity(
                             row.city ||
                             ""
-                        )
-                        } | Annuaire SEO`,
+                        )} | Annuaire SEO`,
 
                     content:
                         row.content ||
@@ -2104,14 +2102,14 @@ router.get(
              */
 
             /*
-     * Recherche robuste :
-     * retrouve les slugs avec ou sans accents.
-     *
-     * Exemple :
-     * velo-lyon
-     * retrouve également :
-     * vélo-lyon
-     */
+             * Recherche robuste :
+             * retrouve les slugs avec ou sans accents.
+             *
+             * Exemple :
+             * velo-lyon
+             * retrouve également :
+             * vélo-lyon
+             */
 
             let page =
                 await findSeoPageBySlug(
@@ -2161,19 +2159,17 @@ router.get(
                 }
             }
 
-
-
             /* ===================================================
-    PAGE INEXISTANTE
- 
-    IMPORTANT :
-    Une URL inconnue ne doit pas créer
-    automatiquement une page SEO.
- 
-    Cela évite notamment qu'une URL erronée,
-    une ancienne URL avec des espaces ou un robot
-    puisse remplir la table seo_pages.
- =================================================== */
+               PAGE INEXISTANTE
+
+               IMPORTANT :
+               Une URL inconnue ne doit pas créer
+               automatiquement une page SEO.
+
+               Cela évite notamment qu'une URL erronée,
+               une ancienne URL avec des espaces ou un robot
+               puisse remplir la table seo_pages.
+            =================================================== */
 
             if (!page) {
 
@@ -2197,6 +2193,7 @@ router.get(
                         normalizedSlug,
                 });
             }
+
             /* ===================================================
                REPONSE
             =================================================== */

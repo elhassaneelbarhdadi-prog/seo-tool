@@ -860,44 +860,129 @@ function validateGeneratedContent(
         // AFFIRMATIONS MÉDICALES / THÉRAPEUTIQUES
         // =====================================================
 
-        [/\bguérit\b/i, "affirmation médicale"],
-        [/\bguérir\b/i, "affirmation médicale"],
-        [/\bguérison\b/i, "affirmation médicale"],
-        [/\bsoigne\b/i, "affirmation médicale"],
-        [/\bsoigner\b/i, "affirmation médicale"],
-        [/\bsoigné\b/i, "affirmation médicale"],
-        [/\bsoignée\b/i, "affirmation médicale"],
-        [/\btraiter\b/i, "affirmation médicale"],
-        [/\btraite\b/i, "affirmation médicale"],
-        [/\btraitement\b/i, "affirmation médicale"],
-        [/\bprévenir\b/i, "affirmation médicale"],
-        [/\bprévention\b/i, "affirmation médicale"],
-        [/\befficacité\b/i, "affirmation médicale"],
-        [/\befficace\b/i, "affirmation médicale"],
-        [/\bpathologie\b/i, "affirmation médicale"],
-        [/\bmaladie\b/i, "affirmation médicale"],
-        [/\btrouble\b/i, "affirmation médicale"],
-        [/\bsymptôme\b/i, "affirmation médicale"],
-        [/\bsymptômes\b/i, "affirmation médicale"],
-        [/\bdiagnostic\b/i, "affirmation médicale"],
-        [/\bdiagnostiquer\b/i, "affirmation médicale"],
-        [/\bdiagnostique\b/i, "affirmation médicale"],
-
         // =====================================================
-        // PRATIQUES / ACTES MÉDICAUX NON CONFIRMÉS
+        // AFFIRMATIONS MÉDICALES / THÉRAPEUTIQUES
         // =====================================================
 
-        [/\bacupuncture\b/i, "pratique médicale non confirmée"],
-        [/\bphytothérapie\b/i, "pratique médicale non confirmée"],
-        [/\bphytotherapie\b/i, "pratique médicale non confirmée"],
-        [/\bostéopathie\b/i, "pratique médicale non confirmée"],
-        [/\bosteopathie\b/i, "pratique médicale non confirmée"],
-        [/\bchiropractie\b/i, "pratique médicale non confirmée"],
-        [/\bchiropratique\b/i, "pratique médicale non confirmée"],
-        [/\bmassage thérapeutique\b/i, "pratique médicale non confirmée"],
-        [/\bmassage therapeutique\b/i, "pratique médicale non confirmée"],
-        [/\bconsultation médicale\b/i, "pratique médicale non confirmée"],
-        [/\bconsultation medicale\b/i, "pratique médicale non confirmée"],
+        [
+            /\bguérit\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bguérir\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bguérison\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigne les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigne la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoignent les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoignent la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigner les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigner la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraite les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraite la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraitent les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraitent la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpermet de traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpermet de soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpeut traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpeut soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpermettrait de traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpermettrait de soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bgarantit la guérison\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bguérison garantie\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\befficace pour traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\befficace pour soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\befficacité garantie\b/i,
+            "affirmation médicale",
+        ],
 
         // =====================================================
         // QUALIFICATIONS NON VÉRIFIÉES

@@ -963,15 +963,42 @@ function validateGeneratedContent(
         // DISPONIBILITÉ NON PROUVÉE
         // =====================================================
 
-        [/\bsont disponibles\b/i, "disponibilité non prouvée"],
-        [/\best disponible\b/i, "disponibilité non prouvée"],
-        [/\bsont proposés\b/i, "disponibilité non prouvée"],
-        [/\bsont proposées\b/i, "disponibilité non prouvée"],
-        [/\best proposé\b/i, "disponibilité non prouvée"],
-        [/\best proposée\b/i, "disponibilité non prouvée"],
-        [/\bpropose des services\b/i, "disponibilité non prouvée"],
-        [/\bproposent des services\b/i, "disponibilité non prouvée"],
+        // =====================================================
+        // DISPONIBILITÉ / OFFRE NON VÉRIFIÉE
+        // =====================================================
 
+        // Ne pas bloquer les formulations factuelles
+        // concernant les données présentes dans l'annuaire.
+        //
+        // Exemples autorisés :
+        // "profils disponibles"
+        // "informations disponibles"
+        // "données disponibles"
+        // "les informations peuvent être consultées"
+        //
+        // On bloque uniquement les formulations affirmant
+        // qu'un professionnel fournit une prestation précise
+        // sans que cette information soit vérifiée.
+
+        [
+            /\bce professionnel propose\b/i,
+            "disponibilité non prouvée",
+        ],
+
+        [
+            /\bcette entreprise propose\b/i,
+            "disponibilité non prouvée",
+        ],
+
+        [
+            /\bce professionnel offre\b/i,
+            "disponibilité non prouvée",
+        ],
+
+        [
+            /\bcette entreprise offre\b/i,
+            "disponibilité non prouvée",
+        ],
         // =====================================================
         // ORGANISATION / ÉVÉNEMENTS NON PROUVÉS
         // =====================================================
@@ -1173,43 +1200,37 @@ La recherche « ${keywordDisplay} à ${cityDisplay} » permet d'orienter les rec
    PROMPT IA
 ========================================================= */
 
+/* =========================================================
+   PROMPT IA — GÉNÉRATION SEO LOCALE
+========================================================= */
+
 function buildGenerationPrompt({
     keyword,
     city,
     profiles = [],
 }) {
     const keywordDisplay =
-        beautifyKeyword(
-            keyword
-        );
+        beautifyKeyword(keyword);
 
     const cityDisplay =
         displayCity(city);
 
     let directoryContext = "";
 
-    if (
-        profiles.length > 0
-    ) {
+    if (profiles.length > 0) {
         const safeProfiles =
             profiles
                 .slice(0, 10)
-                .map(
-                    (profile) => ({
-                        name:
-                            profile.name ||
-                            "",
-                        description:
-                            profile.description ||
-                            "",
-                        keyword:
-                            profile.keyword ||
-                            "",
-                        city:
-                            profile.city ||
-                            "",
-                    })
-                );
+                .map((profile) => ({
+                    name:
+                        profile.name || "",
+                    description:
+                        profile.description || "",
+                    keyword:
+                        profile.keyword || "",
+                    city:
+                        profile.city || "",
+                }));
 
         directoryContext = `
 DONNÉES RÉELLES DISPONIBLES DANS L'ANNUAIRE :
@@ -1220,128 +1241,282 @@ ${JSON.stringify(
             2
         )}
 
-Tu ne dois utiliser que ces informations pour parler de profils précis.
+IMPORTANT :
 
-N'invente :
-- aucune adresse ;
-- aucun numéro ;
-- aucun horaire ;
-- aucun avis ;
-- aucune certification ;
-- aucun diplôme ;
-- aucune qualification ;
-- aucune prestation.
+Tu peux uniquement utiliser ces données pour parler
+d'une entreprise ou d'un profil précis.
+
+Tu ne dois jamais inventer :
+- une adresse ;
+- un téléphone ;
+- un email ;
+- un horaire ;
+- un avis ;
+- une note ;
+- une certification ;
+- un diplôme ;
+- une qualification ;
+- une prestation ;
+- un tarif ;
+- une information absente des données fournies.
 `;
     } else {
         directoryContext = `
-AUCUN PROFIL SPÉCIFIQUE N'EST FOURNI.
+AUCUN PROFIL SPÉCIFIQUE N'EST DISPONIBLE.
 
-Reste général et ne parle d'aucune entreprise ou personne précise.
+Le contenu doit donc rester général.
+
+Ne cite aucune entreprise, aucun professionnel,
+aucune adresse et aucune prestation précise.
 `;
     }
 
     return `
-Tu rédiges une page SEO locale française sur :
+Tu es un rédacteur SEO français spécialisé dans les pages
+locales destinées à un annuaire professionnel.
+
+Tu dois rédiger une page informative et naturelle concernant :
 
 "${keywordDisplay}" à "${cityDisplay}"
 
-RÈGLE ABSOLUE :
+=========================================================
+RÈGLE PRINCIPALE
+=========================================================
 
 Le mot-clé doit conserver exactement son sens.
 
+Exemple :
+
 "médecine chinoise" doit rester "médecine chinoise".
-Ne transforme jamais ce terme en "médecin chinois".
 
-INTERDICTIONS :
+Ne transforme jamais :
+"médecine chinoise"
+en
+"médecin chinois".
 
-- aucune invention ;
-- aucun avis client ;
-- aucun chiffre de recherche ;
-- aucun CPC ;
-- aucun revenu ;
-- aucun potentiel financier ;
-- aucun trafic estimé ;
-- aucune donnée SEO dans le texte ;
-- aucune certification inventée ;
-- aucun diplôme inventé ;
-- aucune qualification inventée ;
-- aucune adresse inventée ;
-- aucun téléphone inventé ;
-- aucun horaire inventé ;
-- aucune promesse médicale ;
-- aucun traitement ;
-- aucune guérison ;
-- aucun soin présenté comme efficace ;
-- aucune promesse de résultat ;
-- aucune garantie ;
-- aucun "Qi" ;
-- aucune "énergie vitale" ;
-- aucun "équilibre du corps" ;
-- aucune "harmonie du corps" ;
-- aucune affirmation sur l'efficacité ;
-- aucun avis ;
-- aucun "meilleur professionnel" ;
-- aucune liste exhaustive ;
-- aucune promesse de trouver un professionnel ;
-- aucune expression "vous pourrez trouver" ;
-- aucune expression "pour trouver un professionnel" ;
-- aucune expression "pour trouver des professionnels" ;
-- aucune expression "trouver des praticiens" ;
-- aucune affirmation selon laquelle des professionnels connaissent les besoins de la communauté.
+Le mot-clé doit être utilisé naturellement dans le texte,
+sans répétition artificielle.
 
-Ne dis jamais :
-"favoriser la circulation"
-"améliorer la santé"
-"promouvoir le bien-être"
-"garantir"
-"efficace pour"
-"les meilleurs"
-"avis clients".
+=========================================================
+OBJECTIF DU CONTENU
+=========================================================
 
-STYLE :
+La page doit réellement informer le lecteur sur la recherche
+locale correspondant au mot-clé et à la ville.
 
-- français naturel ;
+Le contenu doit être :
+
+- naturel ;
+- utile ;
+- clair ;
 - professionnel ;
-- informatif ;
 - neutre ;
-- SEO local naturel ;
-- pas de bourrage de mots-clés ;
-- pas de publicité excessive.
+- agréable à lire ;
+- spécifique à la recherche locale ;
+- rédigé en français naturel.
 
-STRUCTURE :
+Évite absolument les phrases génériques répétées
+sur toutes les pages.
+
+Ne remplis pas la page avec des formulations comme :
+
+"Une recherche locale permet de cibler..."
+"Cette page présente les informations disponibles..."
+"Il est possible de consulter..."
+"Cette recherche permet de..."
+
+Utilise plutôt des formulations variées et naturelles.
+
+=========================================================
+LONGUEUR
+=========================================================
+
+Rédige environ 700 à 1000 mots.
+
+Chaque section doit apporter une information différente.
+
+Ne répète pas plusieurs fois la même idée uniquement
+pour augmenter la longueur du texte.
+
+=========================================================
+STRUCTURE
+=========================================================
 
 # ${keywordDisplay} à ${cityDisplay}
 
 Introduction
 
-## Rechercher ${keywordDisplay} à ${cityDisplay}
+Présente naturellement le sujet et explique ce que signifie
+une recherche portant sur "${keywordDisplay}" à "${cityDisplay}".
 
-## Quels services liés à ${keywordDisplay} peut-on trouver à ${cityDisplay} ?
+## ${keywordDisplay} à ${cityDisplay} : comprendre la recherche locale
 
-## Comment choisir un professionnel adapté à ${keywordDisplay} à ${cityDisplay} ?
+Explique le contexte général de la recherche locale.
 
-## Rechercher un professionnel dans notre annuaire SEO
+Le texte doit rester factuel et ne doit pas inventer
+de caractéristiques particulières concernant la ville.
+
+## Informations à vérifier avant de contacter un professionnel
+
+Explique quelles informations un utilisateur peut vérifier
+sur une fiche ou une présentation professionnelle :
+
+- activité déclarée ;
+- localisation ;
+- description ;
+- informations de contact lorsqu'elles sont publiées ;
+- autres informations réellement présentes sur la fiche.
+
+Ne prétends jamais qu'une information existe si elle
+n'est pas fournie.
+
+## Les profils référencés dans l'annuaire
+
+Explique le rôle de l'annuaire.
+
+Si des profils réels sont fournis plus bas,
+présente uniquement les informations présentes
+dans ces profils.
+
+Si aucun profil n'est fourni, reste général.
+
+## Comment utiliser l'annuaire SEO
+
+Explique simplement comment consulter les informations
+présentes dans l'annuaire et comparer les fiches.
+
+Ne promets pas qu'un professionnel sera trouvé.
+
+Ne dis pas que l'annuaire contient tous les professionnels
+d'une ville.
 
 ## Questions fréquentes
 
 ### Où rechercher ${keywordDisplay} à ${cityDisplay} ?
 
-### Comment choisir un professionnel adapté à ${keywordDisplay} ?
+Réponds naturellement à cette question.
 
-### Quels peuvent être les avantages d'une recherche locale ?
+### Quelles informations vérifier sur une fiche ?
+
+Réponds de manière pratique et factuelle.
+
+### Comment comparer les profils référencés ?
+
+Explique comment comparer uniquement les informations
+réellement publiées.
 
 ## Conclusion
 
-PARTIE ANNUAIRE :
+Termine par un résumé court et naturel de la recherche
+"${keywordDisplay} à ${cityDisplay}".
 
-Explique uniquement que l'annuaire permet de consulter les profils réellement disponibles et les informations publiées sur leurs fiches.
+=========================================================
+RÈGLES DE SÉCURITÉ ET DE FIABILITÉ
+=========================================================
+
+N'invente aucune information.
+
+N'invente aucune donnée locale.
+
+N'invente aucune entreprise.
+
+N'invente aucun professionnel.
+
+N'invente aucune adresse.
+
+N'invente aucun téléphone.
+
+N'invente aucun horaire.
+
+N'invente aucun avis.
+
+N'invente aucune certification.
+
+N'invente aucun diplôme.
+
+N'invente aucune qualification.
+
+N'invente aucun tarif.
+
+N'invente aucune prestation.
+
+N'invente aucune donnée statistique.
+
+N'invente aucun volume de recherche.
+
+N'invente aucun CPC.
+
+N'invente aucun revenu.
+
+N'invente aucune donnée SEO.
+
+N'utilise aucune promesse de résultat.
+
+N'utilise aucune garantie.
+
+N'affirme pas qu'un professionnel est meilleur qu'un autre.
+
+N'affirme pas qu'un professionnel est populaire,
+reconnu ou réputé sans donnée réelle.
+
+N'affirme pas qu'un service est disponible
+s'il n'est pas présent dans les données fournies.
+
+=========================================================
+SANTÉ / BIEN-ÊTRE
+=========================================================
+
+Lorsque le mot-clé concerne la santé, le bien-être ou
+une pratique pouvant avoir une dimension médicale :
+
+- reste strictement descriptif ;
+- ne formule aucune promesse médicale ;
+- ne prétends pas traiter une maladie ;
+- ne prétends pas guérir ;
+- ne prétends pas prévenir une maladie ;
+- ne présente pas une efficacité comme établie ;
+- ne donne pas de conseil médical personnalisé ;
+- ne transforme pas une pratique en affirmation médicale.
+
+Ne présente jamais une entreprise ou une personne comme
+médecin, thérapeute, spécialiste, diplômé ou certifié
+si cette information n'est pas explicitement fournie.
+
+=========================================================
+SEO
+=========================================================
+
+Le mot-clé principal doit apparaître naturellement.
+
+La ville doit apparaître naturellement.
+
+Utilise des variantes lexicales lorsque cela améliore
+la lisibilité.
+
+Ne fais pas de bourrage de mots-clés.
+
+Ne répète pas systématiquement le mot-clé dans chaque phrase.
+
+Le contenu doit être écrit d'abord pour le lecteur,
+puis optimisé naturellement pour les moteurs de recherche.
+
+=========================================================
+DONNÉES DE L'ANNUAIRE
+=========================================================
 
 ${directoryContext}
 
-Retourne uniquement le contenu final.
+=========================================================
+FORMAT FINAL
+=========================================================
+
+Retourne uniquement le contenu de la page.
+
+N'ajoute aucune explication sur tes instructions.
+
+N'ajoute aucun commentaire avant ou après le contenu.
 `;
 }
-
 /* =========================================================
    REPARATION IA
 ========================================================= */

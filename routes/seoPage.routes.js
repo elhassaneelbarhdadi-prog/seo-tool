@@ -832,6 +832,10 @@ function cleanGeneratedContent(
    VALIDATION STRICTE
 ========================================================= */
 
+/* =========================================================
+   VALIDATION STRICTE
+========================================================= */
+
 function validateGeneratedContent(
     content,
     keyword,
@@ -856,205 +860,201 @@ function validateGeneratedContent(
         // AFFIRMATIONS MÉDICALES / THÉRAPEUTIQUES
         // =====================================================
 
-        /\bguérit\b/i,
-        /\bguérir\b/i,
-        /\bguérison\b/i,
-        /\bsoigne\b/i,
-        /\bsoigner\b/i,
-        /\bsoigné\b/i,
-        /\bsoignée\b/i,
-        /\btraiter\b/i,
-        /\btraite\b/i,
-        /\btraitement\b/i,
-        /\bprévenir\b/i,
-        /\bprévention\b/i,
-        /\befficacité\b/i,
-        /\befficace\b/i,
-        /\bpathologie\b/i,
-        /\bmaladie\b/i,
-        /\btrouble\b/i,
-        /\bsymptôme\b/i,
-        /\bsymptômes\b/i,
-        /\bdiagnostic\b/i,
-        /\bdiagnostiquer\b/i,
-        /\bdiagnostique\b/i,
+        [/\bguérit\b/i, "affirmation médicale"],
+        [/\bguérir\b/i, "affirmation médicale"],
+        [/\bguérison\b/i, "affirmation médicale"],
+        [/\bsoigne\b/i, "affirmation médicale"],
+        [/\bsoigner\b/i, "affirmation médicale"],
+        [/\bsoigné\b/i, "affirmation médicale"],
+        [/\bsoignée\b/i, "affirmation médicale"],
+        [/\btraiter\b/i, "affirmation médicale"],
+        [/\btraite\b/i, "affirmation médicale"],
+        [/\btraitement\b/i, "affirmation médicale"],
+        [/\bprévenir\b/i, "affirmation médicale"],
+        [/\bprévention\b/i, "affirmation médicale"],
+        [/\befficacité\b/i, "affirmation médicale"],
+        [/\befficace\b/i, "affirmation médicale"],
+        [/\bpathologie\b/i, "affirmation médicale"],
+        [/\bmaladie\b/i, "affirmation médicale"],
+        [/\btrouble\b/i, "affirmation médicale"],
+        [/\bsymptôme\b/i, "affirmation médicale"],
+        [/\bsymptômes\b/i, "affirmation médicale"],
+        [/\bdiagnostic\b/i, "affirmation médicale"],
+        [/\bdiagnostiquer\b/i, "affirmation médicale"],
+        [/\bdiagnostique\b/i, "affirmation médicale"],
 
         // =====================================================
         // PRATIQUES / ACTES MÉDICAUX NON CONFIRMÉS
         // =====================================================
 
-        /\bacupuncture\b/i,
-        /\bphytothérapie\b/i,
-        /\bphytotherapie\b/i,
-        /\bostéopathie\b/i,
-        /\bosteopathie\b/i,
-        /\bchiropractie\b/i,
-        /\bchiropratique\b/i,
-        /\bmassage thérapeutique\b/i,
-        /\bmassage therapeutique\b/i,
-        /\bconsultation médicale\b/i,
-        /\bconsultation medicale\b/i,
+        [/\bacupuncture\b/i, "pratique médicale non confirmée"],
+        [/\bphytothérapie\b/i, "pratique médicale non confirmée"],
+        [/\bphytotherapie\b/i, "pratique médicale non confirmée"],
+        [/\bostéopathie\b/i, "pratique médicale non confirmée"],
+        [/\bosteopathie\b/i, "pratique médicale non confirmée"],
+        [/\bchiropractie\b/i, "pratique médicale non confirmée"],
+        [/\bchiropratique\b/i, "pratique médicale non confirmée"],
+        [/\bmassage thérapeutique\b/i, "pratique médicale non confirmée"],
+        [/\bmassage therapeutique\b/i, "pratique médicale non confirmée"],
+        [/\bconsultation médicale\b/i, "pratique médicale non confirmée"],
+        [/\bconsultation medicale\b/i, "pratique médicale non confirmée"],
 
         // =====================================================
         // QUALIFICATIONS NON VÉRIFIÉES
         // =====================================================
 
-        /\bprofessionnel certifié\b/i,
-        /\bprofessionnels certifiés\b/i,
-        /\bprofessionnel qualifié\b/i,
-        /\bprofessionnels qualifiés\b/i,
-        /\bpraticien qualifié\b/i,
-        /\bpraticiens qualifiés\b/i,
-        /\bpraticien spécialisé\b/i,
-        /\bpraticiens spécialisés\b/i,
-        /\bpraticien specialise\b/i,
-        /\bpraticiens specialises\b/i,
-        /\bdiplômé\b/i,
-        /\bdiplômée\b/i,
-        /\bdiplômés\b/i,
-        /\bdiplômées\b/i,
-        /\bcertifié\b/i,
-        /\bcertifiée\b/i,
-        /\bcertifiés\b/i,
-        /\bcertifiées\b/i,
-        /\bqualification\b/i,
-        /\bqualifications\b/i,
+        [/\bprofessionnel certifié\b/i, "qualification non vérifiée"],
+        [/\bprofessionnels certifiés\b/i, "qualification non vérifiée"],
+        [/\bprofessionnel qualifié\b/i, "qualification non vérifiée"],
+        [/\bprofessionnels qualifiés\b/i, "qualification non vérifiée"],
+        [/\bpraticien qualifié\b/i, "qualification non vérifiée"],
+        [/\bpraticiens qualifiés\b/i, "qualification non vérifiée"],
+        [/\bpraticien spécialisé\b/i, "spécialisation non vérifiée"],
+        [/\bpraticiens spécialisés\b/i, "spécialisation non vérifiée"],
+        [/\bpraticien specialise\b/i, "spécialisation non vérifiée"],
+        [/\bpraticiens specialises\b/i, "spécialisation non vérifiée"],
+        [/\bdiplômé\b/i, "qualification non vérifiée"],
+        [/\bdiplômée\b/i, "qualification non vérifiée"],
+        [/\bdiplômés\b/i, "qualification non vérifiée"],
+        [/\bdiplômées\b/i, "qualification non vérifiée"],
+        [/\bcertifié\b/i, "qualification non vérifiée"],
+        [/\bcertifiée\b/i, "qualification non vérifiée"],
+        [/\bcertifiés\b/i, "qualification non vérifiée"],
+        [/\bcertifiées\b/i, "qualification non vérifiée"],
+        [/\bqualification\b/i, "qualification non vérifiée"],
+        [/\bqualifications\b/i, "qualification non vérifiée"],
 
         // =====================================================
         // RÉPUTATION / POPULARITÉ NON VÉRIFIÉE
         // =====================================================
 
-        /\bbonne réputation\b/i,
-        /\bbonne reputation\b/i,
-        /\bmauvaise réputation\b/i,
-        /\bmauvaise reputation\b/i,
-        /\bgagne en popularité\b/i,
-        /\bgagne en popularite\b/i,
-        /\btrès populaire\b/i,
-        /\btrès populaires\b/i,
-        /\btrès apprécié\b/i,
-        /\btrès appréciée\b/i,
-        /\btrès appréciés\b/i,
-        /\btrès appréciées\b/i,
+        [/\bbonne réputation\b/i, "réputation non vérifiée"],
+        [/\bbonne reputation\b/i, "réputation non vérifiée"],
+        [/\bmauvaise réputation\b/i, "réputation non vérifiée"],
+        [/\bmauvaise reputation\b/i, "réputation non vérifiée"],
+        [/\bgagne en popularité\b/i, "popularité non vérifiée"],
+        [/\bgagne en popularite\b/i, "popularité non vérifiée"],
+        [/\btrès populaire\b/i, "popularité non vérifiée"],
+        [/\btrès populaires\b/i, "popularité non vérifiée"],
+        [/\btrès apprécié\b/i, "popularité non vérifiée"],
+        [/\btrès appréciée\b/i, "popularité non vérifiée"],
+        [/\btrès appréciés\b/i, "popularité non vérifiée"],
+        [/\btrès appréciées\b/i, "popularité non vérifiée"],
 
         // =====================================================
         // AFFIRMATIONS LOCALES NON VÉRIFIÉES
         // =====================================================
 
-        /\bune large gamme\b/i,
-        /\blarge gamme\b/i,
-        /\bune grande variété\b/i,
-        /\bgrande variété\b/i,
-        /\bgrande variete\b/i,
-        /\bvariété de services\b/i,
-        /\bvariete de services\b/i,
-        /\bnombreuses infrastructures\b/i,
-        /\bplusieurs options\b/i,
-        /\bde nombreux services\b/i,
-        /\bde nombreuses entreprises\b/i,
-        /\bde nombreux professionnels\b/i,
-        /\bde nombreux praticiens\b/i,
+        [/\bune large gamme\b/i, "affirmation locale non vérifiée"],
+        [/\blarge gamme\b/i, "affirmation locale non vérifiée"],
+        [/\bune grande variété\b/i, "affirmation locale non vérifiée"],
+        [/\bgrande variété\b/i, "affirmation locale non vérifiée"],
+        [/\bgrande variete\b/i, "affirmation locale non vérifiée"],
+        [/\bvariété de services\b/i, "affirmation locale non vérifiée"],
+        [/\bvariete de services\b/i, "affirmation locale non vérifiée"],
+        [/\bnombreuses infrastructures\b/i, "affirmation locale non vérifiée"],
+        [/\bplusieurs options\b/i, "affirmation locale non vérifiée"],
+        [/\bde nombreux services\b/i, "affirmation locale non vérifiée"],
+        [/\bde nombreuses entreprises\b/i, "affirmation locale non vérifiée"],
+        [/\bde nombreux professionnels\b/i, "affirmation locale non vérifiée"],
+        [/\bde nombreux praticiens\b/i, "affirmation locale non vérifiée"],
 
         // =====================================================
         // DISPONIBILITÉ NON PROUVÉE
         // =====================================================
 
-        /\bsont disponibles\b/i,
-        /\best disponible\b/i,
-        /\bsont proposés\b/i,
-        /\bsont proposées\b/i,
-        /\best proposé\b/i,
-        /\best proposée\b/i,
-        /\bpropose des services\b/i,
-        /\bproposent des services\b/i,
+        [/\bsont disponibles\b/i, "disponibilité non prouvée"],
+        [/\best disponible\b/i, "disponibilité non prouvée"],
+        [/\bsont proposés\b/i, "disponibilité non prouvée"],
+        [/\bsont proposées\b/i, "disponibilité non prouvée"],
+        [/\best proposé\b/i, "disponibilité non prouvée"],
+        [/\best proposée\b/i, "disponibilité non prouvée"],
+        [/\bpropose des services\b/i, "disponibilité non prouvée"],
+        [/\bproposent des services\b/i, "disponibilité non prouvée"],
 
         // =====================================================
         // ORGANISATION / ÉVÉNEMENTS NON PROUVÉS
         // =====================================================
 
-        /\brégulièrement organisés\b/i,
-        /\brégulièrement organisées\b/i,
-        /\bregulierement organises\b/i,
-        /\bregulierement organisees\b/i,
-        /\bévénements locaux\b/i,
-        /\bevenements locaux\b/i,
-        /\binitiatives locales\b/i,
+        [/\brégulièrement organisés\b/i, "événement non vérifié"],
+        [/\brégulièrement organisées\b/i, "événement non vérifié"],
+        [/\bregulierement organises\b/i, "événement non vérifié"],
+        [/\bregulierement organisees\b/i, "événement non vérifié"],
+        [/\bévénements locaux\b/i, "événement non vérifié"],
+        [/\bevenements locaux\b/i, "événement non vérifié"],
+        [/\binitiatives locales\b/i, "affirmation locale non vérifiée"],
 
         // =====================================================
         // BÉNÉFICES / PROMESSES NON VÉRIFIÉS
         // =====================================================
 
-        /\bbien entretenues\b/i,
-        /\bbien entretenus\b/i,
-        /\bcirculer en toute sécurité\b/i,
-        /\bcirculer en toute securite\b/i,
-        /\bfacilitant l'accès\b/i,
-        /\bfacilitant l'acces\b/i,
-        /\bfaciliter l'accès\b/i,
-        /\bfaciliter l'acces\b/i,
-        /\bfaciliter la compréhension\b/i,
-        /\bfaciliter la comprehension\b/i,
-        /\bprofiter pleinement\b/i,
-        /\bconnaissent bien la région\b/i,
-        /\bconnaissent bien la region\b/i,
-        /\brelation de confiance\b/i,
+        [/\bbien entretenues\b/i, "bénéfice non vérifié"],
+        [/\bbien entretenus\b/i, "bénéfice non vérifié"],
+        [/\bcirculer en toute sécurité\b/i, "bénéfice non vérifié"],
+        [/\bcirculer en toute securite\b/i, "bénéfice non vérifié"],
+        [/\bfacilitant l'accès\b/i, "bénéfice non vérifié"],
+        [/\bfacilitant l'acces\b/i, "bénéfice non vérifié"],
+        [/\bfaciliter l'accès\b/i, "bénéfice non vérifié"],
+        [/\bfaciliter l'acces\b/i, "bénéfice non vérifié"],
+        [/\bfaciliter la compréhension\b/i, "bénéfice non vérifié"],
+        [/\bfaciliter la comprehension\b/i, "bénéfice non vérifié"],
+        [/\bprofiter pleinement\b/i, "bénéfice non vérifié"],
+        [/\bconnaissent bien la région\b/i, "affirmation locale non vérifiée"],
+        [/\bconnaissent bien la region\b/i, "affirmation locale non vérifiée"],
+        [/\brelation de confiance\b/i, "affirmation non vérifiée"],
 
         // =====================================================
         // FORMULATIONS TROP AFFIRMATIVES
         // =====================================================
 
-        /\bpermet de traiter\b/i,
-        /\bpermet de soigner\b/i,
-        /\bpermet de prévenir\b/i,
-        /\bpermettrait de traiter\b/i,
-        /\bpeut traiter\b/i,
-        /\bpeut soigner\b/i,
-        /\bpeut prévenir\b/i,
+        [/\bpermet de traiter\b/i, "affirmation médicale"],
+        [/\bpermet de soigner\b/i, "affirmation médicale"],
+        [/\bpermet de prévenir\b/i, "affirmation médicale"],
+        [/\bpermettrait de traiter\b/i, "affirmation médicale"],
+        [/\bpeut traiter\b/i, "affirmation médicale"],
+        [/\bpeut soigner\b/i, "affirmation médicale"],
+        [/\bpeut prévenir\b/i, "affirmation médicale"],
 
         // FORMULATIONS MÉDICALES OU TROP AFFIRMATIVES
-        /\bsoin\b/i,
-        /\bsoins\b/i,
-        /\bméthodes alternatives\b/i,
-        /\bmethodes alternatives\b/i,
-        /\balternative de soins\b/i,
-        /\balternatives de soins\b/i,
+        [/\bsoin\b/i, "formulation médicale"],
+        [/\bsoins\b/i, "formulation médicale"],
+        [/\bméthodes alternatives\b/i, "formulation médicale"],
+        [/\bmethodes alternatives\b/i, "formulation médicale"],
+        [/\balternative de soins\b/i, "formulation médicale"],
+        [/\balternatives de soins\b/i, "formulation médicale"],
 
         // QUALIFICATIONS / FORMATION NON VÉRIFIÉES
-        /\bformation\b/i,
-        /\bformations\b/i,
-        /\bse spécialise\b/i,
-        /\bse specialise\b/i,
-        /\bspécialisé\b/i,
-        /\bspécialisée\b/i,
-        /\bspécialisés\b/i,
-        /\bspécialisées\b/i,
+        [/\bformation\b/i, "qualification non vérifiée"],
+        [/\bformations\b/i, "qualification non vérifiée"],
+        [/\bse spécialise\b/i, "spécialisation non vérifiée"],
+        [/\bse specialise\b/i, "spécialisation non vérifiée"],
+        [/\bspécialisé\b/i, "spécialisation non vérifiée"],
+        [/\bspécialisée\b/i, "spécialisation non vérifiée"],
+        [/\bspécialisés\b/i, "spécialisation non vérifiée"],
+        [/\bspécialisées\b/i, "spécialisation non vérifiée"],
 
         // RECONNAISSANCE / POPULARITÉ NON PROUVÉE
-        /\bde plus en plus reconnue\b/i,
-        /\bde plus en plus recherché\b/i,
-        /\bde plus en plus recherchée\b/i,
-        /\bintérêt croissant\b/i,
-        /\binteret croissant\b/i,
-        /\breconnue et recherchée\b/i,
-        /\breconnue et recherchee\b/i,
+        [/\bde plus en plus reconnue\b/i, "reconnaissance non vérifiée"],
+        [/\bde plus en plus recherché\b/i, "recherche non vérifiée"],
+        [/\bde plus en plus recherchée\b/i, "recherche non vérifiée"],
+        [/\bintérêt croissant\b/i, "intérêt non vérifié"],
+        [/\binteret croissant\b/i, "intérêt non vérifié"],
+        [/\breconnue et recherchée\b/i, "reconnaissance non vérifiée"],
+        [/\breconnue et recherchee\b/i, "reconnaissance non vérifiée"],
 
         // AFFIRMATIONS SUR LES PROFILS
-        /\bpeuvent offrir\b/i,
-        /\bpeut offrir\b/i,
-        /\boffrent\b/i,
-        /\boffre\b/i,
+        [/\bpeuvent offrir\b/i, "affirmation sur le profil"],
+        [/\bpeut offrir\b/i, "affirmation sur le profil"],
+        [/\boffrent\b/i, "affirmation sur le profil"],
+        [/\boffre\b/i, "affirmation sur le profil"],
     ];
 
     for (const [
         pattern,
         reason,
     ] of forbiddenPatterns) {
-        if (
-            pattern.test(text)
-        ) {
-            reasons.push(
-                reason
-            );
+        if (pattern.test(text)) {
+            reasons.push(reason);
         }
     }
 

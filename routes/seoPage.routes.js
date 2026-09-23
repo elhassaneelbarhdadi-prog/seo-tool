@@ -985,30 +985,28 @@ function validateGeneratedContent(
         ],
 
         // =====================================================
-        // QUALIFICATIONS NON VÉRIFIÉES
+        // SPÉCIALISATION NON VÉRIFIÉE
         // =====================================================
 
-        [/\bprofessionnel certifié\b/i, "qualification non vérifiée"],
-        [/\bprofessionnels certifiés\b/i, "qualification non vérifiée"],
-        [/\bprofessionnel qualifié\b/i, "qualification non vérifiée"],
-        [/\bprofessionnels qualifiés\b/i, "qualification non vérifiée"],
-        [/\bpraticien qualifié\b/i, "qualification non vérifiée"],
-        [/\bpraticiens qualifiés\b/i, "qualification non vérifiée"],
-        [/\bpraticien spécialisé\b/i, "spécialisation non vérifiée"],
-        [/\bpraticiens spécialisés\b/i, "spécialisation non vérifiée"],
-        [/\bpraticien specialise\b/i, "spécialisation non vérifiée"],
-        [/\bpraticiens specialises\b/i, "spécialisation non vérifiée"],
-        [/\bdiplômé\b/i, "qualification non vérifiée"],
-        [/\bdiplômée\b/i, "qualification non vérifiée"],
-        [/\bdiplômés\b/i, "qualification non vérifiée"],
-        [/\bdiplômées\b/i, "qualification non vérifiée"],
-        [/\bcertifié\b/i, "qualification non vérifiée"],
-        [/\bcertifiée\b/i, "qualification non vérifiée"],
-        [/\bcertifiés\b/i, "qualification non vérifiée"],
-        [/\bcertifiées\b/i, "qualification non vérifiée"],
-        [/\bqualification\b/i, "qualification non vérifiée"],
-        [/\bqualifications\b/i, "qualification non vérifiée"],
+        [
+            /\bspécialiste reconnu\b/i,
+            "spécialisation non vérifiée",
+        ],
 
+        [
+            /\bspécialiste reconnue\b/i,
+            "spécialisation non vérifiée",
+        ],
+
+        [
+            /\bexpert reconnu\b/i,
+            "spécialisation non vérifiée",
+        ],
+
+        [
+            /\bexperte reconnue\b/i,
+            "spécialisation non vérifiée",
+        ],
         // =====================================================
         // RÉPUTATION / POPULARITÉ NON VÉRIFIÉE
         // =====================================================
@@ -1127,38 +1125,202 @@ function validateGeneratedContent(
         [/\bpeut soigner\b/i, "affirmation médicale"],
         [/\bpeut prévenir\b/i, "affirmation médicale"],
 
-        // FORMULATIONS MÉDICALES OU TROP AFFIRMATIVES
-        [/\bsoin\b/i, "formulation médicale"],
-        [/\bsoins\b/i, "formulation médicale"],
-        [/\bméthodes alternatives\b/i, "formulation médicale"],
-        [/\bmethodes alternatives\b/i, "formulation médicale"],
-        [/\balternative de soins\b/i, "formulation médicale"],
-        [/\balternatives de soins\b/i, "formulation médicale"],
+        // =====================================================
+        // FORMULATIONS MÉDICALES / THÉRAPEUTIQUES
+        // =====================================================
 
-        // QUALIFICATIONS / FORMATION NON VÉRIFIÉES
-        [/\bformation\b/i, "qualification non vérifiée"],
-        [/\bformations\b/i, "qualification non vérifiée"],
-        [/\bse spécialise\b/i, "spécialisation non vérifiée"],
-        [/\bse specialise\b/i, "spécialisation non vérifiée"],
-        [/\bspécialisé\b/i, "spécialisation non vérifiée"],
-        [/\bspécialisée\b/i, "spécialisation non vérifiée"],
-        [/\bspécialisés\b/i, "spécialisation non vérifiée"],
-        [/\bspécialisées\b/i, "spécialisation non vérifiée"],
+        [
+            /\bguérit\b/i,
+            "affirmation médicale",
+        ],
 
+        [
+            /\bguérir\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bguérison\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigne les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigne la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoignent les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoignent la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigner les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bsoigner la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraite les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraite la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraitent les\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\btraitent la\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpermet de traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpermet de soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpeut traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bpeut soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bgarantit la guérison\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\bguérison garantie\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\befficace pour traiter\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\befficace pour soigner\b/i,
+            "affirmation médicale",
+        ],
+
+        [
+            /\befficacité garantie\b/i,
+            "affirmation médicale",
+        ],
+        // =====================================================
+        // QUALIFICATIONS NON VÉRIFIÉES
+        // =====================================================
+
+        [
+            /\bprofessionnel certifié\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bprofessionnelle certifiée\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bprofessionnel qualifié\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bprofessionnelle qualifiée\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bpraticien qualifié\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bpraticienne qualifiée\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bdiplômé\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bdiplômée\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bcertifié\b/i,
+            "qualification non vérifiée",
+        ],
+
+        [
+            /\bcertifiée\b/i,
+            "qualification non vérifiée",
+        ],
         // RECONNAISSANCE / POPULARITÉ NON PROUVÉE
         [/\bde plus en plus reconnue\b/i, "reconnaissance non vérifiée"],
         [/\bde plus en plus recherché\b/i, "recherche non vérifiée"],
         [/\bde plus en plus recherchée\b/i, "recherche non vérifiée"],
-        [/\bintérêt croissant\b/i, "intérêt non vérifié"],
-        [/\binteret croissant\b/i, "intérêt non vérifié"],
         [/\breconnue et recherchée\b/i, "reconnaissance non vérifiée"],
         [/\breconnue et recherchee\b/i, "reconnaissance non vérifiée"],
 
+        // =====================================================
         // AFFIRMATIONS SUR LES PROFILS
-        [/\bpeuvent offrir\b/i, "affirmation sur le profil"],
-        [/\bpeut offrir\b/i, "affirmation sur le profil"],
-        [/\boffrent\b/i, "affirmation sur le profil"],
-        [/\boffre\b/i, "affirmation sur le profil"],
+        // =====================================================
+
+        [
+            /\bce professionnel propose\b/i,
+            "affirmation sur le profil",
+        ],
+
+        [
+            /\bcette entreprise propose\b/i,
+            "affirmation sur le profil",
+        ],
+
+        [
+            /\bce professionnel offre\b/i,
+            "affirmation sur le profil",
+        ],
+
+        [
+            /\bcette entreprise offre\b/i,
+            "affirmation sur le profil",
+        ],
     ];
 
     for (const [

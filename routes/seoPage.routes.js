@@ -1451,6 +1451,10 @@ La recherche « ${keywordDisplay} à ${cityDisplay} » permet d'orienter les rec
    PROMPT IA — GÉNÉRATION SEO LOCALE
 ========================================================= */
 
+/* =========================================================
+   PROMPT IA
+========================================================= */
+
 function buildGenerationPrompt({
     keyword,
     city,
@@ -1461,6 +1465,12 @@ function buildGenerationPrompt({
 
     const cityDisplay =
         displayCity(city);
+
+    /*
+     * -------------------------------------------------------
+     * DONNÉES RÉELLES DES PROFILS
+     * -------------------------------------------------------
+     */
 
     let directoryContext = "";
 
@@ -1480,7 +1490,11 @@ function buildGenerationPrompt({
                 }));
 
         directoryContext = `
-DONNÉES RÉELLES DISPONIBLES DANS L'ANNUAIRE :
+=========================================================
+DONNÉES RÉELLES DE L'ANNUAIRE
+=========================================================
+
+Les données suivantes proviennent réellement de l'annuaire :
 
 ${JSON.stringify(
             safeProfiles,
@@ -1488,151 +1502,359 @@ ${JSON.stringify(
             2
         )}
 
-IMPORTANT :
+RÈGLE ABSOLUE CONCERNANT LES PROFILS :
 
-Tu peux uniquement utiliser ces données pour parler
-d'une entreprise ou d'un profil précis.
+Tu peux uniquement utiliser les informations explicitement
+présentes dans ces données.
+
+Tu peux reformuler légèrement une information présente
+dans "description", mais tu ne dois jamais en déduire
+une information supplémentaire.
+
+EXEMPLE :
+
+Si les données indiquent :
+
+{
+  "name": "Hassane",
+  "keyword": "médecine chinoise",
+  "description": "bien être"
+}
+
+Tu peux écrire :
+
+"Hassane est référencé dans l'annuaire pour la recherche
+« médecine chinoise » à Guesnain."
+
+Tu peux mentionner que la fiche contient la mention
+"bien-être".
+
+Tu ne peux PAS écrire :
+
+"Hassane est spécialiste de médecine chinoise."
+
+"Hassane utilise des techniques de médecine chinoise."
+
+"Hassane propose des consultations."
+
+"Hassane propose des soins."
+
+"Hassane est diplômé."
+
+"Hassane est certifié."
+
+"Hassane possède une expertise particulière."
+
+Ces informations ne doivent être utilisées que si elles
+sont explicitement présentes dans les données fournies.
+
+INTERDICTIONS ABSOLUES POUR LES PROFILS :
+
+- aucune spécialisation déduite ;
+- aucune qualification déduite ;
+- aucun diplôme déduit ;
+- aucune certification déduite ;
+- aucune prestation déduite ;
+- aucun service déduit ;
+- aucun tarif déduit ;
+- aucun horaire déduit ;
+- aucune adresse déduite ;
+- aucun avis déduit ;
+- aucune réputation déduite ;
+- aucun classement qualitatif déduit ;
+- aucune promesse de disponibilité ;
+- aucune affirmation médicale déduite.
+
+`;
+
+    } else {
+        directoryContext = `
+=========================================================
+PROFILS
+=========================================================
+
+Aucun profil spécifique n'est disponible dans les données.
+
+Dans ce cas :
+
+- ne cite aucune entreprise ;
+- ne cite aucune personne ;
+- ne crée aucun professionnel ;
+- ne crée aucune prestation ;
+- ne crée aucune adresse ;
+- ne crée aucun téléphone ;
+- ne crée aucun horaire ;
+- ne prétends pas qu'un professionnel est disponible.
+
+Reste général et informatif.
+`;
+    }
+
+    /*
+     * -------------------------------------------------------
+     * PROMPT PRINCIPAL
+     * -------------------------------------------------------
+     */
+
+    return `
+Tu es un rédacteur SEO français spécialisé dans la création
+de pages locales pour un annuaire professionnel.
+
+Tu dois rédiger une page concernant :
+
+MOT-CLÉ :
+"${keywordDisplay}"
+
+VILLE :
+"${cityDisplay}"
+
+=========================================================
+OBJECTIF
+=========================================================
+
+Créer une page SEO locale utile, naturelle et factuelle.
+
+La page doit expliquer la recherche :
+
+"${keywordDisplay}" à "${cityDisplay}"
+
+Elle doit aider le lecteur à comprendre la page et à
+consulter les informations réellement disponibles dans
+l'annuaire.
+
+Le contenu doit être écrit pour un lecteur humain.
+
+Il ne doit pas ressembler à un texte automatique généré
+uniquement pour les moteurs de recherche.
+
+=========================================================
+RÈGLE ABSOLUE : NE RIEN INVENTER
+=========================================================
+
+Tu ne dois jamais transformer une supposition en information.
 
 Tu ne dois jamais inventer :
+
+- une entreprise ;
+- un professionnel ;
 - une adresse ;
 - un téléphone ;
 - un email ;
 - un horaire ;
-- un avis ;
-- une note ;
+- une prestation ;
+- un service ;
+- un tarif ;
 - une certification ;
 - un diplôme ;
 - une qualification ;
-- une prestation ;
-- un tarif ;
-- une information absente des données fournies.
-`;
-    } else {
-        directoryContext = `
-AUCUN PROFIL SPÉCIFIQUE N'EST DISPONIBLE.
-
-Le contenu doit donc rester général.
-
-Ne cite aucune entreprise, aucun professionnel,
-aucune adresse et aucune prestation précise.
-`;
-    }
-
-    return `
-Tu es un rédacteur SEO français spécialisé dans les pages
-locales destinées à un annuaire professionnel.
-
-Tu dois rédiger une page informative et naturelle concernant :
-
-"${keywordDisplay}" à "${cityDisplay}"
+- une spécialisation ;
+- une expérience ;
+- un avis ;
+- une note ;
+- une réputation ;
+- une popularité ;
+- une statistique ;
+- un volume de recherche ;
+- un CPC ;
+- un revenu ;
+- un trafic ;
+- un classement ;
+- une disponibilité.
 
 =========================================================
-RÈGLE PRINCIPALE
+MOT-CLÉ
 =========================================================
 
 Le mot-clé doit conserver exactement son sens.
 
-Exemple :
-
-"médecine chinoise" doit rester "médecine chinoise".
+"${keywordDisplay}" doit rester "${keywordDisplay}".
 
 Ne transforme jamais :
+
 "médecine chinoise"
-en
-"médecin chinois".
 
-Le mot-clé doit être utilisé naturellement dans le texte,
-sans répétition artificielle.
+en :
 
-=========================================================
-OBJECTIF DU CONTENU
-=========================================================
+"médecin chinois"
 
-La page doit réellement informer le lecteur sur la recherche
-locale correspondant au mot-clé et à la ville.
+Ne transforme jamais une activité en métier.
 
-Le contenu doit être :
+Ne transforme jamais une catégorie en qualification.
 
-- naturel ;
-- utile ;
-- clair ;
-- professionnel ;
-- neutre ;
-- agréable à lire ;
-- spécifique à la recherche locale ;
-- rédigé en français naturel.
-
-Évite absolument les phrases génériques répétées
-sur toutes les pages.
-
-Ne remplis pas la page avec des formulations comme :
-
-"Une recherche locale permet de cibler..."
-"Cette page présente les informations disponibles..."
-"Il est possible de consulter..."
-"Cette recherche permet de..."
-
-Utilise plutôt des formulations variées et naturelles.
+Le mot-clé doit être utilisé naturellement, sans bourrage
+de mots-clés.
 
 =========================================================
-LONGUEUR
+DONNÉES DE PROFILS
 =========================================================
 
-Rédige environ 700 à 1000 mots.
+${directoryContext}
 
-Chaque section doit apporter une information différente.
+=========================================================
+RÈGLE TRÈS IMPORTANTE SUR LES PROFILS
+=========================================================
 
-Ne répète pas plusieurs fois la même idée uniquement
-pour augmenter la longueur du texte.
+Un nom, un mot-clé ou une catégorie ne constitue pas
+une preuve de spécialisation.
+
+Exemple :
+
+Si un profil contient :
+
+"médecine chinoise"
+
+cela signifie seulement que cette information est associée
+au profil dans les données de l'annuaire.
+
+Cela ne permet PAS d'affirmer que la personne :
+
+- est spécialiste ;
+- est experte ;
+- est diplômée ;
+- est certifiée ;
+- pratique effectivement une technique précise ;
+- propose une consultation ;
+- propose un traitement ;
+- obtient des résultats ;
+- possède une expérience particulière.
+
+Ne fais aucune déduction.
+
+=========================================================
+CONTENU MÉDICAL / BIEN-ÊTRE
+=========================================================
+
+Si le mot-clé concerne la santé, le bien-être ou une pratique
+pouvant avoir une dimension médicale, reste strictement
+descriptif.
+
+Ne formule aucune promesse médicale.
+
+Ne prétends jamais qu'une pratique :
+
+- guérit ;
+- soigne ;
+- traite une maladie ;
+- prévient une maladie ;
+- améliore une pathologie ;
+- améliore un symptôme ;
+- garantit un résultat ;
+- améliore la santé ;
+- améliore la qualité de vie ;
+- rétablit l'équilibre du corps ;
+- rétablit l'énergie ;
+- favorise la circulation ;
+- apporte un bénéfice médical.
+
+Ne présente pas une efficacité comme établie.
+
+Ne donne aucun conseil médical personnalisé.
+
+Tu peux parler de la recherche locale et de la manière
+de consulter les informations publiées dans l'annuaire.
+
+=========================================================
+PHRASES À ÉVITER
+=========================================================
+
+N'utilise pas de formulations comme :
+
+"Cette pratique attire de plus en plus d'intérêt."
+
+"Cette pratique est très populaire."
+
+"Les habitants recherchent de plus en plus..."
+
+"Cette méthode permet de..."
+
+"Cette pratique améliore..."
+
+"Cette approche permet de..."
+
+"Les professionnels proposent..."
+
+"Les professionnels offrent..."
+
+"Vous trouverez..."
+
+"Vous pourrez trouver..."
+
+"Vous trouverez facilement..."
+
+"Il existe de nombreux professionnels..."
+
+"De nombreux spécialistes..."
+
+"Les meilleurs professionnels..."
+
+"Les professionnels les plus réputés..."
+
+Ces formulations introduisent des informations qui ne sont
+pas nécessairement vérifiées.
 
 =========================================================
 STRUCTURE
 =========================================================
 
+Rédige environ 700 à 900 mots.
+
+Utilise cette structure :
+
 # ${keywordDisplay} à ${cityDisplay}
 
-Introduction
+Introduction courte présentant uniquement la recherche
+locale et le rôle de la page.
 
-Présente naturellement le sujet et explique ce que signifie
-une recherche portant sur "${keywordDisplay}" à "${cityDisplay}".
+## ${keywordDisplay} à ${cityDisplay}
 
-## ${keywordDisplay} à ${cityDisplay} : comprendre la recherche locale
+Explique de manière neutre ce que représente la recherche
+du mot-clé dans cette ville.
 
-Explique le contexte général de la recherche locale.
+Ne fais aucune affirmation médicale ou commerciale.
 
-Le texte doit rester factuel et ne doit pas inventer
-de caractéristiques particulières concernant la ville.
+## Comprendre la recherche locale
+
+Explique comment utiliser le mot-clé et la ville pour
+consulter les informations disponibles.
+
+Ne prétends pas qu'un professionnel sera trouvé.
 
 ## Informations à vérifier avant de contacter un professionnel
 
-Explique quelles informations un utilisateur peut vérifier
-sur une fiche ou une présentation professionnelle :
+Explique de manière générale quelles informations peuvent
+être vérifiées lorsqu'elles sont présentes sur une fiche :
 
 - activité déclarée ;
 - localisation ;
 - description ;
-- informations de contact lorsqu'elles sont publiées ;
-- autres informations réellement présentes sur la fiche.
+- informations de contact ;
+- autres informations réellement publiées.
 
-Ne prétends jamais qu'une information existe si elle
-n'est pas fournie.
+Ne prétends jamais qu'une de ces informations est présente
+si elle n'est pas fournie.
 
 ## Les profils référencés dans l'annuaire
 
-Explique le rôle de l'annuaire.
+Si des profils sont fournis dans les données :
 
-Si des profils réels sont fournis plus bas,
-présente uniquement les informations présentes
-dans ces profils.
+- présente uniquement les informations réellement présentes ;
+- utilise les noms réellement fournis ;
+- ne crée aucune qualification ;
+- ne crée aucune spécialisation ;
+- ne crée aucune prestation ;
+- ne crée aucun service.
 
-Si aucun profil n'est fourni, reste général.
+Si aucun profil n'est fourni, indique simplement que la page
+présente une recherche générale et ne cite aucune entreprise.
 
 ## Comment utiliser l'annuaire SEO
 
-Explique simplement comment consulter les informations
-présentes dans l'annuaire et comparer les fiches.
+Explique comment consulter les informations disponibles
+dans les fiches.
 
-Ne promets pas qu'un professionnel sera trouvé.
+Ne promets aucun résultat.
+
+Ne promets pas de mise en relation.
 
 Ne dis pas que l'annuaire contient tous les professionnels
 d'une ville.
@@ -1641,11 +1863,11 @@ d'une ville.
 
 ### Où rechercher ${keywordDisplay} à ${cityDisplay} ?
 
-Réponds naturellement à cette question.
+Réponse courte et factuelle.
 
 ### Quelles informations vérifier sur une fiche ?
 
-Réponds de manière pratique et factuelle.
+Réponse pratique sans inventer de données.
 
 ### Comment comparer les profils référencés ?
 
@@ -1654,80 +1876,39 @@ réellement publiées.
 
 ## Conclusion
 
-Termine par un résumé court et naturel de la recherche
-"${keywordDisplay} à ${cityDisplay}".
+Fais une conclusion courte rappelant que la page concerne
+la recherche "${keywordDisplay}" à "${cityDisplay}" et que
+les informations doivent être vérifiées sur les fiches
+référencées.
 
 =========================================================
-RÈGLES DE SÉCURITÉ ET DE FIABILITÉ
+STYLE
 =========================================================
 
-N'invente aucune information.
+Le texte doit être :
 
-N'invente aucune donnée locale.
+- naturel ;
+- fluide ;
+- professionnel ;
+- neutre ;
+- clair ;
+- utile ;
+- spécifique à la recherche locale.
 
-N'invente aucune entreprise.
+Évite les répétitions.
 
-N'invente aucun professionnel.
+N'utilise pas systématiquement :
 
-N'invente aucune adresse.
+"Cette page présente..."
 
-N'invente aucun téléphone.
+"Cette recherche permet..."
 
-N'invente aucun horaire.
+"Il est possible de..."
 
-N'invente aucun avis.
+Varie naturellement les formulations.
 
-N'invente aucune certification.
-
-N'invente aucun diplôme.
-
-N'invente aucune qualification.
-
-N'invente aucun tarif.
-
-N'invente aucune prestation.
-
-N'invente aucune donnée statistique.
-
-N'invente aucun volume de recherche.
-
-N'invente aucun CPC.
-
-N'invente aucun revenu.
-
-N'invente aucune donnée SEO.
-
-N'utilise aucune promesse de résultat.
-
-N'utilise aucune garantie.
-
-N'affirme pas qu'un professionnel est meilleur qu'un autre.
-
-N'affirme pas qu'un professionnel est populaire,
-reconnu ou réputé sans donnée réelle.
-
-N'affirme pas qu'un service est disponible
-s'il n'est pas présent dans les données fournies.
-
-=========================================================
-SANTÉ / BIEN-ÊTRE
-=========================================================
-
-Lorsque le mot-clé concerne la santé, le bien-être ou
-une pratique pouvant avoir une dimension médicale :
-
-- reste strictement descriptif ;
-- ne formule aucune promesse médicale ;
-- ne prétends pas traiter une maladie ;
-- ne prétends pas guérir ;
-- ne prétends pas prévenir une maladie ;
-- ne présente pas une efficacité comme établie ;
-- ne donne pas de conseil médical personnalisé ;
-- ne transforme pas une pratique en affirmation médicale.
-
-Ne présente jamais une entreprise ou une personne comme
-médecin, thérapeute, spécialiste, diplômé ou certifié
-si cette information n'est pas explicitement fournie.
+N'utilise pas de phrases artificielles destinées uniquement
+à augmenter la longueur du texte.
 
 =========================================================
 SEO
@@ -1737,32 +1918,35 @@ Le mot-clé principal doit apparaître naturellement.
 
 La ville doit apparaître naturellement.
 
-Utilise des variantes lexicales lorsque cela améliore
+Utilise quelques variantes lexicales lorsque cela améliore
 la lisibilité.
 
-Ne fais pas de bourrage de mots-clés.
+Ne fais jamais de keyword stuffing.
 
-Ne répète pas systématiquement le mot-clé dans chaque phrase.
+Ne mentionne aucune donnée SEO chiffrée dans le contenu.
 
-Le contenu doit être écrit d'abord pour le lecteur,
-puis optimisé naturellement pour les moteurs de recherche.
+Ne mentionne :
+
+- aucun volume ;
+- aucun CPC ;
+- aucun revenu ;
+- aucun potentiel ;
+- aucune difficulté SEO ;
+- aucun score ;
+- aucun trafic.
 
 =========================================================
-DONNÉES DE L'ANNUAIRE
+FORMAT
 =========================================================
 
-${directoryContext}
+Retourne uniquement le contenu Markdown de la page.
 
-=========================================================
-FORMAT FINAL
-=========================================================
-
-Retourne uniquement le contenu de la page.
-
-N'ajoute aucune explication sur tes instructions.
+N'ajoute aucune explication concernant tes instructions.
 
 N'ajoute aucun commentaire avant ou après le contenu.
-`;
+
+${directoryContext}
+`.trim();
 }
 /* =========================================================
    REPARATION IA

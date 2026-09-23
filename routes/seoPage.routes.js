@@ -1728,6 +1728,17 @@ Si le mot-clé concerne la santé, le bien-être ou une pratique
 pouvant avoir une dimension médicale, reste strictement
 descriptif.
 
+La page doit principalement parler :
+
+- de la recherche locale ;
+- du mot-clé ;
+- de la ville ;
+- des informations réellement présentes dans l'annuaire ;
+- des profils réellement référencés.
+
+Ne décris pas la pratique médicale ou de bien-être comme si
+tu devais expliquer son efficacité, ses effets ou ses bénéfices.
+
 Ne formule aucune promesse médicale.
 
 Ne prétends jamais qu'une pratique :
@@ -1746,18 +1757,18 @@ Ne prétends jamais qu'une pratique :
 - favorise la circulation ;
 - apporte un bénéfice médical.
 
-Ne présente pas une efficacité comme établie.
+Ne présente aucune efficacité comme établie.
 
 Ne donne aucun conseil médical personnalisé.
 
-Tu peux parler de la recherche locale et de la manière
-de consulter les informations publiées dans l'annuaire.
-
 =========================================================
-PHRASES À ÉVITER
+INTERDICTIONS SUR LES AFFIRMATIONS GÉNÉRALES
 =========================================================
 
-N'utilise pas de formulations comme :
+N'utilise pas de formulations générales présentant une
+pratique comme ayant un effet, un avantage ou une efficacité.
+
+Évite notamment :
 
 "Cette pratique attire de plus en plus d'intérêt."
 
@@ -1770,6 +1781,16 @@ N'utilise pas de formulations comme :
 "Cette pratique améliore..."
 
 "Cette approche permet de..."
+
+"Cette pratique peut répondre à des besoins..."
+
+"Cette pratique favorise..."
+
+"Cette pratique contribue à..."
+
+"Cette pratique aide à..."
+
+"Les habitants peuvent bénéficier..."
 
 "Les professionnels proposent..."
 
@@ -1789,8 +1810,125 @@ N'utilise pas de formulations comme :
 
 "Les professionnels les plus réputés..."
 
-Ces formulations introduisent des informations qui ne sont
-pas nécessairement vérifiées.
+Ces formulations ne doivent pas être utilisées pour enrichir
+artificiellement le contenu.
+
+=========================================================
+CONTENU MÉDICAL / BIEN-ÊTRE
+=========================================================
+
+Si le mot-clé concerne la santé, le bien-être ou une pratique
+pouvant avoir une dimension médicale, reste strictement
+descriptif.
+
+La page doit principalement parler :
+
+- de la recherche locale ;
+- du mot-clé ;
+- de la ville ;
+- des informations réellement présentes dans l'annuaire ;
+- des profils réellement référencés.
+
+Ne décris pas la pratique médicale ou de bien-être comme si
+tu devais expliquer son efficacité, ses effets ou ses bénéfices.
+
+Ne formule aucune promesse médicale.
+
+Ne prétends jamais qu'une pratique :
+
+- guérit ;
+- soigne ;
+- traite une maladie ;
+- prévient une maladie ;
+- améliore une pathologie ;
+- améliore un symptôme ;
+- garantit un résultat ;
+- améliore la santé ;
+- améliore la qualité de vie ;
+- rétablit l'équilibre du corps ;
+- rétablit l'énergie ;
+- favorise la circulation ;
+- apporte un bénéfice médical.
+
+Ne présente aucune efficacité comme établie.
+
+Ne donne aucun conseil médical personnalisé.
+
+=========================================================
+INTERDICTIONS SUR LES AFFIRMATIONS GÉNÉRALES
+=========================================================
+
+N'utilise pas de formulations générales présentant une
+pratique comme ayant un effet, un avantage ou une efficacité.
+
+Évite notamment :
+
+"Cette pratique attire de plus en plus d'intérêt."
+
+"Cette pratique est très populaire."
+
+"Les habitants recherchent de plus en plus..."
+
+"Cette méthode permet de..."
+
+"Cette pratique améliore..."
+
+"Cette approche permet de..."
+
+"Cette pratique peut répondre à des besoins..."
+
+"Cette pratique favorise..."
+
+"Cette pratique contribue à..."
+
+"Cette pratique aide à..."
+
+"Les habitants peuvent bénéficier..."
+
+"Les professionnels proposent..."
+
+"Les professionnels offrent..."
+
+"Vous trouverez..."
+
+"Vous pourrez trouver..."
+
+"Vous trouverez facilement..."
+
+"Il existe de nombreux professionnels..."
+
+"De nombreux spécialistes..."
+
+"Les meilleurs professionnels..."
+
+"Les professionnels les plus réputés..."
+
+Ces formulations ne doivent pas être utilisées pour enrichir
+artificiellement le contenu.
+
+=========================================================
+PRATIQUES MÉDICALES OU DE BIEN-ÊTRE
+=========================================================
+
+Ne développe pas d'explication générale sur les effets,
+les bénéfices ou les propriétés d'une pratique.
+
+Par exemple, pour "médecine chinoise", ne développe pas
+automatiquement une explication sur :
+
+- l'acupuncture ;
+- la phytothérapie ;
+- le massage ;
+- les effets sur la santé ;
+- les bénéfices ;
+- les résultats ;
+- les propriétés thérapeutiques.
+
+Une pratique peut être mentionnée uniquement si elle apparaît
+explicitement dans les données réelles de l'annuaire.
+
+Même lorsqu'une pratique est présente dans les données,
+ne lui attribue aucun effet médical ou bénéfice.
 
 =========================================================
 STRUCTURE
@@ -1802,35 +1940,35 @@ Utilise cette structure :
 
 # ${keywordDisplay} à ${cityDisplay}
 
-Introduction courte présentant uniquement la recherche
-locale et le rôle de la page.
+Introduction courte présentant uniquement la recherche locale
+et le rôle de la page.
 
 ## ${keywordDisplay} à ${cityDisplay}
 
-Explique de manière neutre ce que représente la recherche
-du mot-clé dans cette ville.
+Présente de manière neutre la recherche du mot-clé
+dans cette ville.
 
 Ne fais aucune affirmation médicale ou commerciale.
 
 ## Comprendre la recherche locale
 
-Explique comment utiliser le mot-clé et la ville pour
-consulter les informations disponibles.
+Explique comment consulter les informations disponibles
+pour cette recherche.
 
-Ne prétends pas qu'un professionnel sera trouvé.
+Ne prétends pas qu'un professionnel sera nécessairement trouvé.
 
 ## Informations à vérifier avant de contacter un professionnel
 
-Explique de manière générale quelles informations peuvent
-être vérifiées lorsqu'elles sont présentes sur une fiche :
+Explique uniquement quelles informations peuvent être vérifiées
+lorsqu'elles sont présentes sur une fiche :
 
-- activité déclarée ;
-- localisation ;
+- activité ou mot-clé associé ;
+- localisation si elle est réellement publiée ;
 - description ;
-- informations de contact ;
-- autres informations réellement publiées.
+- informations de contact si elles sont publiées ;
+- autres informations réellement présentes.
 
-Ne prétends jamais qu'une de ces informations est présente
+Ne prétends jamais qu'une information est présente
 si elle n'est pas fournie.
 
 ## Les profils référencés dans l'annuaire
@@ -1842,15 +1980,30 @@ Si des profils sont fournis dans les données :
 - ne crée aucune qualification ;
 - ne crée aucune spécialisation ;
 - ne crée aucune prestation ;
-- ne crée aucun service.
+- ne crée aucun service ;
+- ne crée aucune adresse ;
+- ne crée aucun horaire ;
+- ne crée aucun tarif ;
+- ne crée aucun avis ;
+- ne crée aucune réputation.
 
-Si aucun profil n'est fourni, indique simplement que la page
-présente une recherche générale et ne cite aucune entreprise.
+Pour un profil, utilise de préférence une formulation
+factuelle comme :
+
+"${keywordDisplay}" est associé à ce profil dans l'annuaire.
+
+ou :
+
+"La fiche de [nom] contient la mention [information réellement
+présente]."
+
+Si aucun profil n'est fourni, ne cite aucune entreprise
+ou personne.
 
 ## Comment utiliser l'annuaire SEO
 
-Explique comment consulter les informations disponibles
-dans les fiches.
+Explique simplement comment consulter les informations
+disponibles dans les fiches.
 
 Ne promets aucun résultat.
 
@@ -1878,13 +2031,12 @@ réellement publiées.
 
 Fais une conclusion courte rappelant que la page concerne
 la recherche "${keywordDisplay}" à "${cityDisplay}" et que
-les informations doivent être vérifiées sur les fiches
-référencées.
+les informations doivent être vérifiées directement
+sur les fiches référencées.
 
 =========================================================
 STYLE
 =========================================================
-
 Le texte doit être :
 
 - naturel ;

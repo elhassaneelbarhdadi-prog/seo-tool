@@ -1462,25 +1462,34 @@ function buildGenerationPrompt({
     city,
     profiles = [],
 }) {
+
     const keywordDisplay =
         beautifyKeyword(keyword);
 
     const cityDisplay =
         displayCity(city);
 
+    /* =====================================================
+       DONNÉES RÉELLES DE L'ANNUAIRE
+    ===================================================== */
+
     let directoryContext = "";
 
     if (profiles.length > 0) {
+
         const safeProfiles =
             profiles
                 .slice(0, 10)
                 .map((profile) => ({
                     name:
                         profile.name || "",
+
                     description:
                         profile.description || "",
+
                     keyword:
                         profile.keyword || "",
+
                     city:
                         profile.city || "",
                 }));
@@ -1496,6 +1505,8 @@ ${JSON.stringify(
 
 Ces données correspondent aux profils réellement présents
 dans l'annuaire.
+
+IMPORTANT :
 
 Tu peux utiliser uniquement les informations présentes
 dans ces données.
@@ -1520,7 +1531,9 @@ Tu ne dois jamais inventer pour un profil :
 
 Si une information n'est pas présente, ne la mentionne pas.
 `;
+
     } else {
+
         directoryContext = `
 AUCUN PROFIL SPÉCIFIQUE N'EST DISPONIBLE.
 
@@ -1532,15 +1545,21 @@ Ne crée aucune adresse.
 Ne crée aucun numéro de téléphone.
 Ne crée aucun horaire.
 Ne crée aucune prestation précise.
+Ne laisse pas entendre qu'un professionnel est actuellement
+référencé si aucun profil n'est fourni.
 `;
     }
 
-    return `
-Tu es un rédacteur SEO français spécialisé dans la création
-de pages locales pour un annuaire professionnel.
 
-Tu dois rédiger le contenu éditorial d'une page consacrée
-à la recherche suivante :
+    /* =====================================================
+       PROMPT PRINCIPAL
+    ===================================================== */
+
+    return `
+Tu es un rédacteur SEO français spécialisé dans les pages
+locales d'un annuaire professionnel.
+
+Tu dois rédiger le contenu éditorial d'une page consacrée à :
 
 "${keywordDisplay}" à "${cityDisplay}"
 
@@ -1548,58 +1567,60 @@ Tu dois rédiger le contenu éditorial d'une page consacrée
 OBJECTIF
 =========================================================
 
-Créer un contenu réellement utile pour une personne qui
-effectue cette recherche locale.
+Créer une page utile, naturelle et spécifique à cette
+recherche locale.
 
-Le texte doit être :
+Le lecteur doit comprendre :
 
-- naturel ;
-- fluide ;
-- informatif ;
-- professionnel ;
-- crédible ;
-- agréable à lire ;
-- spécifique à la recherche ;
-- rédigé en français naturel.
+- ce qu'il peut rechercher avec ce mot-clé ;
+- pourquoi une recherche locale peut être pertinente ;
+- quelles informations sont réellement disponibles dans
+  l'annuaire ;
+- quels profils sont effectivement référencés, lorsqu'il y
+  en a ;
+- comment consulter et comparer les informations publiées.
 
 Le contenu doit donner l'impression d'avoir été écrit
-pour cette recherche précise et non d'être un texte
-automatiquement reproduit sur des centaines de villes.
+spécifiquement pour cette recherche.
+
+Il ne doit PAS ressembler à une page copiée automatiquement
+pour plusieurs centaines de villes.
 
 =========================================================
-IMPORTANT : PAS DE REMPLISSAGE SEO
+RÈGLE ABSOLUE : DONNÉES RÉELLES
 =========================================================
 
-Ne cherche pas à augmenter artificiellement la longueur.
+${directoryContext}
 
-Chaque paragraphe doit apporter une information différente.
+Ne complète jamais une information manquante avec une
+supposition.
 
-Ne répète pas la même idée avec des formulations différentes.
+Ne déduis pas une profession à partir du seul mot-clé.
 
-Évite les formulations génériques et répétitives comme :
+Exemple :
 
-"Cette page permet de..."
-"Cette recherche permet de..."
-"Il est possible de..."
-"Il est conseillé de..."
-"Il est important de noter..."
-"Pour consulter les informations disponibles..."
-"Cette page est dédiée à..."
-"Les personnes intéressées peuvent..."
+Si un profil indique :
 
-N'utilise pas systématiquement ces expressions.
+"Nom : Hassane"
+"Activité : bien être"
+"Mot-clé : médecine chinoise"
 
-Varie naturellement les formulations.
+tu ne dois PAS écrire :
+
+"Hassane est médecin chinois."
+
+Tu peux uniquement dire que le profil de Hassane est associé
+à l'activité ou au mot-clé indiqué dans les données.
 
 =========================================================
-MOT-CLÉ
+MOT-CLÉ PRINCIPAL
 =========================================================
 
-Le mot-clé principal est :
+Mot-clé :
 
 "${keywordDisplay}"
 
-La ville est :
+Ville :
 
 "${cityDisplay}"
 
@@ -1607,168 +1628,258 @@ Respecte exactement le sens du mot-clé.
 
 Ne transforme jamais le mot-clé en une autre activité.
 
-Par exemple :
+Exemple :
 
 "médecine chinoise"
 
-ne doit jamais être transformé en :
+ne doit jamais devenir :
 
 "médecin chinois"
+"médecin spécialisé en médecine chinoise"
+"cabinet médical chinois"
 
-ou :
+sauf si ces informations sont explicitement présentes dans
+les données de l'annuaire.
 
-"médecin spécialisé en médecine chinoise".
+Le mot-clé doit être utilisé naturellement.
 
-Le mot-clé doit apparaître naturellement dans le contenu.
-
-Ne fais jamais de bourrage de mots-clés.
+Évite le bourrage de mots-clés.
 
 Utilise des variantes lexicales uniquement lorsqu'elles
 améliorent réellement la lecture.
 
 =========================================================
-STRUCTURE DU CONTENU
+IMPORTANT : PAS DE TEXTE GÉNÉRIQUE
 =========================================================
 
-IMPORTANT :
+Ne commence pas systématiquement par :
+
+"Cette recherche..."
+"Cette page..."
+"Les personnes intéressées..."
+"Il est possible de..."
+"Il est conseillé de..."
+"Il est important de..."
+"Pour consulter..."
+"Cette activité connaît..."
+"Cette activité suscite un intérêt croissant..."
+
+Évite également de répéter plusieurs fois la structure :
+
+"à ${cityDisplay}".
+
+La ville doit être présente naturellement, sans répétition
+artificielle.
+
+Chaque paragraphe doit apporter une information différente.
+
+=========================================================
+INTRODUCTION
+=========================================================
+
+Commence directement par une introduction naturelle.
+
+Présente le sujet "${keywordDisplay}" et son contexte local
+à "${cityDisplay}".
+
+L'introduction doit être adaptée au sens réel du mot-clé.
+
+Ne donne aucune information spécifique sur la ville qui
+n'est pas fournie dans les données.
+
+Ne prétends pas connaître :
+
+- la demande locale ;
+- la popularité de l'activité ;
+- le nombre de professionnels ;
+- les habitudes des habitants ;
+- les quartiers ;
+- les lieux connus ;
+- la concurrence locale ;
+
+sauf si ces informations sont explicitement fournies.
+
+=========================================================
+STRUCTURE ÉDITORIALE
+=========================================================
 
 Ne génère PAS de H1.
 
 Le H1 est déjà généré par le site.
 
-Commence directement par une introduction naturelle.
+Commence directement par l'introduction.
 
-Utilise ensuite des titres H2 et éventuellement H3.
+Utilise plusieurs H2 pertinents.
 
----------------------------------------------------------
-INTRODUCTION
----------------------------------------------------------
+IMPORTANT :
 
-Rédige une introduction de quelques paragraphes.
+Ne reproduis pas obligatoirement exactement les mêmes H2
+sur toutes les pages.
 
-Présente naturellement la recherche :
+Adapte les titres au sujet.
+
+Tu peux utiliser par exemple :
+
+- Comprendre cette recherche locale
+- Les informations disponibles
+- Les profils référencés
+- Comment consulter les fiches
+- Les éléments à vérifier
+- Ce que l'annuaire permet de trouver
+- Questions fréquentes
+
+Mais choisis uniquement les sections réellement utiles.
+
+Ne crée pas une section simplement pour augmenter
+artificiellement la longueur.
+
+=========================================================
+RECHERCHE LOCALE
+=========================================================
+
+Explique naturellement ce que peut rechercher une personne
+qui utilise :
 
 "${keywordDisplay}" à "${cityDisplay}"
 
-Explique ce que peut rechercher une personne utilisant
-cette requête et introduis l'intérêt d'une recherche locale.
+Adapte cette explication au véritable sens du mot-clé.
 
-Ne répète pas simplement le mot-clé plusieurs fois.
+Ne transforme pas cette section en définition encyclopédique.
 
----------------------------------------------------------
-## Comprendre la recherche locale
----------------------------------------------------------
+Ne prétends pas que l'annuaire représente l'ensemble de
+l'offre disponible dans la ville.
 
-Explique de manière naturelle ce que signifie rechercher
-"${keywordDisplay}" à "${cityDisplay}".
+Utilise des formulations comme :
 
-Adapte réellement cette partie au sens du mot-clé.
+"l'annuaire permet de consulter les profils disponibles"
 
-Ne donne pas d'informations spécifiques sur la ville
-si elles ne sont pas présentes dans les données fournies.
+ou :
 
----------------------------------------------------------
-## Trouver un professionnel à ${cityDisplay}
----------------------------------------------------------
+"les informations publiées dans les fiches peuvent aider
+à identifier les profils correspondant à cette recherche"
 
-Explique comment une personne peut utiliser un annuaire
-pour rechercher un professionnel correspondant au
-mot-clé.
+uniquement lorsque cela correspond réellement aux données.
 
-Explique concrètement ce qu'elle peut regarder sur une fiche.
+=========================================================
+PROFILS RÉFÉRENCÉS
+=========================================================
 
-Ne promets jamais qu'un professionnel sera disponible.
+Si des profils réels sont disponibles :
 
-Ne prétends jamais que l'annuaire recense tous les
-professionnels de la ville.
+Présente-les de manière naturelle.
 
----------------------------------------------------------
-## Les informations disponibles dans l'annuaire
----------------------------------------------------------
+Utilise uniquement :
 
-Présente les types d'informations qu'une fiche peut
-contenir lorsqu'elles sont réellement disponibles :
+- leur nom ;
+- leur activité indiquée ;
+- leur description ;
+- leur mot-clé ;
+- leur ville ;
 
-- activité ;
-- mot-clé ;
-- localisation ;
-- description ;
-- coordonnées ;
-- autres informations publiées.
+lorsque ces informations sont présentes.
 
-Ne présente jamais une information comme disponible
-si elle n'est pas présente dans les données.
-
----------------------------------------------------------
-## Les profils référencés
----------------------------------------------------------
-
-Si des profils réels sont fournis dans les données,
-présente-les de manière naturelle.
-
-Utilise uniquement les informations disponibles.
-
-Ne transforme jamais un simple mot-clé en qualification
+Ne transforme jamais une information en qualification
 professionnelle.
 
-Ne présente jamais une personne comme :
+Ne présente jamais automatiquement une personne comme :
 
 - médecin ;
 - thérapeute ;
+- praticien ;
 - spécialiste ;
 - expert ;
+- professionnel de santé ;
 - diplômé ;
 - certifié ;
 
-sauf si cette information est explicitement présente
-dans les données.
+si cette information n'est pas explicitement présente.
 
-Si les données sont limitées, indique simplement que
-les informations disponibles sur le profil sont limitées.
+Si un seul profil est disponible, ne fais pas semblant
+qu'il existe plusieurs professionnels.
 
-Si aucun profil n'est fourni, ne crée aucun profil.
+Si plusieurs profils sont disponibles, présente-les
+individuellement sans établir de classement subjectif.
 
----------------------------------------------------------
-## Comment comparer les informations
----------------------------------------------------------
+Si les informations sont limitées, dis simplement que les
+informations publiées dans la fiche sont limitées.
 
-Explique comment un utilisateur peut comparer les fiches
-en se basant uniquement sur les informations réellement
-publiées.
+Si aucun profil n'est disponible, ne crée aucun profil.
 
-Ne désigne aucun professionnel comme meilleur qu'un autre.
+=========================================================
+INFORMATIONS DE L'ANNUAIRE
+=========================================================
 
-Ne classe pas les professionnels selon une appréciation
-subjective.
+Explique uniquement les informations réellement présentes.
 
----------------------------------------------------------
-## Questions fréquentes
----------------------------------------------------------
+Selon les données disponibles, une fiche peut contenir :
 
-Crée 3 questions réellement utiles et différentes
-concernant la recherche :
+- le nom ;
+- l'activité ;
+- le mot-clé ;
+- la ville ;
+- une description ;
+- des coordonnées ;
+- d'autres informations publiées.
+
+Ne dis pas qu'une fiche contient une donnée si cette donnée
+n'est pas réellement fournie.
+
+=========================================================
+COMMENT CONSULTER LES FICHES
+=========================================================
+
+Explique simplement comment utiliser les informations
+présentes dans l'annuaire.
+
+L'objectif est d'aider le lecteur à comprendre ce qu'il peut
+vérifier dans une fiche :
+
+- activité déclarée ;
+- description ;
+- localisation ;
+- informations de contact lorsqu'elles sont disponibles ;
+- autres informations publiées.
+
+Ne donne aucun jugement sur la qualité d'un professionnel.
+
+Ne recommande aucun profil.
+
+=========================================================
+COMPARAISON
+=========================================================
+
+Lorsqu'il existe plusieurs profils, explique que l'utilisateur
+peut comparer les informations publiées.
+
+Ne désigne jamais :
+
+- le meilleur professionnel ;
+- le professionnel le plus compétent ;
+- le plus expérimenté ;
+- le plus fiable ;
+- le plus recommandé.
+
+Ne crée aucun classement subjectif.
+
+=========================================================
+QUESTIONS FRÉQUENTES
+=========================================================
+
+Crée 3 questions réellement utiles concernant :
 
 "${keywordDisplay}" à "${cityDisplay}"
 
-Les réponses doivent être courtes, naturelles et utiles.
+Les questions doivent être différentes les unes des autres.
 
-Évite les questions artificielles destinées uniquement
-à placer le mot-clé.
+Les réponses doivent être courtes et naturelles.
 
----------------------------------------------------------
-CONCLUSION
----------------------------------------------------------
+Ne crée pas de question uniquement pour répéter le mot-clé.
 
-Termine par un court paragraphe récapitulatif.
-
-La conclusion doit être naturelle.
-
-Ne répète pas mot pour mot l'introduction.
-
-Ne fais pas de promesse commerciale.
+Si le sujet concerne la santé ou le bien-être, reste
+strictement descriptif.
 
 =========================================================
-CAS PARTICULIER : SANTÉ ET BIEN-ÊTRE
+SANTÉ / BIEN-ÊTRE
 =========================================================
 
 Si le mot-clé concerne la santé, le bien-être ou une pratique
@@ -1778,7 +1889,7 @@ reste strictement descriptif.
 
 Ne formule aucune promesse médicale.
 
-Ne prétends pas qu'une pratique :
+Ne prétends jamais qu'une pratique :
 
 - soigne ;
 - guérit ;
@@ -1787,13 +1898,25 @@ Ne prétends pas qu'une pratique :
 - améliore une maladie ;
 - produit un résultat médical.
 
-Ne présente aucune efficacité comme scientifiquement établie
-si cette information n'est pas fournie dans les données.
+Ne présente aucune efficacité médicale comme établie.
 
 Ne donne aucun conseil médical personnalisé.
 
-Ne transforme jamais un professionnel de l'annuaire en
-professionnel de santé sans information explicite.
+Ne transforme jamais un profil en professionnel de santé
+sans information explicite dans les données.
+
+=========================================================
+CONCLUSION
+=========================================================
+
+Termine par un court paragraphe récapitulatif.
+
+La conclusion doit rappeler naturellement le sujet de la
+page et l'intérêt de consulter les informations disponibles.
+
+Ne répète pas mot pour mot l'introduction.
+
+Ne fais aucune promesse commerciale.
 
 =========================================================
 FIABILITÉ
@@ -1801,7 +1924,7 @@ FIABILITÉ
 
 N'invente absolument aucune donnée.
 
-N'invente pas :
+N'invente jamais :
 
 - entreprise ;
 - professionnel ;
@@ -1820,44 +1943,42 @@ N'invente pas :
 - chiffre ;
 - réputation ;
 - expérience ;
-- résultat.
+- résultat ;
+- information locale.
 
-N'invente aucune donnée concernant ${cityDisplay}.
-
-Ne prétends pas connaître des informations locales
-qui ne sont pas fournies.
-
-=========================================================
-DONNÉES RÉELLES DE L'ANNUAIRE
-=========================================================
-
-${directoryContext}
+N'invente aucune donnée concernant "${cityDisplay}".
 
 =========================================================
 STYLE
 =========================================================
 
-Écris comme un rédacteur professionnel français.
+Écris en français naturel.
 
-Privilégie :
+Le texte doit être :
 
-- des phrases de longueur variable ;
-- des paragraphes courts ;
-- un vocabulaire naturel ;
-- des transitions fluides ;
-- des informations concrètes ;
-- une lecture agréable.
+- fluide ;
+- professionnel ;
+- clair ;
+- crédible ;
+- agréable à lire ;
+- utile ;
+- spécifique au sujet.
+
+Utilise des phrases de longueur variable.
+
+Utilise des paragraphes courts.
+
+Varie naturellement les formulations.
 
 Évite :
 
 - le ton robotique ;
 - les répétitions ;
-- les listes inutiles ;
+- le remplissage ;
 - le bourrage SEO ;
-- les formulations identiques ;
-- les affirmations non vérifiables ;
-- les phrases destinées uniquement à atteindre
-  un nombre de mots.
+- les listes inutiles ;
+- les phrases artificielles ;
+- les formulations identiques d'une page à l'autre.
 
 Le contenu doit être utile avant d'être optimisé pour le SEO.
 
@@ -1865,11 +1986,13 @@ Le contenu doit être utile avant d'être optimisé pour le SEO.
 LONGUEUR
 =========================================================
 
-Vise environ 700 à 1000 mots lorsque suffisamment
-d'informations permettent de produire un contenu utile.
+Vise environ 700 à 1000 mots UNIQUEMENT lorsque les données
+et le sujet permettent réellement de produire un contenu utile.
 
-Si les données disponibles sont limitées, privilégie
-la qualité et la précision plutôt que le remplissage.
+Si les informations disponibles sont limitées, écris moins.
+
+Il vaut mieux une page plus courte et pertinente qu'une page
+longue remplie de contenu générique.
 
 =========================================================
 FORMAT FINAL
@@ -1884,15 +2007,11 @@ Ne retourne pas :
 - de JSON ;
 - de balises HTML ;
 - de H1 ;
-- de texte concernant tes instructions.
+- de texte concernant les instructions.
 
 Commence directement par l'introduction.
 `.trim();
 }
-/* =========================================================
-   REPARATION IA
-========================================================= */
-
 async function repairContent(
     content,
     keyword,

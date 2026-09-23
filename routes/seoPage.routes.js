@@ -2339,20 +2339,14 @@ async function saveGeneratedPage(
        REVENUE
     ===================================================== */
 
+    /* =====================================================
+    REVENUE / POTENTIEL ESTIMÉ
+ ===================================================== */
+
     let revenue =
         Number(
-            seo?.roiScore
+            seo?.revenue
         );
-
-    if (
-        !Number.isFinite(revenue)
-    ) {
-
-        revenue =
-            Number(
-                seo?.revenue
-            );
-    }
 
     if (
         !Number.isFinite(revenue)

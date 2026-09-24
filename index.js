@@ -333,6 +333,8 @@ app.get(
 
                 `${BASE_URL}/fr/`,
 
+                `${BASE_URL}/fr/free-analyzer`,
+
                 `${BASE_URL}/fr/annuaire/`,
 
                 `${BASE_URL}/fr/pricing`
@@ -342,7 +344,7 @@ app.get(
 
             /* ================================================= */
             /* GET REAL CITIES */
-            /* FROM BUSINESS PROFILES */
+            /* FROM BUSINESS_PROFILES */
             /* ================================================= */
 
             const cityRows =
@@ -355,7 +357,7 @@ app.get(
 
 
             /* ================================================= */
-            /* VALID CITY MAP */
+            /* VALID CITY SET */
             /* ================================================= */
 
             const validCities =

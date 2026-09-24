@@ -2092,31 +2092,7 @@ async function saveGeneratedPage(
                 generated.keyword
             );
 
-        console.log(
-            "📊 SEO PAGE METRICS:",
-            {
-                keyword:
-                    generated.keyword,
 
-                volume:
-                    seo?.volume,
-
-                cpc:
-                    seo?.cpc,
-
-                difficulty:
-                    seo?.difficulty,
-
-                score:
-                    seo?.score,
-
-                revenue:
-                    seo?.revenue,
-
-                roiScore:
-                    seo?.roiScore,
-            }
-        );
 
     } catch (error) {
 
@@ -2227,6 +2203,19 @@ async function saveGeneratedPage(
                 0.05
             );
     }
+    console.log(
+        "📊 SEO PAGE METRICS FINAL:",
+        {
+            keyword:
+                generated.keyword,
+
+            volume,
+            cpc,
+            difficulty,
+            score,
+            revenue,
+        }
+    );
     const trend =
         generateTrend();
 

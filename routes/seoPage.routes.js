@@ -1697,6 +1697,117 @@ Les questions doivent être numérotées exactement :
 
 Chaque numéro ne doit apparaître qu'une seule fois.
 Chaque question doit être immédiatement suivie de sa réponse.
+
+=========================================================
+STRUCTURE ÉDITORIALE
+=========================================================
+
+Ne génère PAS de H1.
+Le H1 principal est déjà affiché par le site.
+
+Commence directement par une introduction naturelle de
+1 à 2 paragraphes.
+
+La page doit être spécifique à la recherche :
+"${keywordDisplay}" à "${cityDisplay}".
+
+Utilise uniquement les sections qui permettent d'apporter
+une information réellement utile.
+
+## ${keywordDisplay} à ${cityDisplay}
+
+Présente la recherche locale de manière naturelle.
+
+Explique ce que l'internaute recherche avec ce mot-clé
+dans cette ville, sans inventer de prestation ou de
+qualification professionnelle.
+
+## Profils référencés à ${cityDisplay}
+
+Cette section doit utiliser uniquement les informations
+présentes dans :
+
+"DONNÉES RÉELLES DISPONIBLES DANS L'ANNUAIRE".
+
+Lorsqu'un profil existe, tu peux mentionner :
+
+- son nom ;
+- son activité déclarée ;
+- le mot-clé associé ;
+- la ville enregistrée.
+
+Ne déduis aucune autre information.
+
+Ne transforme jamais une activité en métier,
+qualification ou prestation.
+
+Exemple autorisé :
+
+"Hassane est associé dans l'annuaire à l'activité
+de bien-être et au mot-clé « médecine chinoise »."
+
+Exemples interdits :
+
+"Hassane pratique l'acupuncture."
+
+"Hassane est praticien en médecine chinoise."
+
+"Hassane propose des soins de médecine chinoise."
+
+## Recherche locale et annuaire SEO
+
+Explique simplement que l'annuaire permet de consulter
+les informations enregistrées pour les profils référencés
+et de comparer les informations disponibles.
+
+Ne promets pas qu'un professionnel particulier est
+disponible au-delà des données réellement fournies.
+
+## Questions fréquentes
+
+Génère exactement 3 questions fréquentes.
+
+Les trois questions doivent être différentes.
+
+Elles doivent être directement liées à la recherche
+"${keywordDisplay}" à "${cityDisplay}".
+
+Les réponses doivent rester factuelles et utiliser
+uniquement les informations disponibles.
+
+Ne répète pas trois fois la même réponse sous une
+formulation différente.
+
+## Conclusion
+
+Termine par un court paragraphe naturel qui rappelle
+la recherche "${keywordDisplay}" à "${cityDisplay}"
+et la possibilité de consulter les informations
+réellement publiées dans l'annuaire.
+
+=========================================================
+RÈGLE DE QUALITÉ
+=========================================================
+
+Ne cherche pas à atteindre artificiellement une longueur
+importante.
+
+Une page plus courte, naturelle et précise est préférable
+à une page longue remplie de phrases génériques.
+
+Évite notamment les formulations répétitives comme :
+
+"Il est conseillé de vérifier..."
+"Les informations peuvent varier..."
+"Une recherche locale permet de..."
+"Il est possible de consulter..."
+"Les résultats présentés dépendent..."
+
+N'utilise pas systématiquement ces formulations.
+
+Chaque paragraphe doit apporter une information différente.
+
+=========================================================
 =========================================================
 STYLE
 =========================================================

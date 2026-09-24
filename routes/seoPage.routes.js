@@ -1592,362 +1592,111 @@ RÈGLE ABSOLUE : DONNÉES RÉELLES
 
 ${directoryContext}
 
-Ne complète jamais une information manquante avec une
-supposition.
+=========================================================
+RÈGLE CRITIQUE : NE PAS CONFONDRE LE MOT-CLÉ AVEC
+LES INFORMATIONS DU PROFIL
+=========================================================
 
-Ne déduis pas une profession à partir du seul mot-clé.
+Le mot-clé recherché décrit uniquement la recherche de
+l'utilisateur.
+
+Il ne constitue PAS une information sur les professionnels.
 
 Exemple :
-
-Si un profil indique :
-
-"Nom : Hassane"
-"Activité : bien être"
-"Mot-clé : médecine chinoise"
-
-tu ne dois PAS écrire :
-
-"Hassane est médecin chinois."
-
-Tu peux uniquement dire que le profil de Hassane est associé
-à l'activité ou au mot-clé indiqué dans les données.
-
-=========================================================
-MOT-CLÉ PRINCIPAL
-=========================================================
 
 Mot-clé :
-
-"${keywordDisplay}"
-
-Ville :
-
-"${cityDisplay}"
-
-Respecte exactement le sens du mot-clé.
-
-Ne transforme jamais le mot-clé en une autre activité.
-
-Exemple :
-
 "médecine chinoise"
 
-ne doit jamais devenir :
+Profil :
+nom = Hassane
+activité = bien être
+mot-clé = médecine chinoise
 
-"médecin chinois"
-"médecin spécialisé en médecine chinoise"
-"cabinet médical chinois"
+Tu peux écrire :
 
-sauf si ces informations sont explicitement présentes dans
-les données de l'annuaire.
+"Hassane est associé dans l'annuaire à l'activité
+de bien-être et au mot-clé « médecine chinoise »."
 
-Le mot-clé doit être utilisé naturellement.
+Tu ne peux PAS écrire :
 
-Évite le bourrage de mots-clés.
+"Hassane pratique l'acupuncture."
 
-Utilise des variantes lexicales uniquement lorsqu'elles
-améliorent réellement la lecture.
+Tu ne peux PAS écrire :
 
-=========================================================
-IMPORTANT : PAS DE TEXTE GÉNÉRIQUE
-=========================================================
+"Hassane propose de la phytothérapie."
 
-Ne commence pas systématiquement par :
+Tu ne peux PAS écrire :
 
-"Cette recherche..."
-"Cette page..."
-"Les personnes intéressées..."
-"Il est possible de..."
-"Il est conseillé de..."
-"Il est important de..."
-"Pour consulter..."
-"Cette activité connaît..."
-"Cette activité suscite un intérêt croissant..."
+"Hassane propose des massages Tui Na."
 
-Évite également de répéter plusieurs fois la structure :
+Tu ne peux PAS écrire :
 
-"à ${cityDisplay}".
+"Hassane est praticien en médecine chinoise."
 
-La ville doit être présente naturellement, sans répétition
-artificielle.
+Tu ne peux PAS écrire :
 
-Chaque paragraphe doit apporter une information différente.
+"Hassane est thérapeute."
+
+Ces informations ne peuvent être utilisées que si elles
+figurent explicitement dans les données du profil.
 
 =========================================================
-INTRODUCTION
+RÈGLE CRITIQUE : INFORMATIONS GÉNÉRALES SUR L'ACTIVITÉ
 =========================================================
 
-Commence directement par une introduction naturelle.
+Tu peux expliquer brièvement ce que signifie le mot-clé
+ou l'activité recherchée.
 
-Présente le sujet "${keywordDisplay}" et son contexte local
-à "${cityDisplay}".
+Cependant, ne transforme jamais une information générale
+sur l'activité en information concernant un professionnel
+référencé.
 
-L'introduction doit être adaptée au sens réel du mot-clé.
+Par exemple, si le mot-clé est "médecine chinoise", tu peux
+expliquer de manière générale que cette expression désigne
+un ensemble de pratiques traditionnelles.
 
-Ne donne aucune information spécifique sur la ville qui
-n'est pas fournie dans les données.
-
-Ne prétends pas connaître :
-
-- la demande locale ;
-- la popularité de l'activité ;
-- le nombre de professionnels ;
-- les habitudes des habitants ;
-- les quartiers ;
-- les lieux connus ;
-- la concurrence locale ;
-
-sauf si ces informations sont explicitement fournies.
+Mais tu ne dois pas écrire que les professionnels
+référencés proposent l'acupuncture, la phytothérapie,
+le massage Tui Na ou toute autre technique si cela n'est
+pas indiqué dans leurs données.
 
 =========================================================
-STRUCTURE ÉDITORIALE
+RÈGLE CRITIQUE : QUESTIONS FRÉQUENTES
 =========================================================
 
-Ne génère PAS de H1.
+Les questions fréquentes doivent rester cohérentes avec
+les informations réellement disponibles.
 
-Le H1 est déjà généré par le site.
+N'invente aucune prestation.
 
-Commence directement par l'introduction.
+N'invente aucun traitement.
 
-Utilise plusieurs H2 pertinents.
+N'invente aucune technique.
 
-IMPORTANT :
+N'invente aucune caractéristique médicale.
 
-Ne reproduis pas obligatoirement exactement les mêmes H2
-sur toutes les pages.
+Évite les questions du type :
 
-Adapte les titres au sujet.
+"Quels traitements sont proposés ?"
 
-Tu peux utiliser par exemple :
+si aucune prestation n'est indiquée dans les données.
 
-- Comprendre cette recherche locale
-- Les informations disponibles
-- Les profils référencés
-- Comment consulter les fiches
-- Les éléments à vérifier
-- Ce que l'annuaire permet de trouver
-- Questions fréquentes
+Privilégie des questions comme :
 
-Mais choisis uniquement les sections réellement utiles.
+"Quels professionnels sont actuellement référencés ?"
 
-Ne crée pas une section simplement pour augmenter
-artificiellement la longueur.
+"Quelles informations sont disponibles dans les fiches ?"
 
-=========================================================
-RECHERCHE LOCALE
-=========================================================
+"Comment consulter une fiche dans l'annuaire ?"
 
-Explique naturellement ce que peut rechercher une personne
-qui utilise :
+Les questions doivent être numérotées exactement :
 
-"${keywordDisplay}" à "${cityDisplay}"
+1.
+2.
+3.
 
-Adapte cette explication au véritable sens du mot-clé.
-
-Ne transforme pas cette section en définition encyclopédique.
-
-Ne prétends pas que l'annuaire représente l'ensemble de
-l'offre disponible dans la ville.
-
-Utilise des formulations comme :
-
-"l'annuaire permet de consulter les profils disponibles"
-
-ou :
-
-"les informations publiées dans les fiches peuvent aider
-à identifier les profils correspondant à cette recherche"
-
-uniquement lorsque cela correspond réellement aux données.
-
-=========================================================
-PROFILS RÉFÉRENCÉS
-=========================================================
-
-Si des profils réels sont disponibles :
-
-Présente-les de manière naturelle.
-
-Utilise uniquement :
-
-- leur nom ;
-- leur activité indiquée ;
-- leur description ;
-- leur mot-clé ;
-- leur ville ;
-
-lorsque ces informations sont présentes.
-
-Ne transforme jamais une information en qualification
-professionnelle.
-
-Ne présente jamais automatiquement une personne comme :
-
-- médecin ;
-- thérapeute ;
-- praticien ;
-- spécialiste ;
-- expert ;
-- professionnel de santé ;
-- diplômé ;
-- certifié ;
-
-si cette information n'est pas explicitement présente.
-
-Si un seul profil est disponible, ne fais pas semblant
-qu'il existe plusieurs professionnels.
-
-Si plusieurs profils sont disponibles, présente-les
-individuellement sans établir de classement subjectif.
-
-Si les informations sont limitées, dis simplement que les
-informations publiées dans la fiche sont limitées.
-
-Si aucun profil n'est disponible, ne crée aucun profil.
-
-=========================================================
-INFORMATIONS DE L'ANNUAIRE
-=========================================================
-
-Explique uniquement les informations réellement présentes.
-
-Selon les données disponibles, une fiche peut contenir :
-
-- le nom ;
-- l'activité ;
-- le mot-clé ;
-- la ville ;
-- une description ;
-- des coordonnées ;
-- d'autres informations publiées.
-
-Ne dis pas qu'une fiche contient une donnée si cette donnée
-n'est pas réellement fournie.
-
-=========================================================
-COMMENT CONSULTER LES FICHES
-=========================================================
-
-Explique simplement comment utiliser les informations
-présentes dans l'annuaire.
-
-L'objectif est d'aider le lecteur à comprendre ce qu'il peut
-vérifier dans une fiche :
-
-- activité déclarée ;
-- description ;
-- localisation ;
-- informations de contact lorsqu'elles sont disponibles ;
-- autres informations publiées.
-
-Ne donne aucun jugement sur la qualité d'un professionnel.
-
-Ne recommande aucun profil.
-
-=========================================================
-COMPARAISON
-=========================================================
-
-Lorsqu'il existe plusieurs profils, explique que l'utilisateur
-peut comparer les informations publiées.
-
-Ne désigne jamais :
-
-- le meilleur professionnel ;
-- le professionnel le plus compétent ;
-- le plus expérimenté ;
-- le plus fiable ;
-- le plus recommandé.
-
-Ne crée aucun classement subjectif.
-
-=========================================================
-QUESTIONS FRÉQUENTES
-=========================================================
-
-Crée 3 questions réellement utiles concernant :
-
-"${keywordDisplay}" à "${cityDisplay}"
-
-Les questions doivent être différentes les unes des autres.
-
-Les réponses doivent être courtes et naturelles.
-
-Ne crée pas de question uniquement pour répéter le mot-clé.
-
-Si le sujet concerne la santé ou le bien-être, reste
-strictement descriptif.
-
-=========================================================
-SANTÉ / BIEN-ÊTRE
-=========================================================
-
-Si le mot-clé concerne la santé, le bien-être ou une pratique
-pouvant avoir une dimension médicale :
-
-reste strictement descriptif.
-
-Ne formule aucune promesse médicale.
-
-Ne prétends jamais qu'une pratique :
-
-- soigne ;
-- guérit ;
-- traite ;
-- prévient ;
-- améliore une maladie ;
-- produit un résultat médical.
-
-Ne présente aucune efficacité médicale comme établie.
-
-Ne donne aucun conseil médical personnalisé.
-
-Ne transforme jamais un profil en professionnel de santé
-sans information explicite dans les données.
-
-=========================================================
-CONCLUSION
-=========================================================
-
-Termine par un court paragraphe récapitulatif.
-
-La conclusion doit rappeler naturellement le sujet de la
-page et l'intérêt de consulter les informations disponibles.
-
-Ne répète pas mot pour mot l'introduction.
-
-Ne fais aucune promesse commerciale.
-
-=========================================================
-FIABILITÉ
-=========================================================
-
-N'invente absolument aucune donnée.
-
-N'invente jamais :
-
-- entreprise ;
-- professionnel ;
-- adresse ;
-- téléphone ;
-- email ;
-- horaire ;
-- tarif ;
-- prestation ;
-- diplôme ;
-- certification ;
-- qualification ;
-- avis ;
-- note ;
-- statistique ;
-- chiffre ;
-- réputation ;
-- expérience ;
-- résultat ;
-- information locale.
-
-N'invente aucune donnée concernant "${cityDisplay}".
-
+Chaque numéro ne doit apparaître qu'une seule fois.
+Chaque question doit être immédiatement suivie de sa réponse.
 =========================================================
 STYLE
 =========================================================

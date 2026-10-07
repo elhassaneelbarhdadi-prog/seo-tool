@@ -1007,7 +1007,7 @@ export default function AnnuairePage() {
 
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
                         <Link
-                            to={`/${lang}/register`}
+                            to={`/${lang}/referencer-mon-entreprise`}
                             className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90"
                         >
                             🚀 Référencer mon entreprise
@@ -1021,7 +1021,73 @@ export default function AnnuairePage() {
                         </Link>
                     </div>
                 </div>
+                {/* ========================= */}
+                {/* 🔎 SEO RÉFÉRENCEMENT LOCAL */}
+                {/* ========================= */}
 
+                <section
+                    className="
+        bg-indigo-50
+        rounded-2xl
+        p-8
+        mb-12
+        border
+        border-indigo-100
+    "
+                >
+                    <div className="max-w-4xl mx-auto text-center">
+
+                        <h2 className="text-2xl lg:text-3xl font-black text-gray-900 mb-4">
+                            📍 Référencement local des entreprises
+                        </h2>
+
+                        <p className="text-gray-700 text-lg leading-relaxed mb-6">
+                            Développez la visibilité de votre entreprise dans les
+                            recherches locales. Découvrez notre solution de
+                            référencement local et présentez votre activité dans
+                            notre annuaire professionnel.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row justify-center gap-4">
+
+                            <Link
+                                to={`/${lang}/referencement-local`}
+                                className="
+                    bg-indigo-600
+                    hover:bg-indigo-700
+                    text-white
+                    px-6
+                    py-3
+                    rounded-xl
+                    font-semibold
+                    transition
+                "
+                            >
+                                Découvrir le référencement local →
+                            </Link>
+
+                            <Link
+                                to={`/${lang}/referencer-mon-entreprise`}
+                                className="
+                    bg-white
+                    border
+                    border-indigo-200
+                    hover:bg-indigo-100
+                    text-indigo-700
+                    px-6
+                    py-3
+                    rounded-xl
+                    font-semibold
+                    transition
+                "
+                            >
+                                Référencer mon entreprise
+                            </Link>
+
+                        </div>
+
+                    </div>
+                </section>
                 {/* =================================================
                    ERROR
                 ================================================= */}
@@ -1213,10 +1279,10 @@ export default function AnnuairePage() {
                     </p>
 
                     <Link
-                        to={`/${lang}/register`}
+                        to={`/${lang}/referencer-mon-entreprise`}
                         className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold"
                     >
-                        S'inscrire gratuitement
+                        Voir les abonnements
                     </Link>
                 </div>
             </div>
@@ -1582,8 +1648,8 @@ export default function AnnuairePage() {
                         </p>
 
                         <Link
-                            to={`/${lang}/register`}
-                            className="inline-block bg-indigo-600 text-white px-5 py-3 rounded-xl font-semibold"
+                            to={`/${lang}/referencer-mon-entreprise`}
+                            className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:opacity-90"
                         >
                             🚀 Référencer mon entreprise
                         </Link>
@@ -1720,10 +1786,10 @@ export default function AnnuairePage() {
                 </p>
 
                 <Link
-                    to={`/${lang}/register`}
+                    to={`/${lang}/referencer-mon-entreprise`}
                     className="inline-block bg-indigo-600 text-white px-5 py-3 rounded-xl font-semibold"
                 >
-                    🚀 S'inscrire gratuitement
+                    Voir les abonnements
                 </Link>
             </div>
         </div>

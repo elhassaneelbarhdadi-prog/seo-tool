@@ -330,17 +330,12 @@ app.get(
             /* ================================================= */
 
             const staticUrls = [
-
                 `${BASE_URL}/fr/`,
-
                 `${BASE_URL}/fr/free-analyzer`,
-
                 `${BASE_URL}/fr/annuaire/`,
-
-                `${BASE_URL}/fr/pricing`
-
+                `${BASE_URL}/fr/pricing`,
+                `${BASE_URL}/fr/referencer-mon-entreprise`
             ];
-
 
             /* ================================================= */
             /* GET REAL CITIES */

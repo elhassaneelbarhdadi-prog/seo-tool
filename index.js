@@ -55,18 +55,10 @@ if (
 }
 
 
-/* ========================================================= */
-/* FRONTEND URL */
-/* ========================================================= */
 
-const FRONT_URL =
-    process.env.FRONT_URL ||
-    "https://www.referenciaseo.com";
+const FRONT_URL = "https://referenciaseo.com";
 
 
-/* ========================================================= */
-/* RATE LIMIT */
-/* ========================================================= */
 
 app.use(
     rateLimit({
@@ -256,13 +248,12 @@ app.get(
             /* BASE URL */
             /* ================================================= */
 
+
             const BASE_URL = (
                 FRONT_URL ||
-                "https://www.referenciaseo.com"
-            ).replace(
-                /\/$/,
-                ""
-            );
+                "https://referenciaseo.com"
+            ).replace(/\/$/, "");
+
 
 
             /* ================================================= */
